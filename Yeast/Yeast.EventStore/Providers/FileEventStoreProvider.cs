@@ -28,28 +28,6 @@ namespace Yeast.EventStore.Provider
 			VersionTracker = new Dictionary<Guid, int>();
 		}
 
-		private FileStream OpenFile(string path, FileMode mode, FileAccess access, FileShare share)
-		{
-			var retryCount = 0;
-
-			while (true)
-			{
-				try
-				{
-					return File.Open(path, mode, access, share);
-				}
-				catch (IOException)
-				{
-					if (OpenFileRetryCount <= ++retryCount)
-					{
-						throw;
-					}
-
-					Thread.Sleep(TimeSpan.FromMilliseconds(retryCount * retryCount * retryCount * 10));
-				}
-			}
-		}
-
 		private bool VersionExists(Guid aggregateId, int versionToCheck)
 		{
 			int lastSeenVersion = -1;
