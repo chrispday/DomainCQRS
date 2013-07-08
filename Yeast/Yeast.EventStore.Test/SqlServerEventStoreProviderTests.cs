@@ -169,7 +169,7 @@ namespace Yeast.EventStore.Provider.Test
 		[TestMethod]
 		public void SqlLoadTest()
 		{
-			foreach (var i in Enumerable.Range(1, 100000))
+			foreach (var i in Enumerable.Range(1, 1))
 			{
 				var id = LoadTestAggregateIds.Keys.ToArray()[new Random().Next(99)];
 				var version = LoadTestAggregateIds[id];

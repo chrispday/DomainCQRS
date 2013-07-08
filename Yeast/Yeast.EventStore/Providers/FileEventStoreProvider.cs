@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text;
-using System.Threading;
+
+using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore.Provider
 {
@@ -14,10 +11,11 @@ namespace Yeast.EventStore.Provider
 		public string Directory { get; set; }
 		public TimeSpan LockTimeout { get; set; }
 		public int OpenFileRetryCount { get; set; }
+		public int VersionTrackerCapacity { get; set; }
 		private BinaryWriter EventWriter;
 		private Stream VersionReaderStream;
 		private BinaryReader VersionReader;
-		private Dictionary<Guid, int> VersionTracker;
+		private LRUDictionary<Guid, int> VersionTracker;
 		private long VersionTrackerLastPosition;
 		private const short Check = 666;
 
@@ -25,11 +23,16 @@ namespace Yeast.EventStore.Provider
 		{
 			LockTimeout = TimeSpan.FromSeconds(5);
 			OpenFileRetryCount = 5;
-			VersionTracker = new Dictionary<Guid, int>();
+			VersionTrackerCapacity = 10000;
 		}
 
 		private bool VersionExists(Guid aggregateId, int versionToCheck)
 		{
+			if (null == VersionTracker)
+			{
+				VersionTracker = new LRUDictionary<Guid, int>(VersionTrackerCapacity);
+			}
+
 			int lastSeenVersion = -1;
 			if (VersionTracker.TryGetValue(aggregateId, out lastSeenVersion))
 			{

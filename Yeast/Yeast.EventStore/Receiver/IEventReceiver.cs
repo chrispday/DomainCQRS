@@ -7,6 +7,11 @@ namespace Yeast.EventStore
 {
 	public interface IEventReceiver
 	{
-		void Receive<T>(T @event);
+		IEventStore EventStore { get; set; }
+
+		void Receive(object command);
+		IEventReceiver Register<AR, C>()
+			where AR : IAggregateRoot
+			where C : ICommand;
 	}
 }

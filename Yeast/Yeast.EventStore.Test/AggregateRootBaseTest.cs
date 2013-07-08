@@ -42,7 +42,7 @@ namespace Yeast.EventStore.Test
 		public void Init()
 		{
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-			EventStore.Current = new EventStore() { Serializer = new BinaryFormatterSerializer(), EventStoreProvider = new FileEventStoreProvider() { Directory = directory }.EnsureExists() };
+			AggregateRootBase.EventStore = EventStore.Current = new EventStore() { Serializer = new BinaryFormatterSerializer(), EventStoreProvider = new FileEventStoreProvider() { Directory = directory }.EnsureExists() };
 		}
 
 		[TestCleanup]
