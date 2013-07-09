@@ -38,7 +38,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void EnsuresExists()
+		public void SqlServerEventStoreProvider_EnsuresExists()
 		{
 			var sqlEventEventStoreProvider = new SqlServerEventStoreProvider() { ConnectionString = ConnectionString }.EnsureExists();
 			using (var conn = new SqlConnection(ConnectionString))
@@ -52,7 +52,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void Save()
+		public void SqlServerEventStoreProvider_Save()
 		{
 			var sqlEventEventStoreProvider = new SqlServerEventStoreProvider() { ConnectionString = ConnectionString }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateId = Guid.NewGuid(), Version = 1, Timestamp = DateTime.Now, Data = new byte[] { 1, 2, 3 } };
@@ -79,7 +79,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod, ExpectedException(typeof(ConcurrencyException))]
-		public void Save_VersionExists()
+		public void SqlServerEventStoreProvider_Save_VersionExists()
 		{
 			var sqlEventEventStoreProvider = new SqlServerEventStoreProvider() { ConnectionString = ConnectionString }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateId = Guid.NewGuid(), Version = 1, Timestamp = DateTime.Now, Data = new byte[] { 1, 2, 3 } };
@@ -88,7 +88,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void Load()
+		public void SqlServerEventStoreProvider_Load()
 		{
 			var sqlEventEventStoreProvider = new SqlServerEventStoreProvider() { ConnectionString = ConnectionString }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateId = Guid.NewGuid(), Version = 1, Timestamp = DateTime.Now, Data = new byte[] { 1, 2, 3 } };
@@ -120,7 +120,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void Load_FromVersion()
+		public void SqlServerEventStoreProvider_Load_FromVersion()
 		{
 			var sqlEventEventStoreProvider = new SqlServerEventStoreProvider() { ConnectionString = ConnectionString }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateId = Guid.NewGuid(), Version = 1, Timestamp = DateTime.Now, Data = new byte[] { 1, 2, 3 } };
@@ -135,7 +135,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void LoadAfterSaveOutOfOrder()
+		public void SqlServerEventStoreProvider_LoadAfterSaveOutOfOrder()
 		{
 			var EventToStore = new EventToStore() { AggregateId = Guid.NewGuid(), Version = 1, Timestamp = DateTime.Now, Data = new byte[] { 1, 2, 3 } };
 			var sqlEventEventStoreProvider = new SqlServerEventStoreProvider() { ConnectionString = ConnectionString }.EnsureExists();
@@ -167,7 +167,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void SqlLoadTest()
+		public void LoadTest_SqlServerEventStoreProvider()
 		{
 			foreach (var i in Enumerable.Range(1, 1))
 			{

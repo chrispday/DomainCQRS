@@ -10,8 +10,6 @@ namespace Yeast.EventStore
 		IEventStore EventStore { get; set; }
 
 		void Receive(object command);
-		IEventReceiver Register<AR, C>()
-			where AR : IAggregateRoot
-			where C : ICommand;
+		//IEventReceiver Register<AggregateRoot, Command>();
 	}
 }

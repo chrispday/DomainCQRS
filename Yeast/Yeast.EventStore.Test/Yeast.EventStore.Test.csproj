@@ -58,10 +58,14 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Mock\MockAggregateRoot.cs" />
+    <Compile Include="Mock\MockCommand.cs" />
+    <Compile Include="Mock\MockEventStore.cs" />
     <Compile Include="SqlServerEventStoreProviderTests.cs" />
     <Compile Include="FileEventStoreProviderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="AggregateRootBaseTest.cs" />
+    <Compile Include="EventReceiverTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Yeast.EventStore\Yeast.EventStore.csproj">

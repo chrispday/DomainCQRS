@@ -9,35 +9,6 @@ namespace Yeast.EventStore.Test
 	[TestClass]
 	public class AggregateRootBaseTest
 	{
-		[Serializable]
-		public class TestCommand
-		{
-			public int Increment { get; set; }
-		}
-
-		[Serializable]
-		public class TestCommand2
-		{
-			public int Increment { get; set; }
-		}
-
-		public class AggregateTest : AggregateRootBase<AggregateTest>, IHandles<TestCommand>
-		{
-			public int Amount { get; set; }
-
-			public AggregateTest()
-			{
-				Amount = 0;
-			}
-
-			public AggregateTest(Guid id) : base(id) { }
-
-			public void Handle(TestCommand command)
-			{
-				Amount += command.Increment;
-			}
-		}
-
 		[TestInitialize]
 		public void Init()
 		{
@@ -53,33 +24,33 @@ namespace Yeast.EventStore.Test
 		}
 
 		[TestMethod]
-		public void NewAggregate()
+		public void AggregateRootBase_NewAggregate()
 		{
-			var at = new AggregateTest();
+			var at = new MockAggregateRoot();
 
 			Assert.AreNotEqual(Guid.Empty, at.AggregateId);
 			Assert.AreEqual(-1, at.Version);
 		}
 
 		[TestMethod]
-		public void LoadByConstructor()
+		public void AggregateRootBase_LoadByConstructor()
 		{
-			var at = new AggregateTest();
-			at.HandleCommand(new TestCommand() { Increment = 2 });
+			var at = new MockAggregateRoot();
+			at.HandleCommand(new MockCommand() { Increment = 2 });
 
 			Assert.AreEqual(2, at.Amount);
 
-			var at2 = new AggregateTest(at.AggregateId);
+			var at2 = new MockAggregateRoot(at.AggregateId);
 			Assert.AreEqual(at.AggregateId, at2.AggregateId);
 			Assert.AreEqual(2, at2.Amount);
 			Assert.AreEqual(at.Version, at2.Version);
 		}
 
 		[TestMethod, ExpectedException(typeof(CommandHandlerException))]
-		public void CommandWithoutHandler()
+		public void AggregateRootBase_CommandWithoutHandler()
 		{
-			var at = new AggregateTest();
-			at.HandleCommand(new TestCommand2());
+			var at = new MockAggregateRoot();
+			at.HandleCommand(new MockCommand2());
 		}
 	}
 }

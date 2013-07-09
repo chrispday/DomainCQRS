@@ -8,5 +8,6 @@ namespace Yeast.EventStore
 	public interface ICommand
 	{
 		Guid AggregateRootId { get; set; }
+		int Version { get; set; }
 	}
 }

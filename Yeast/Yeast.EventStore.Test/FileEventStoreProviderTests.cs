@@ -42,7 +42,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void EnsuresExists()
+		public void FileEventStoreProvider_EnsuresExists()
 		{
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 			try
@@ -60,7 +60,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void Save()
+		public void FileEventStoreProvider_Save()
 		{
 			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
@@ -90,7 +90,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod, ExpectedException(typeof(ConcurrencyException))]
-		public void Save_VersionExists()
+		public void FileEventStoreProvider_Save_VersionExists()
 		{
 			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
@@ -99,7 +99,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void Load()
+		public void FileEventStoreProvider_Load()
 		{
 			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
@@ -131,7 +131,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void Load_FromVersion()
+		public void FileEventStoreProvider_Load_FromVersion()
 		{
 			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
@@ -146,7 +146,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod, ExpectedException(typeof(ConcurrencyException))]
-		public void LoadAfterSaveOutOfOrder()
+		public void FileEventStoreProvider_LoadAfterSaveOutOfOrder()
 		{
 			var EventToStore = new EventToStore() { AggregateId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
 			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
@@ -178,7 +178,7 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void FileLoadTest()
+		public void LoadTest_FileEventStoreProvider()
 		{
 			foreach (var i in Enumerable.Range(1, 1))
 			{
