@@ -1,49 +1,58 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection.Emit;
-using System.Text;
 
 namespace Yeast.EventStore
 {
 	public abstract class AggregateRootBase : IAggregateRoot
 	{
-		public static IEventStore EventStore { get; set; }
-		public Guid AggregateId { get; set; }
+		public IEventStore EventStore { get; set; }
+		public Guid Id { get; set; }
 		public int Version { get; set; }
 
-		public AggregateRootBase()
+		public AggregateRootBase(IEventStore eventStore)
 		{
-			AggregateId = Guid.NewGuid();
+			EventStore = eventStore;
+			Id = Guid.NewGuid();
 			Version = -1;
 		}
 
-		public AggregateRootBase(Guid aggregateId)
+		public AggregateRootBase(IEventStore eventStore, Guid id)
+			: this(eventStore)
 		{
-			AggregateId = aggregateId;
+			Id = id;
 			Version = -1;
 			Load();
 		}
 
-		public virtual IAggregateRoot HandleCommand(object command)
+		public IEnumerable Apply(object command)
 		{
-			return Save(command).ApplyCommand(command);
+			return Save(GetApply(GetType(), command.GetType()).Invoke(this, command));
+		}
+
+		public object When(object @event)
+		{
+			return GetWhen(GetType(), @event.GetType()).Invoke(this, @event);
 		}
 
 		#region EventStore Related
 
-		protected virtual AggregateRootBase Save(object command)
+		protected virtual IEnumerable Save(IEnumerable events)
 		{
-			EventStore.Save(AggregateId, ++Version, command);
-			return this;
+			foreach (var @event in events)
+			{
+				EventStore.Save(Id, ++Version, When(@event));
+			}
+			return events;
 		}
 
 		protected virtual AggregateRootBase Load()
 		{
-			foreach (var storedEvent in EventStore.Load(AggregateId, null, null, null, null))
+			foreach (var storedEvent in EventStore.Load(Id, Version, null, null, null))
 			{
 				Version = storedEvent.Version;
-				ApplyCommand(storedEvent.Event);
+				When(storedEvent.Event);
 			}
 
 			return this;
@@ -53,28 +62,24 @@ namespace Yeast.EventStore
 
 		#region Automagic Command Handling
 
-		protected virtual AggregateRootBase ApplyCommand(object command)
-		{
-			GetApplyCommand(GetType(), command.GetType()).Invoke(this, command);
-			return this;
-		}
+		protected struct AggregateRootTypeAndType { public Type AggregateRootType; public Type Type; }
 
-		protected delegate void ApplyCommandInvoker(object aggregateRoot, object command);
-		protected struct AggregateRootAndCommandType { public Type AggregateRootType; public Type CommandType; }
-		protected static Dictionary<AggregateRootAndCommandType, ApplyCommandInvoker> ApplyCommandInvokers = new Dictionary<AggregateRootAndCommandType, ApplyCommandInvoker>();
-		protected static ApplyCommandInvoker GetApplyCommand(Type aggregateRootType, Type commandType)
+		protected delegate IEnumerable ApplyDelegate(object aggregateRoot, object command);
+		protected static Dictionary<AggregateRootTypeAndType, ApplyDelegate> ApplyDelegates = new Dictionary<AggregateRootTypeAndType, ApplyDelegate>();
+		protected static ApplyDelegate GetApply(Type aggregateRootType, Type commandType)
 		{
-			var key = new AggregateRootAndCommandType() { AggregateRootType = aggregateRootType, CommandType = commandType };
+			var key = new AggregateRootTypeAndType() { AggregateRootType = aggregateRootType, Type = commandType };
 
-			if (!ApplyCommandInvokers.ContainsKey(key))
+			if (!ApplyDelegates.ContainsKey(key))
 			{
-				var targetMethod = aggregateRootType.GetMethod("Handle", new Type[] { commandType });
-				if (null == targetMethod)
+				var targetMethod = aggregateRootType.GetMethod("Apply", new Type[] { commandType });
+				if (null == targetMethod
+					|| typeof(object) == targetMethod.GetParameters()[0].ParameterType)
 				{
-					throw new CommandHandlerException(string.Format("{0} does not handle {1}.", aggregateRootType.Name, commandType.Name)) { AggregateType = aggregateRootType, CommandType = commandType };
+					throw new CommandApplyException(string.Format("{0} does not handle {1}.", aggregateRootType.Name, commandType.Name)) { AggregateType = aggregateRootType, CommandType = commandType };
 				}
 
-				var dynamicMethod = new DynamicMethod(string.Format("ApplyCommand_{0}_{1}", aggregateRootType.Name, commandType.Name), null, new Type[] { typeof(object), typeof(object) });
+				var dynamicMethod = new DynamicMethod(string.Format("Apply_{0}_{1}", aggregateRootType.Name, commandType.Name), typeof(IEnumerable), new Type[] { typeof(object), typeof(object) });
 				var ilGenerator = dynamicMethod.GetILGenerator();
 
 				ilGenerator.Emit(OpCodes.Nop);
@@ -86,26 +91,50 @@ namespace Yeast.EventStore
 				ilGenerator.Emit(OpCodes.Nop);
 				ilGenerator.Emit(OpCodes.Ret);
 
-				lock (ApplyCommandInvokers)
+				lock (ApplyDelegates)
 				{
-					ApplyCommandInvokers[key] = (ApplyCommandInvoker)dynamicMethod.CreateDelegate(typeof(ApplyCommandInvoker));
+					ApplyDelegates[key] = (ApplyDelegate)dynamicMethod.CreateDelegate(typeof(ApplyDelegate));
 				}
 			}
 
-			return ApplyCommandInvokers[key];
+			return ApplyDelegates[key];
+		}
+
+		protected delegate object WhenDelegate(object aggregateRoot, object @event);
+		protected static Dictionary<AggregateRootTypeAndType, WhenDelegate> WhenDelegates = new Dictionary<AggregateRootTypeAndType, WhenDelegate>();
+		protected static WhenDelegate GetWhen(Type aggregateRootType, Type eventType)
+		{
+			var key = new AggregateRootTypeAndType() { AggregateRootType = aggregateRootType, Type = eventType };
+
+			if (!WhenDelegates.ContainsKey(key))
+			{
+				var targetMethod = aggregateRootType.GetMethod("When", new Type[] { eventType });
+				if (null == targetMethod)
+				{
+					throw new EventWhenException(string.Format("{0} does not handle {1}.", aggregateRootType.Name, eventType.Name)) { AggregateType = aggregateRootType, EventType = eventType };
+				}
+
+				var dynamicMethod = new DynamicMethod(string.Format("When_{0}_{1}", aggregateRootType.Name, eventType.Name), typeof(object), new Type[] { typeof(object), typeof(object) });
+				var ilGenerator = dynamicMethod.GetILGenerator();
+
+				ilGenerator.Emit(OpCodes.Nop);
+				ilGenerator.Emit(OpCodes.Ldarg_0);
+				ilGenerator.Emit(OpCodes.Castclass, aggregateRootType);
+				ilGenerator.Emit(OpCodes.Ldarg_1);
+				ilGenerator.Emit(OpCodes.Castclass, eventType);
+				ilGenerator.EmitCall(OpCodes.Callvirt, targetMethod, null);
+				ilGenerator.Emit(OpCodes.Nop);
+				ilGenerator.Emit(OpCodes.Ret);
+
+				lock (WhenDelegates)
+				{
+					WhenDelegates[key] = (WhenDelegate)dynamicMethod.CreateDelegate(typeof(WhenDelegate));
+				}
+			}
+
+			return WhenDelegates[key];
 		}
 
 		#endregion
-	}
-
-	public abstract class AggregateRootBase<T> : AggregateRootBase, IAggregateRoot<T>
-	{
-		public AggregateRootBase() : base() { }
-		public AggregateRootBase(Guid aggregateId) : base(aggregateId) { }
-
-		public new T HandleCommand(object command)
-		{
-			return (T)base.HandleCommand(command);
-		}
 	}
 }

@@ -9,48 +9,50 @@ namespace Yeast.EventStore.Test
 	[TestClass]
 	public class AggregateRootBaseTest
 	{
-		[TestInitialize]
-		public void Init()
+		static IEventStore EventStore;
+
+		[ClassInitialize]
+		public static void ClassInit(TestContext ctx)
 		{
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-			AggregateRootBase.EventStore = EventStore.Current = new EventStore() { Serializer = new BinaryFormatterSerializer(), EventStoreProvider = new FileEventStoreProvider() { Directory = directory }.EnsureExists() };
+			EventStore = new EventStore() { Serializer = new BinaryFormatterSerializer(), EventStoreProvider = new FileEventStoreProvider() { Directory = directory }.EnsureExists() };
 		}
 
-		[TestCleanup]
-		public void Cleanup()
+		[ClassCleanup]
+		public static void ClassCleanup()
 		{
-			(EventStore.Current.EventStoreProvider as FileEventStoreProvider).Dispose();
-			Directory.Delete((EventStore.Current.EventStoreProvider as FileEventStoreProvider).Directory, true);
+			(EventStore as FileEventStoreProvider).Dispose();
+			Directory.Delete((EventStore.EventStoreProvider as FileEventStoreProvider).Directory, true);
 		}
 
 		[TestMethod]
 		public void AggregateRootBase_NewAggregate()
 		{
-			var at = new MockAggregateRoot();
+			var at = new MockAggregateRoot(EventStore);
 
-			Assert.AreNotEqual(Guid.Empty, at.AggregateId);
+			Assert.AreNotEqual(Guid.Empty, at.Id);
 			Assert.AreEqual(-1, at.Version);
 		}
 
 		[TestMethod]
 		public void AggregateRootBase_LoadByConstructor()
 		{
-			var at = new MockAggregateRoot();
-			at.HandleCommand(new MockCommand() { Increment = 2 });
+			var at = new MockAggregateRoot(EventStore);
+			at.Apply((object)new MockCommand() { Increment = 2 });
 
 			Assert.AreEqual(2, at.Amount);
 
-			var at2 = new MockAggregateRoot(at.AggregateId);
-			Assert.AreEqual(at.AggregateId, at2.AggregateId);
+			var at2 = new MockAggregateRoot(EventStore, at.Id);
+			Assert.AreEqual(at.Id, at2.Id);
 			Assert.AreEqual(2, at2.Amount);
 			Assert.AreEqual(at.Version, at2.Version);
 		}
 
-		[TestMethod, ExpectedException(typeof(CommandHandlerException))]
+		[TestMethod, ExpectedException(typeof(CommandApplyException))]
 		public void AggregateRootBase_CommandWithoutHandler()
 		{
-			var at = new MockAggregateRoot();
-			at.HandleCommand(new MockCommand2());
+			var at = new MockAggregateRoot(EventStore);
+			at.Apply(new MockCommand2());
 		}
 	}
 }

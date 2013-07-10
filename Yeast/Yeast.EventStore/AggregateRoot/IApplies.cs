@@ -5,8 +5,8 @@ using System.Text;
 
 namespace Yeast.EventStore
 {
-	public interface IHandles<E>
+	public interface IApplies<C>
 	{
-		E When(E @event);
+		IEnumerable<object> Apply(C command);
 	}
 }

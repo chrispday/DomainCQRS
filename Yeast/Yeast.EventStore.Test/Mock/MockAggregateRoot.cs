@@ -6,20 +6,26 @@ using System.Threading.Tasks;
 
 namespace Yeast.EventStore.Test
 {
-	public class MockAggregateRoot : AggregateRootBase<MockAggregateRoot>, IHandles<MockCommand>
+	public class MockAggregateRoot : AggregateRootBase, IApplies<MockCommand>, IHandles<MockCommand>
 	{
 			public int Amount { get; set; }
 
-			public MockAggregateRoot()
+			public MockAggregateRoot(IEventStore eventStore) : base(eventStore)
 			{
 				Amount = 0;
 			}
 
-			public MockAggregateRoot(Guid id) : base(id) { }
+			public MockAggregateRoot(IEventStore eventStore, Guid id) : base(eventStore, id) { }
 
-			public void Handle(MockCommand command)
+			public IEnumerable<object> Apply(MockCommand command)
 			{
-				Amount += command.Increment;
+				return new object[] { command };
+			}
+
+			public MockCommand When(MockCommand @event)
+			{
+				Amount += @event.Increment;
+				return @event;
 			}
 	}
 }

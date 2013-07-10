@@ -44,12 +44,14 @@
   <ItemGroup>
     <Compile Include="AggregateRoot\AggregateRootBase.cs" />
     <Compile Include="AggregateRoot\IAggregateRoot.cs" />
+    <Compile Include="AggregateRoot\IApplies.cs" />
     <Compile Include="AggregateRoot\IHandles.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Common\LRUDictionary.cs" />
     <Compile Include="EventStore\EventStore.cs" />
-    <Compile Include="Exceptions\CommandHandlerException.cs" />
+    <Compile Include="Exceptions\CommandApplyException.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
+    <Compile Include="Exceptions\EventWhenException.cs" />
     <Compile Include="Exceptions\RegistrationException.cs" />
     <Compile Include="Exceptions\EventStoreException.cs" />
     <Compile Include="Exceptions\EventToStoreException.cs" />

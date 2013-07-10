@@ -1,20 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Collections;
 
 namespace Yeast.EventStore
 {
 	public interface IAggregateRoot
 	{
-		Guid AggregateId { get; set; }
+		Guid Id { get; set; }
 		int Version { get; set; }
 
-		IAggregateRoot HandleCommand(object command);
-	}
-
-	public interface IAggregateRoot<T> : IAggregateRoot
-	{
-		new T HandleCommand(object command);
+		IEnumerable Apply(object command);
+		object When(object @event);
 	}
 }
