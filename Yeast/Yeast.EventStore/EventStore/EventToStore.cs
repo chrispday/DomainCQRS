@@ -5,7 +5,7 @@ namespace Yeast.EventStore
 {
 	public class EventToStore
 	{
-		public Guid AggregateId { get; set; }
+		public Guid AggregateRootId { get; set; }
 		public int Version { get; set; }
 		public DateTime Timestamp { get; set; }
 		public byte[] Data { get; set; }

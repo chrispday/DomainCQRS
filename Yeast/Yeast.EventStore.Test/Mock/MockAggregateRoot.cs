@@ -15,7 +15,7 @@ namespace Yeast.EventStore.Test
 				Amount = 0;
 			}
 
-			public MockAggregateRoot(IEventStore eventStore, Guid id) : base(eventStore, id) { }
+			public MockAggregateRoot(IEventStore eventStore, Guid aggregateRootId) : base(eventStore, aggregateRootId) { }
 
 			public IEnumerable<object> Apply(MockCommand command)
 			{

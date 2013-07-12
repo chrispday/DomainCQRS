@@ -8,20 +8,20 @@ namespace Yeast.EventStore
 	public abstract class AggregateRootBase : IAggregateRoot
 	{
 		public IEventStore EventStore { get; set; }
-		public Guid Id { get; set; }
+		public Guid AggregateRootId { get; set; }
 		public int Version { get; set; }
 
 		public AggregateRootBase(IEventStore eventStore)
 		{
 			EventStore = eventStore;
-			Id = Guid.NewGuid();
+			AggregateRootId = Guid.NewGuid();
 			Version = -1;
 		}
 
-		public AggregateRootBase(IEventStore eventStore, Guid id)
+		public AggregateRootBase(IEventStore eventStore, Guid aggregateRootId)
 			: this(eventStore)
 		{
-			Id = id;
+			AggregateRootId = aggregateRootId;
 			Version = -1;
 			Load();
 		}
@@ -42,14 +42,14 @@ namespace Yeast.EventStore
 		{
 			foreach (var @event in events)
 			{
-				EventStore.Save(Id, ++Version, When(@event));
+				EventStore.Save(AggregateRootId, ++Version, When(@event));
 			}
 			return events;
 		}
 
 		protected virtual AggregateRootBase Load()
 		{
-			foreach (var storedEvent in EventStore.Load(Id, Version, null, null, null))
+			foreach (var storedEvent in EventStore.Load(AggregateRootId, Version, null, null, null))
 			{
 				Version = storedEvent.Version;
 				When(storedEvent.Event);

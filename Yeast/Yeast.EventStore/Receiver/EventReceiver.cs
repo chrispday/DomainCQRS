@@ -74,11 +74,11 @@ namespace Yeast.EventStore
 			return @delegate;
 		}
 
-		private delegate Guid GetAggregateId(object command);
-		private static Dictionary<Type, GetAggregateId> GetAggregateIdDelegates = new Dictionary<Type, GetAggregateId>();
-		private static GetAggregateId GetGetAggregateIdDelegate(Type commandType, string aggregateIdPropertyName)
+		private delegate Guid GetAggregateRootId(object command);
+		private static Dictionary<Type, GetAggregateRootId> GetAggregateIdDelegates = new Dictionary<Type, GetAggregateRootId>();
+		private static GetAggregateRootId GetGetAggregateIdDelegate(Type commandType, string aggregateIdPropertyName)
 		{
-			GetAggregateId @delegate;
+			GetAggregateRootId @delegate;
 			if (!GetAggregateIdDelegates.TryGetValue(commandType, out @delegate))
 			{
 				var dynamicMethod = new DynamicMethod("GetAggregateId_" + commandType.Name, typeof(Guid), new Type[] { typeof(object) });
@@ -92,14 +92,14 @@ namespace Yeast.EventStore
 
 				lock (GetAggregateIdDelegates)
 				{
-					GetAggregateIdDelegates[commandType] = @delegate = (GetAggregateId)dynamicMethod.CreateDelegate(typeof(GetAggregateId));
+					GetAggregateIdDelegates[commandType] = @delegate = (GetAggregateRootId)dynamicMethod.CreateDelegate(typeof(GetAggregateRootId));
 				}
 			}
 
 			return @delegate;
 		}
 
-		private delegate IAggregateRoot CreateAndLoadAggregateRoot(Guid aggregateId);
+		private delegate IAggregateRoot CreateAndLoadAggregateRoot(Guid aggregateRootId);
 		private static Dictionary<Type, CreateAndLoadAggregateRoot> CreateAndLoadAggregateRootDelegates = new Dictionary<Type, CreateAndLoadAggregateRoot>();
 		private static CreateAndLoadAggregateRoot GetCreateAndLoadAggregateRootDelegates(Type aggregateType)
 		{

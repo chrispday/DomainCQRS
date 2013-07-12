@@ -88,7 +88,7 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 			using (var conn = new SqlConnection(ConnectionString))
 			using (var cmd = new SqlCommand() { Connection = conn, CommandText = InsertCommand })
 			{
-				cmd.Parameters.Add(new SqlParameter("@AggregateId", eventToStore.AggregateId));
+				cmd.Parameters.Add(new SqlParameter("@AggregateId", eventToStore.AggregateRootId));
 				cmd.Parameters.Add(new SqlParameter("@Version", eventToStore.Version));
 				cmd.Parameters.Add(new SqlParameter("@Timestamp", eventToStore.Timestamp));
 				cmd.Parameters.Add(new SqlParameter("@Data", eventToStore.Data));
@@ -101,7 +101,7 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 				{
 					if (sEx.Errors.Cast<SqlError>().Any(sqlError => 2627 == sqlError.Number))
 					{
-						throw new ConcurrencyException("Version already exists.", sEx) { EventToStore = eventToStore, AggregateId = eventToStore.AggregateId, Version = eventToStore.Version };
+						throw new ConcurrencyException("Version already exists.", sEx) { EventToStore = eventToStore, AggregateRootId = eventToStore.AggregateRootId, Version = eventToStore.Version };
 					}
 
 					throw;
@@ -111,14 +111,14 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 			return this;
 		}
 
-		public IEnumerable<EventToStore> Load(Guid aggregateId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
+		public IEnumerable<EventToStore> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
 			string commandText = fromTimestamp.HasValue && toTimestamp.HasValue ? SelectCommandWithTimestamp : SelectCommand;
 
 			using (var conn = new SqlConnection(ConnectionString))
 			using (var cmd = new SqlCommand() { Connection = conn, CommandText =  commandText })
 			{
-				cmd.Parameters.Add(new SqlParameter("@AggregateId", aggregateId));
+				cmd.Parameters.Add(new SqlParameter("@AggregateId", aggregateRootId));
 				cmd.Parameters.Add(new SqlParameter("@FromVersion", fromVersion.GetValueOrDefault(-1)));
 				cmd.Parameters.Add(new SqlParameter("@ToVersion", toVersion.GetValueOrDefault(System.Data.SqlTypes.SqlInt32.MaxValue.Value)));
 				cmd.Parameters.Add(new SqlParameter("@FromTimestamp", fromTimestamp.GetValueOrDefault(System.Data.SqlTypes.SqlDateTime.MinValue.Value)));
@@ -130,7 +130,7 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 					{
 						yield return new EventToStore()
 						{
-							AggregateId = aggregateId,
+							AggregateRootId = aggregateRootId,
 							Version = reader.GetInt32(0),
 							Timestamp = reader.GetDateTime(1),
 							Data = reader.GetSqlBinary(2).Value

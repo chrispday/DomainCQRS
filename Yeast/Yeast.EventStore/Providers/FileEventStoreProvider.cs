@@ -26,7 +26,7 @@ namespace Yeast.EventStore.Provider
 			VersionTrackerCapacity = 10000;
 		}
 
-		private bool VersionExists(Guid aggregateId, int versionToCheck)
+		private bool VersionExists(Guid aggregateRootId, int versionToCheck)
 		{
 			if (null == VersionTracker)
 			{
@@ -34,7 +34,7 @@ namespace Yeast.EventStore.Provider
 			}
 
 			int lastSeenVersion = -1;
-			if (VersionTracker.TryGetValue(aggregateId, out lastSeenVersion))
+			if (VersionTracker.TryGetValue(aggregateRootId, out lastSeenVersion))
 			{
 				return versionToCheck <= lastSeenVersion;
 			}
@@ -61,7 +61,7 @@ namespace Yeast.EventStore.Provider
 
 				VersionTracker[savedAggregateId] = version;
 
-				if (aggregateId == savedAggregateId
+				if (aggregateRootId == savedAggregateId
 					&& version == versionToCheck)
 				{
 					VersionTrackerLastPosition = VersionReaderStream.Position;
@@ -105,9 +105,9 @@ namespace Yeast.EventStore.Provider
 				EventWriter = new BinaryWriter(OpenFile(FileAccess.Write));
 			}
 
-			if (VersionExists(eventToStore.AggregateId, eventToStore.Version))
+			if (VersionExists(eventToStore.AggregateRootId, eventToStore.Version))
 			{
-				throw new ConcurrencyException() { EventToStore = eventToStore, AggregateId = eventToStore.AggregateId, Version = eventToStore.Version };
+				throw new ConcurrencyException() { EventToStore = eventToStore, AggregateRootId = eventToStore.AggregateRootId, Version = eventToStore.Version };
 			}
 
 			if (EventWriter.BaseStream.Length != EventWriter.BaseStream.Position)
@@ -115,19 +115,19 @@ namespace Yeast.EventStore.Provider
 				EventWriter.Seek(0, SeekOrigin.End);
 			}
 
-			EventWriter.Write(eventToStore.AggregateId.ToByteArray());
+			EventWriter.Write(eventToStore.AggregateRootId.ToByteArray());
 			EventWriter.Write(eventToStore.Version);
 			EventWriter.Write(eventToStore.Data.Length);
 			EventWriter.Write(eventToStore.Timestamp.ToBinary());
 			EventWriter.Write(eventToStore.Data);
 			EventWriter.Flush();
 
-			VersionTracker[eventToStore.AggregateId] = eventToStore.Version;
+			VersionTracker[eventToStore.AggregateRootId] = eventToStore.Version;
 
 			return this;
 		}
 
-		public IEnumerable<EventToStore> Load(Guid aggregateId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
+		public IEnumerable<EventToStore> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
 			using (var reader = new BinaryReader(OpenFile(FileAccess.Read)))
 			{
@@ -140,7 +140,7 @@ namespace Yeast.EventStore.Provider
 					var timestamp = DateTime.FromBinary(reader.ReadInt64());
 					var data = reader.ReadBytes(dataSize);
 
-					if (aggregateId == savedAggregateId
+					if (aggregateRootId == savedAggregateId
 						&& version >= fromVersion.GetValueOrDefault(-1)
 						&& version <= toVersion.GetValueOrDefault(int.MaxValue)
 						&& timestamp >= fromTimestamp.GetValueOrDefault(DateTime.MinValue)
@@ -148,7 +148,7 @@ namespace Yeast.EventStore.Provider
 					{
 						yield return new EventToStore()
 						{
-							AggregateId = aggregateId,
+							AggregateRootId = aggregateRootId,
 							Version = version,
 							Timestamp = timestamp,
 							Data = data
@@ -170,21 +170,6 @@ namespace Yeast.EventStore.Provider
 				VersionReader.Close();
 				VersionReader = null;
 			}
-		}
-	}
-
-	public static class StoredEventExtensions
-	{
-		public static string CreateAggregatePath(this Guid aggregateId, string baseDirectory)
-		{
-			var aggregateDirector = Path.Combine(baseDirectory, Path.Combine(aggregateId.ToString().Substring(0, 4), aggregateId.ToString().Substring(4, 4)));
-			
-			if (!Directory.Exists(aggregateDirector))
-			{
-				Directory.CreateDirectory(aggregateDirector);
-			}
-
-			return Path.Combine(aggregateDirector, aggregateId.ToString());
 		}
 	}
 }

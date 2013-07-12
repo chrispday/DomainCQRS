@@ -24,10 +24,10 @@ namespace Yeast.EventStore.Test
 		{
 			var eventStore = new MockEventStore();
 			var eventReceiver = new EventReceiver() { EventStore = eventStore, AggregateIdPropertyName = "Id", VersionPropertyName = "Ver" };
-			var command = new MockCommand2() { Id = Guid.NewGuid(), Ver = 1, Increment = 0 };
+			var command = new MockCommand2() { AggregateRootId = Guid.NewGuid(), Ver = 1, Increment = 0 };
 			eventReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
-			Assert.AreEqual(command.Id, eventStore.Saved[0].Item1);
+			Assert.AreEqual(command.AggregateRootId, eventStore.Saved[0].Item1);
 			Assert.AreEqual(command.Ver, eventStore.Saved[0].Item2);
 			Assert.AreSame(command, eventStore.Saved[0].Item3);
 		}

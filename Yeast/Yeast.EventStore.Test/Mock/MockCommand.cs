@@ -18,7 +18,7 @@ namespace Yeast.EventStore
 	public class MockCommand2
 	{
 		public int Increment { get; set; }
-		public Guid Id { get; set; }
+		public Guid AggregateRootId { get; set; }
 		public int Ver { get; set; }
 	}
 }

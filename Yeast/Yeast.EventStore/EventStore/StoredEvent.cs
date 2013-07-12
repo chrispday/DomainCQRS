@@ -6,7 +6,7 @@ namespace Yeast.EventStore
 {
 	public class StoredEvent
 	{
-		public Guid AggregateId { get; set; }
+		public Guid AggregateRootId { get; set; }
 		public int Version { get; set; }
 		public object Event { get; set; }
 	}

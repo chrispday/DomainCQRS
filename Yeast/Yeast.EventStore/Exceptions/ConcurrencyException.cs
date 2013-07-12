@@ -14,7 +14,7 @@ namespace Yeast.EventStore
 		public ConcurrencyException(string message, Exception innerException) : base(message, innerException) { }
 		public ConcurrencyException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 
-		public Guid AggregateId { get; set; }
+		public Guid AggregateRootId { get; set; }
 		public int Version { get; set; }
 	}
 }

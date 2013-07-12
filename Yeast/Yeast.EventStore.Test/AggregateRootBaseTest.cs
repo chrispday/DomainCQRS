@@ -30,7 +30,7 @@ namespace Yeast.EventStore.Test
 		{
 			var at = new MockAggregateRoot(EventStore);
 
-			Assert.AreNotEqual(Guid.Empty, at.Id);
+			Assert.AreNotEqual(Guid.Empty, at.AggregateRootId);
 			Assert.AreEqual(-1, at.Version);
 		}
 
@@ -42,8 +42,8 @@ namespace Yeast.EventStore.Test
 
 			Assert.AreEqual(2, at.Amount);
 
-			var at2 = new MockAggregateRoot(EventStore, at.Id);
-			Assert.AreEqual(at.Id, at2.Id);
+			var at2 = new MockAggregateRoot(EventStore, at.AggregateRootId);
+			Assert.AreEqual(at.AggregateRootId, at2.AggregateRootId);
 			Assert.AreEqual(2, at2.Amount);
 			Assert.AreEqual(at.Version, at2.Version);
 		}

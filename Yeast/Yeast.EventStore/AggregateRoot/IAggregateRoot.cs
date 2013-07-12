@@ -5,7 +5,7 @@ namespace Yeast.EventStore
 {
 	public interface IAggregateRoot
 	{
-		Guid Id { get; set; }
+		Guid AggregateRootId { get; set; }
 		int Version { get; set; }
 
 		IEnumerable Apply(object command);

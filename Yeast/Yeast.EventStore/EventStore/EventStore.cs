@@ -32,18 +32,18 @@ namespace Yeast.EventStore
 
 		public static IEventStore Current { get; set; }
 
-		public IEventStore Save<T>(Guid aggregateId, int version, T data)
+		public IEventStore Save<T>(Guid aggregateRootId, int version, T data)
 		{
-			EventStoreProvider.Save(new EventToStore() { AggregateId = aggregateId, Version = version, Timestamp = DateTime.Now, Data = Serialize<T>(data) });
+			EventStoreProvider.Save(new EventToStore() { AggregateRootId = aggregateRootId, Version = version, Timestamp = DateTime.Now, Data = Serialize<T>(data) });
 			return this;
 		}
 
-		public IEnumerable<StoredEvent> Load(Guid aggregateId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
+		public IEnumerable<StoredEvent> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
 			return
-				from storedEvent in EventStoreProvider.Load(aggregateId, fromVersion, toVersion, fromTimestamp, toTimestamp)
+				from storedEvent in EventStoreProvider.Load(aggregateRootId, fromVersion, toVersion, fromTimestamp, toTimestamp)
 				orderby storedEvent.Version
-				select new StoredEvent() { AggregateId = aggregateId, Version = storedEvent.Version, Event = Deserialize(storedEvent.Data) };
+				select new StoredEvent() { AggregateRootId = aggregateRootId, Version = storedEvent.Version, Event = Deserialize(storedEvent.Data) };
 		}
 
 		private object Deserialize(byte[] data)

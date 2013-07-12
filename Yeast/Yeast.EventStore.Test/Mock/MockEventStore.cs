@@ -21,13 +21,13 @@ namespace Yeast.EventStore.Test
 		}
 
 		public List<Tuple<Guid, int, object>> Saved = new List<Tuple<Guid, int, object>>();
-		public IEventStore Save<T>(Guid aggregateId, int version, T data)
+		public IEventStore Save<T>(Guid aggregateRootId, int version, T data)
 		{
-			Saved.Add(Tuple.Create(aggregateId, version, (object)data));
+			Saved.Add(Tuple.Create(aggregateRootId, version, (object)data));
 			return this;
 		}
 
-		public IEnumerable<StoredEvent> Load(Guid aggregateId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
+		public IEnumerable<StoredEvent> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
 			throw new NotImplementedException();
 		}
