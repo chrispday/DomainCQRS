@@ -9,6 +9,7 @@ namespace Yeast.EventStore
 	{
 		IEventStoreProvider EventStoreProvider { get; set; }
 
+		// Messages
 		IEventStore Save<T>(Guid aggregateRootId, int version, T data);
 		IEnumerable<StoredEvent> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp);
 	}

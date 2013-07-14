@@ -29,7 +29,9 @@ namespace Yeast.EventStore.Test
 
 		public IEnumerable<StoredEvent> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
-			throw new NotImplementedException();
+			return from s in Saved
+					 where s.Item1 == aggregateRootId
+					 select new StoredEvent() { AggregateRootId = aggregateRootId, Version = s.Item2, Event = s.Item3 };
 		}
 	}
 }

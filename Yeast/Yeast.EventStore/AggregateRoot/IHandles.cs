@@ -1,12 +1,13 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 namespace Yeast.EventStore
 {
-	public interface IHandles<E>
+	public interface IHandles<M>
 	{
-		E When(E @event);
+		IEnumerable Apply(M message);
 	}
 }

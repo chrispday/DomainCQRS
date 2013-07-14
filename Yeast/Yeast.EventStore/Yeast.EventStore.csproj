@@ -58,8 +58,8 @@
     <Compile Include="EventStore\IEventCache.cs" />
     <Compile Include="EventStore\IEventDeduper.cs" />
     <Compile Include="EventStore\IEventPartitioner.cs" />
-    <Compile Include="Receiver\EventReceiver.cs" />
-    <Compile Include="Receiver\IEventReceiver.cs" />
+    <Compile Include="Receiver\MessageReceiver.cs" />
+    <Compile Include="Receiver\IMessageReceiver.cs" />
     <Compile Include="EventStore\IEventResequencer.cs" />
     <Compile Include="Serializers\IEventSerializer.cs" />
     <Compile Include="EventStore\IEventStore.cs" />

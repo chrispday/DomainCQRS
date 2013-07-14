@@ -11,7 +11,13 @@ namespace Yeast.EventStore
 	{
 		public int Increment { get; set; }
 		public Guid AggregateRootId { get; set; }
+		public Guid[] AggregateRootIds { get; set; }
 		public int Version { get; set; }
+
+		object xxx()
+		{
+			return new MockCommand();
+		}
 	}
 
 	[Serializable]

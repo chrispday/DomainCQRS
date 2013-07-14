@@ -10,7 +10,7 @@ namespace Yeast.EventStore.Test
 		public void EventReceiver_Receive()
 		{
 			var eventStore = new MockEventStore();
-			var eventReceiver = new EventReceiver() { EventStore = eventStore };
+			var eventReceiver = new MessageReceiver() { EventStore = eventStore }.Register<MockCommand, MockAggregateRoot>();
 			var command = new MockCommand() { AggregateRootId = Guid.NewGuid(), Version = 1, Increment = 0 };
 			eventReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
@@ -23,7 +23,7 @@ namespace Yeast.EventStore.Test
 		public void EventReceiver_Receive_CustomNames_NotICommand()
 		{
 			var eventStore = new MockEventStore();
-			var eventReceiver = new EventReceiver() { EventStore = eventStore, AggregateIdPropertyName = "Id", VersionPropertyName = "Ver" };
+			var eventReceiver = new MessageReceiver() { EventStore = eventStore, DefaultAggregateRootIdProperty = "Id" };
 			var command = new MockCommand2() { AggregateRootId = Guid.NewGuid(), Ver = 1, Increment = 0 };
 			eventReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);

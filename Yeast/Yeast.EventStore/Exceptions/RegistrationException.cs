@@ -14,6 +14,6 @@ namespace Yeast.EventStore
 		public RegistrationException(string message, Exception innerException) : base(message, innerException) { }
 		public RegistrationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 
-		public Type CommandType { get; set; }
+		public Type MessageType { get; set; }
 	}
 }
