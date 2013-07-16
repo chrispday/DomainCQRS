@@ -7,27 +7,39 @@ using System.Threading.Tasks;
 
 namespace Yeast.EventStore.Test
 {
-	public class MockAggregateRoot : AggregateRootBase, IHandles<MockCommand>
+	public class MockAggregateRoot : AggregateRootBase, IHandlesCommand<MockCommand>, IHandlesEvent<MockEvent>, IHandlesCommand<MockCommand2>
 	{
-			public int Amount { get; set; }
+		public int Amount { get; set; }
 
-			public MockAggregateRoot(IEventStore eventStore)
-				: base(eventStore)
-			{
-				Amount = 0;
-			}
+		public MockAggregateRoot(IEventStore eventStore)
+			: base(eventStore)
+		{
+			Amount = 0;
+		}
 
-			public MockAggregateRoot() : base(null)
-			{
-				Amount = 0;
-			}
+		public MockAggregateRoot()
+			: base(null)
+		{
+			Amount = 0;
+		}
 
-			public MockAggregateRoot(IEventStore eventStore, Guid aggregateRootId) : base(eventStore, aggregateRootId) { }
+		public MockAggregateRoot(IEventStore eventStore, Guid aggregateRootId) : base(eventStore, aggregateRootId) { }
 
-			public IEnumerable Apply(MockCommand @event)
-			{
-				Amount += @event.Increment;
-				return new object[] { };
-			}
+		public IEnumerable Apply(MockCommand command)
+		{
+			Amount += command.Increment;
+			return new object[] { new MockEvent() { Increment = command.Increment } };
+		}
+
+		public void Apply(MockEvent @event)
+		{
+			Amount += @event.Increment;
+		}
+
+		public IEnumerable Apply(MockCommand2 command)
+		{
+			Amount += command.Increment;
+			return new object[] { new MockEvent() { Increment = command.Increment } };
+		}
 	}
 }

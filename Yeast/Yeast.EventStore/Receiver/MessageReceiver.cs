@@ -21,7 +21,7 @@ namespace Yeast.EventStore
 			DefaultAggregateRootApplyCommandMethod = "Apply";
 		}
 
-		public void Receive(object message)
+		public IMessageReceiver Receive(object message)
 		{
 			var messageType = message.GetType();
 
@@ -38,16 +38,18 @@ namespace Yeast.EventStore
 					foreach (var aggregateRootId in ExtractAggregateRootIdsFromMessage(messageType, propertyAndMethod.Property, message))
 					{
 						var aggregateRoot = CreateAggregateRoot(aggregateRootType.Key);
-						var messages = EventStore.Load(aggregateRootId, null, null, null, null);
-						var version = LoadAggreateRoot(aggregateRootType.Key, propertyAndMethod.Method, aggregateRoot, messages);
-						var events = ApplyMessageToAggregate(messageType, aggregateRootType.Key, propertyAndMethod.Method, message, aggregateRoot);
-						foreach (var @event in events)
+						var eventsToLoad = EventStore.Load(aggregateRootId, null, null, null, null);
+						var version = LoadAggreateRoot(aggregateRootType.Key, aggregateRoot, eventsToLoad);
+						var eventsToStore = ApplyCommandToAggregate(messageType, aggregateRootType.Key, propertyAndMethod.Method, message, aggregateRoot);
+						foreach (var @event in eventsToStore)
 						{
 							EventStore.Save(aggregateRootId, ++version, @event);
 						}
 					}
 				}
 			}
+
+			return this;
 		}
 
 		private delegate IEnumerable<Guid> GetAggregateRootIds(object message);
@@ -93,56 +95,124 @@ namespace Yeast.EventStore
 			return createAggregateRoot();
 		}
 
-		private int LoadAggreateRoot(Type aggregateRootType, MethodInfo applyMethod, object aggregateRoot, IEnumerable<StoredEvent> messages)
+		private int LoadAggreateRoot(Type aggregateRootType, object aggregateRoot, IEnumerable<StoredEvent> events)
 		{
-			int version = -1;
-			foreach (var message in messages)
+			int version = 0;
+			foreach (var @event in events)
 			{
-				if (version < message.Version)
+				if (version < @event.Version)
 				{
-					version = message.Version;
+					version = @event.Version;
 				}
 
-				ApplyMessageToAggregate(message.Event.GetType(), aggregateRootType, applyMethod, message.Event, aggregateRoot);
+				ApplyEventToAggregate(@event.Event.GetType(), aggregateRootType, @event.Event, aggregateRoot);
 			}
 
 			return version;
 		}
 
-		private delegate IEnumerable ApplyMessage(object aggregateRoot, object message);
-		private Dictionary<Type, Dictionary<Type, ApplyMessage>> _perMessagePerAggregateRootApplyMessages = new Dictionary<Type, Dictionary<Type, ApplyMessage>>();
-		private IEnumerable ApplyMessageToAggregate(Type messageType, Type aggregateRootType, MethodInfo applyMethod, object message, object aggregateRoot)
+		private delegate void ApplyEvent(object aggregateRoot, object @event);
+		private Dictionary<Type, Dictionary<Type, ApplyEvent>> _perMessagePerAggregateRootApplyEvents = new Dictionary<Type, Dictionary<Type, ApplyEvent>>();
+		private void ApplyEventToAggregate(Type eventType, Type aggregateRootType, object @event, object aggregateRoot)
 		{
-			Dictionary<Type, ApplyMessage> perAggregateApplyMessages;
-			if (!_perMessagePerAggregateRootApplyMessages.TryGetValue(messageType, out perAggregateApplyMessages))
+			Dictionary<Type, ApplyEvent> perAggregateApplyEvents;
+			if (!_perMessagePerAggregateRootApplyEvents.TryGetValue(eventType, out perAggregateApplyEvents))
 			{
-				_perMessagePerAggregateRootApplyMessages.Add(messageType, perAggregateApplyMessages = new Dictionary<Type, ApplyMessage>());
+				_perMessagePerAggregateRootApplyEvents.Add(eventType, perAggregateApplyEvents = new Dictionary<Type, ApplyEvent>());
 			}
 
-			ApplyMessage applyMessage;
-			if (!perAggregateApplyMessages.TryGetValue(aggregateRootType, out applyMessage))
+			ApplyEvent applyEvent;
+			if (!perAggregateApplyEvents.TryGetValue(aggregateRootType, out applyEvent))
 			{
-				perAggregateApplyMessages.Add(aggregateRootType, applyMessage = CreateApplyMessage(messageType, aggregateRootType, applyMethod));
+				MethodInfo applyMethod = null;
+				foreach (var method in aggregateRootType.GetMethods())
+				{
+					if (null == method.ReturnType)
+					{
+						continue;
+					}
+
+					var parameters = method.GetParameters();
+					if (null == parameters)
+					{
+						continue;
+					}
+
+					if (1 != parameters.Length)
+					{
+						continue;
+					}
+
+					if (eventType != parameters[0].ParameterType)
+					{
+						continue;
+					}
+
+					applyMethod = method;
+					break;
+				}
+				if (null == applyMethod)
+				{
+					throw new RegistrationException(string.Format("{0} does not contain a method to apply {1}.", aggregateRootType.Name, eventType.Name));
+				}
+
+				perAggregateApplyEvents.Add(aggregateRootType, applyEvent = CreateApplyEvent(eventType, aggregateRootType, applyMethod));
 			}
 
-			return applyMessage(aggregateRoot, message);
+			applyEvent(aggregateRoot, @event);
 		}
 
-		private ApplyMessage CreateApplyMessage(Type messageType, Type aggregateRootType, MethodInfo applyMethod)
+		private ApplyEvent CreateApplyEvent(Type eventType, Type aggregateRootType, MethodInfo applyMethod)
 		{
-			var dynamicMethod = new DynamicMethod(string.Format("Apply_{0}_{1}", aggregateRootType.Name, messageType.Name), typeof(IEnumerable), new Type[] { typeof(object), typeof(object) });
+			var dynamicMethod = new DynamicMethod(string.Format("ApplyEvent_{0}_{1}", aggregateRootType.Name, eventType.Name), null, new Type[] { typeof(object), typeof(object) });
 			var ilGenerator = dynamicMethod.GetILGenerator();
 
 			ilGenerator.Emit(OpCodes.Nop);
 			ilGenerator.Emit(OpCodes.Ldarg_0);
 			ilGenerator.Emit(OpCodes.Castclass, aggregateRootType);
 			ilGenerator.Emit(OpCodes.Ldarg_1);
-			ilGenerator.Emit(OpCodes.Castclass, messageType);
+			ilGenerator.Emit(OpCodes.Castclass, eventType);
 			ilGenerator.EmitCall(OpCodes.Callvirt, applyMethod, null);
 			ilGenerator.Emit(OpCodes.Nop);
 			ilGenerator.Emit(OpCodes.Ret);
 
-			return (ApplyMessage)dynamicMethod.CreateDelegate(typeof(ApplyMessage));
+			return (ApplyEvent)dynamicMethod.CreateDelegate(typeof(ApplyEvent));
+		}
+
+		private delegate IEnumerable ApplyCommand(object aggregateRoot, object command);
+		private Dictionary<Type, Dictionary<Type, ApplyCommand>> _perMessagePerAggregateRootApplyCommands = new Dictionary<Type, Dictionary<Type, ApplyCommand>>();
+		private IEnumerable ApplyCommandToAggregate(Type messageType, Type aggregateRootType, MethodInfo applyMethod, object command, object aggregateRoot)
+		{
+			Dictionary<Type, ApplyCommand> perAggregateApplyCommands;
+			if (!_perMessagePerAggregateRootApplyCommands.TryGetValue(messageType, out perAggregateApplyCommands))
+			{
+				_perMessagePerAggregateRootApplyCommands.Add(messageType, perAggregateApplyCommands = new Dictionary<Type, ApplyCommand>());
+			}
+
+			ApplyCommand applyCommand;
+			if (!perAggregateApplyCommands.TryGetValue(aggregateRootType, out applyCommand))
+			{
+				perAggregateApplyCommands.Add(aggregateRootType, applyCommand = CreateApplyCommand(messageType, aggregateRootType, applyMethod));
+			}
+
+			return applyCommand(aggregateRoot, command);
+		}
+
+		private ApplyCommand CreateApplyCommand(Type commandType, Type aggregateRootType, MethodInfo applyMethod)
+		{
+			var dynamicMethod = new DynamicMethod(string.Format("ApplyCommand_{0}_{1}", aggregateRootType.Name, commandType.Name), typeof(IEnumerable), new Type[] { typeof(object), typeof(object) });
+			var ilGenerator = dynamicMethod.GetILGenerator();
+
+			ilGenerator.Emit(OpCodes.Nop);
+			ilGenerator.Emit(OpCodes.Ldarg_0);
+			ilGenerator.Emit(OpCodes.Castclass, aggregateRootType);
+			ilGenerator.Emit(OpCodes.Ldarg_1);
+			ilGenerator.Emit(OpCodes.Castclass, commandType);
+			ilGenerator.EmitCall(OpCodes.Callvirt, applyMethod, null);
+			ilGenerator.Emit(OpCodes.Nop);
+			ilGenerator.Emit(OpCodes.Ret);
+
+			return (ApplyCommand)dynamicMethod.CreateDelegate(typeof(ApplyCommand));
 		}
 
 		public IMessageReceiver Register<Message, AggregateRoot>()

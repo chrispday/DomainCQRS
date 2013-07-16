@@ -45,7 +45,8 @@
     <Compile Include="AggregateRoot\AggregateRootBase.cs" />
     <Compile Include="AggregateRoot\IAggregateRoot.cs" />
     <Compile Include="AggregateRoot\IApplies.cs" />
-    <Compile Include="AggregateRoot\IHandles.cs" />
+    <Compile Include="AggregateRoot\IHandlesCommand.cs" />
+    <Compile Include="AggregateRoot\IHandlesEvent.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Common\LRUDictionary.cs" />
     <Compile Include="EventStore\EventStore.cs" />

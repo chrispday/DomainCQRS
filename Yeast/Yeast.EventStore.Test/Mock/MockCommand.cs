@@ -1,30 +1,44 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
+using ProtoBuf;
 
 namespace Yeast.EventStore
 {
 	[Serializable]
+	[DataContract]
+	[ProtoContract]
+	[ProtoInclude(100, typeof(MockEvent))]
 	public class MockCommand : ICommand
 	{
+		[DataMember]
+		[ProtoMember(1)]
 		public int Increment { get; set; }
+		[DataMember]
+		[ProtoMember(2)]
 		public Guid AggregateRootId { get; set; }
-		public Guid[] AggregateRootIds { get; set; }
-		public int Version { get; set; }
-
-		object xxx()
-		{
-			return new MockCommand();
-		}
 	}
 
 	[Serializable]
+	[DataContract]
+	[ProtoContract]
+	public class MockEvent : MockCommand
+	{
+	}
+
+	[Serializable]
+	[DataContract]
+	[ProtoContract]
 	public class MockCommand2
 	{
+		[DataMember]
+		[ProtoMember(1)]
 		public int Increment { get; set; }
-		public Guid AggregateRootId { get; set; }
-		public int Ver { get; set; }
+		[DataMember]
+		[ProtoMember(2)]
+		public Guid Id { get; set; }
 	}
 }

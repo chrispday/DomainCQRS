@@ -9,7 +9,7 @@ namespace Yeast.EventStore
 	{
 		IEventStore EventStore { get; set; }
 
-		void Receive(object message);
+		IMessageReceiver Receive(object message);
 		IMessageReceiver Register<Message, AggregateRoot>();
 		IMessageReceiver Register<Message, AggregateRoot>(string aggregateRootIdsProperty, string aggregateRootApplyCommandMethod);
 	}

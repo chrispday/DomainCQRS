@@ -1,35 +1,75 @@
 ﻿using System;
+using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Yeast.EventStore.Provider;
+using System.Linq;
 
 namespace Yeast.EventStore.Test
 {
 	[TestClass]
 	public class EventReceiverTests
 	{
+		static IEventStore EventStore;
+
+		[ClassInitialize]
+		public static void ClassInit(TestContext ctx)
+		{
+			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+			EventStore = new EventStore() { Serializer = new BinaryFormatterSerializer(), EventStoreProvider = new FileEventStoreProvider() { Directory = directory }.EnsureExists() };
+		}
+
+		[ClassCleanup]
+		public static void ClassCleanup()
+		{
+			(EventStore as FileEventStoreProvider).Dispose();
+			Directory.Delete((EventStore.EventStoreProvider as FileEventStoreProvider).Directory, true);
+		}
+
 		[TestMethod]
 		public void EventReceiver_Receive()
 		{
 			var eventStore = new MockEventStore();
 			var eventReceiver = new MessageReceiver() { EventStore = eventStore }.Register<MockCommand, MockAggregateRoot>();
-			var command = new MockCommand() { AggregateRootId = Guid.NewGuid(), Version = 1, Increment = 0 };
+			var command = new MockCommand() { AggregateRootId = Guid.NewGuid(), Increment = 1 };
 			eventReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
 			Assert.AreEqual(command.AggregateRootId, eventStore.Saved[0].Item1);
-			Assert.AreEqual(command.Version, eventStore.Saved[0].Item2);
-			Assert.AreSame(command, eventStore.Saved[0].Item3);
+			Assert.IsInstanceOfType(eventStore.Saved[0].Item3, typeof(MockEvent));
+			Assert.AreEqual(command.Increment, ((MockEvent)eventStore.Saved[0].Item3).Increment);
 		}
 
 		[TestMethod]
 		public void EventReceiver_Receive_CustomNames_NotICommand()
 		{
 			var eventStore = new MockEventStore();
-			var eventReceiver = new MessageReceiver() { EventStore = eventStore, DefaultAggregateRootIdProperty = "Id" };
-			var command = new MockCommand2() { AggregateRootId = Guid.NewGuid(), Ver = 1, Increment = 0 };
+			var eventReceiver = new MessageReceiver() { EventStore = eventStore, DefaultAggregateRootIdProperty = "Id" }.Register<MockCommand2, MockAggregateRoot>();
+			var command = new MockCommand2() { Id = Guid.NewGuid(), Increment = 0 };
 			eventReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
-			Assert.AreEqual(command.AggregateRootId, eventStore.Saved[0].Item1);
-			Assert.AreEqual(command.Ver, eventStore.Saved[0].Item2);
-			Assert.AreSame(command, eventStore.Saved[0].Item3);
+			Assert.AreEqual(command.Id, eventStore.Saved[0].Item1);
+			Assert.IsInstanceOfType(eventStore.Saved[0].Item3, typeof(MockEvent));
+			Assert.AreEqual(command.Increment, ((MockEvent)eventStore.Saved[0].Item3).Increment);
+		}
+
+		[TestMethod]
+		public void EventReceiver_Receive2Commands()
+		{
+			var eventReceiver = new MessageReceiver() { EventStore = EventStore }
+				.Register<MockCommand, MockAggregateRoot>()
+				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
+
+			var id = Guid.NewGuid();
+
+			eventReceiver
+				.Receive(new MockCommand() { AggregateRootId = id, Increment = 1 })
+				.Receive(new MockCommand2() { Id = id, Increment = 2 });
+
+			var storedEvents = EventStore.Load(id, null, null, null, null).ToList();
+			Assert.AreEqual(2, storedEvents.Count);
+			Assert.IsInstanceOfType(storedEvents[0].Event, typeof(MockEvent));
+			Assert.AreEqual(1, ((MockEvent)storedEvents[0].Event).Increment);
+			Assert.IsInstanceOfType(storedEvents[1].Event, typeof(MockEvent));
+			Assert.AreEqual(2, ((MockEvent)storedEvents[1].Event).Increment);
 		}
 	}
 }
