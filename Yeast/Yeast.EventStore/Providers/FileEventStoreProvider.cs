@@ -1,29 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-
+using System.Runtime.InteropServices;
 using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore.Provider
 {
 	public class FileEventStoreProvider : IEventStoreProvider, IDisposable
 	{
+
 		public string Directory { get; set; }
 		public TimeSpan LockTimeout { get; set; }
 		public int OpenFileRetryCount { get; set; }
 		public int VersionTrackerCapacity { get; set; }
-		private BinaryWriter EventWriter;
-		private Stream VersionReaderStream;
-		private BinaryReader VersionReader;
+		public int EventStreamCapacity { get; set; }
 		private LRUDictionary<Guid, int> VersionTracker;
-		private long VersionTrackerLastPosition;
-		private const short Check = 666;
+		private EventStreams<byte> EventStreams;
 
 		public FileEventStoreProvider()
 		{
 			LockTimeout = TimeSpan.FromSeconds(5);
 			OpenFileRetryCount = 5;
 			VersionTrackerCapacity = 10000;
+			EventStreamCapacity = 100;
 		}
 
 		private bool VersionExists(Guid aggregateRootId, int versionToCheck)
@@ -39,44 +38,47 @@ namespace Yeast.EventStore.Provider
 				return versionToCheck <= lastSeenVersion;
 			}
 
-			if (null == VersionReader)
+			var index = aggregateRootId.ToByteArray()[0];
+
+			if (!EventStreams.VersionTrackerLastPositions.ContainsKey(index))
 			{
-				VersionReaderStream = OpenFile(FileAccess.Read);
-				VersionReader = new BinaryReader(VersionReaderStream);
+				EventStreams.VersionTrackerLastPositions[index] = 0;
 			}
 
-			if (VersionReaderStream.Position != VersionTrackerLastPosition)
+			var reader = EventStreams.Reader(index);
+			var stream = reader.BaseStream;
+			var streamLength = stream.Length;
+
+			var position = EventStreams.VersionTrackerLastPositions[index];
+			if (stream.Position != position)
 			{
-				VersionReaderStream.Seek(VersionTrackerLastPosition, SeekOrigin.Begin);
+				stream.Seek(position, SeekOrigin.Begin);
 			}
 
-			var streamLength = VersionReaderStream.Length;
 			while (true)
 			{
-				if (VersionReaderStream.Position >= streamLength) { break; }
-				var savedAggregateId = new Guid(VersionReader.ReadBytes(16));
-				int version = VersionReader.ReadInt32();
-				int dataSize = VersionReader.ReadInt32();
-				VersionReader.ReadBytes(dataSize + sizeof(Int64));
+				if (position >= streamLength) { break; }
 
-				VersionTracker[savedAggregateId] = version;
+				var savedAggregateRootId = new Guid(reader.ReadBytes(16));
+				var dataSize = reader.ReadInt32();
+				var version = reader.ReadInt32();
 
-				if (aggregateRootId == savedAggregateId
+				stream.Seek(sizeof(long) + dataSize, SeekOrigin.Current);
+				position += 16 + sizeof(int) + sizeof(int) + sizeof(long) + dataSize;
+
+				VersionTracker[savedAggregateRootId] = version;
+
+				if (aggregateRootId == savedAggregateRootId
 					&& version == versionToCheck)
 				{
-					VersionTrackerLastPosition = VersionReaderStream.Position;
+					EventStreams.VersionTrackerLastPositions[index] = position;
 					return true;
 				}
 			}
 
-			VersionTrackerLastPosition = VersionReaderStream.Position;
+			EventStreams.VersionTrackerLastPositions[index] = position;
 
 			return false;
-		}
-
-		private Stream OpenFile(FileAccess fileAccess)
-		{
-			return new BufferedStream(File.Open(Path.Combine(Directory, "EventStore"), FileMode.OpenOrCreate, fileAccess, FileShare.ReadWrite), 4 * 1024);
 		}
 
 		public IEventStoreProvider EnsureExists()
@@ -85,6 +87,8 @@ namespace Yeast.EventStore.Provider
 			{
 				System.IO.Directory.CreateDirectory(Directory);
 			}
+
+			EventStreams = new EventStreams<byte>() { Directory = Directory };
 
 			return this;
 		}
@@ -100,45 +104,69 @@ namespace Yeast.EventStore.Provider
 				throw new EventToStoreException("Data cannot be null.") { EventToStore = eventToStore };
 			}
 
-			if (null == EventWriter)
-			{
-				EventWriter = new BinaryWriter(OpenFile(FileAccess.Write));
-			}
-
 			if (VersionExists(eventToStore.AggregateRootId, eventToStore.Version))
 			{
 				throw new ConcurrencyException() { EventToStore = eventToStore, AggregateRootId = eventToStore.AggregateRootId, Version = eventToStore.Version };
 			}
 
-			if (EventWriter.BaseStream.Length != EventWriter.BaseStream.Position)
-			{
-				EventWriter.Seek(0, SeekOrigin.End);
-			}
+			var index = eventToStore.AggregateRootId.ToByteArray()[0];
 
-			EventWriter.Write(eventToStore.AggregateRootId.ToByteArray());
-			EventWriter.Write(eventToStore.Version);
-			EventWriter.Write(eventToStore.Data.Length);
-			EventWriter.Write(eventToStore.Timestamp.ToBinary());
-			EventWriter.Write(eventToStore.Data);
-			EventWriter.Flush();
+			Save(EventStreams.Writer(index), eventToStore);
 
 			VersionTracker[eventToStore.AggregateRootId] = eventToStore.Version;
 
 			return this;
 		}
 
+		private void Save(BinaryWriter writer, EventToStore eventToStore)
+		{
+			if (writer.BaseStream.Length != writer.BaseStream.Position)
+			{
+				writer.BaseStream.Seek(0, SeekOrigin.End);
+			}
+
+			writer.Write(eventToStore.AggregateRootId.ToByteArray());
+			writer.Write(eventToStore.Data.Length);
+			writer.Write(eventToStore.Version);
+			writer.Write(eventToStore.Timestamp.Ticks);
+			writer.Write(eventToStore.Data);
+
+			writer.Flush();
+		}
+
 		public IEnumerable<EventToStore> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
-			using (var reader = new BinaryReader(OpenFile(FileAccess.Read)))
+			var index = aggregateRootId.ToByteArray()[0];
+
+			var reader = EventStreams.Reader(index);
+			var stream = reader.BaseStream;
+			var length = stream.Length;
+			var position = 0;
+			stream.Seek(0, SeekOrigin.Begin);
+
+			while (true)
 			{
-				while (true)
+				if (position >= length)
 				{
-					if (reader.BaseStream.Position == reader.BaseStream.Length) { break; }
-					var savedAggregateId = new Guid(reader.ReadBytes(16));
+					length = stream.Length;
+					if (position >= length)
+					{
+						break;
+					}
+				}
+
+				var savedAggregateId = new Guid(reader.ReadBytes(16));
+				var dataSize = reader.ReadInt32();
+
+				if (savedAggregateId != aggregateRootId)
+				{
+					stream.Seek(sizeof(Int32) + sizeof(Int64) + dataSize, SeekOrigin.Current);
+				}
+				else
+				{
+
 					var version = reader.ReadInt32();
-					var dataSize = reader.ReadInt32();
-					var timestamp = DateTime.FromBinary(reader.ReadInt64());
-					var data = reader.ReadBytes(dataSize);
+					var timestamp = new DateTime(reader.ReadInt64());
 
 					if (aggregateRootId == savedAggregateId
 						&& version >= fromVersion.GetValueOrDefault(-1)
@@ -151,24 +179,79 @@ namespace Yeast.EventStore.Provider
 							AggregateRootId = aggregateRootId,
 							Version = version,
 							Timestamp = timestamp,
-							Data = data
+							Data = reader.ReadBytes(dataSize)
 						};
 					}
+					else
+					{
+						stream.Seek(dataSize, SeekOrigin.Current);
+					}
 				}
+
+				position += 16 + sizeof(Int32) + sizeof(Int32) + sizeof(Int64) + dataSize;
 			}
 		}
 
 		public void Dispose()
 		{
-			if (null != EventWriter)
+			if (null != EventStreams)
 			{
-				EventWriter.Close();
-				EventWriter = null;
+				EventStreams.Dispose();
+				EventStreams = null;
 			}
-			if (null != VersionReader)
+		}
+
+	}
+
+	public class EventStreams<T> : IDisposable
+	{
+		public EventStreams()
+		{
+		}
+
+		public string Directory;
+		private Dictionary<T, BinaryWriter> Writers = new Dictionary<T, BinaryWriter>();
+		private Dictionary<T, BinaryReader> Readers = new Dictionary<T, BinaryReader>();
+		public Dictionary<T, long> VersionTrackerLastPositions = new Dictionary<T,long>();
+
+		public BinaryWriter Writer(T index)
+		{
+			BinaryWriter writer;
+			if (!Writers.TryGetValue(index, out writer))
 			{
-				VersionReader.Close();
-				VersionReader = null;
+				Writers.Add(index, writer = new BinaryWriter(OpenFile(Path.Combine(Directory, "EventStore_" + index.ToString()), FileAccess.Write, false)));
+			}
+
+			return writer;
+		}
+
+		public BinaryReader Reader(T index)
+		{
+			BinaryReader reader;
+			if (!Readers.TryGetValue(index, out reader))
+			{
+				Readers.Add(index, reader = new BinaryReader(OpenFile(Path.Combine(Directory, "EventStore_" + index.ToString()), FileAccess.Read, true)));
+			}
+
+			return reader;
+		}
+
+		private Stream OpenFile(string name, FileAccess fileAccess, bool buffered)
+		{
+			return buffered ?
+				(Stream) new BufferedStream(File.Open(name, FileMode.OpenOrCreate, fileAccess, FileShare.ReadWrite), 8 * 1024)
+				: (Stream) File.Open(name, FileMode.OpenOrCreate, fileAccess, FileShare.ReadWrite);
+		}
+
+		public void Dispose()
+		{
+			foreach (var writer in Writers.Values)
+			{
+				writer.Close();
+			}
+			foreach (var reader in Readers.Values)
+			{
+				reader.Close();
 			}
 		}
 	}

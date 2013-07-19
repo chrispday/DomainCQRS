@@ -62,6 +62,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="LoadTests.cs" />
     <Compile Include="XmlObjectSerializerTests.cs" />
     <Compile Include="Mock\MockAggregateRoot.cs" />
     <Compile Include="Mock\MockCommand.cs" />

@@ -11,21 +11,11 @@ namespace Yeast.EventStore.Provider.Test
 	public class FileEventStoreProviderTests
 	{
 		string BaseDirectory;
-		Dictionary<Guid, int> LoadTestAggregateIds;
-		IEventStoreProvider LoadTestProvider;
 
 		[TestInitialize]
 		public void Init()
 		{
 			BaseDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-
-			LoadTestAggregateIds = new Dictionary<Guid,int>();
-			foreach (var i in Enumerable.Range(1, 100))
-			{
-				LoadTestAggregateIds.Add(Guid.NewGuid(), 1);
-			}
-
-			LoadTestProvider = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists();
 		}
 
 		[TestCleanup]
@@ -49,6 +39,7 @@ namespace Yeast.EventStore.Provider.Test
 			{
 				var fileEventStoreProvier = new FileEventStoreProvider() { Directory = directory }.EnsureExists();
 				Assert.IsTrue(Directory.Exists(directory));
+				(fileEventStoreProvier as FileEventStoreProvider).Dispose();
 			}
 			finally
 			{
@@ -69,21 +60,22 @@ namespace Yeast.EventStore.Provider.Test
 			fileEventStoreProvier.Save(EventToStore2);
 			(fileEventStoreProvier as FileEventStoreProvider).Dispose();
 
-			var path = Path.Combine(BaseDirectory, "EventStore");
+			var index = EventToStore.AggregateRootId.ToByteArray()[0];
+			var path = Path.Combine(BaseDirectory, "EventStore_" + index.ToString());
 			Assert.IsTrue(File.Exists(path));
 			using (var reader = new BinaryReader(File.OpenRead(path)))
 			{
 				Assert.AreEqual(EventToStore.AggregateRootId, new Guid(reader.ReadBytes(16)));
-				Assert.AreEqual(EventToStore.Version, reader.ReadInt32());
 				var size = reader.ReadInt32();
 				Assert.AreEqual(EventToStore.Data.Length, size);
-				Assert.AreEqual(EventToStore.Timestamp, DateTime.FromBinary(reader.ReadInt64()));
+				Assert.AreEqual(EventToStore.Version, reader.ReadInt32());
+				Assert.AreEqual(EventToStore.Timestamp, new DateTime(reader.ReadInt64()));
 				Assert.IsTrue(EventToStore.Data.SequenceEqual(reader.ReadBytes(size)));
 				Assert.AreEqual(EventToStore2.AggregateRootId, new Guid(reader.ReadBytes(16)));
-				Assert.AreEqual(EventToStore2.Version, reader.ReadInt32());
 				var size2 = reader.ReadInt32();
 				Assert.AreEqual(EventToStore2.Data.Length, size2);
-				Assert.AreEqual(EventToStore2.Timestamp, DateTime.FromBinary(reader.ReadInt64()));
+				Assert.AreEqual(EventToStore2.Version, reader.ReadInt32());
+				Assert.AreEqual(EventToStore2.Timestamp, new DateTime(reader.ReadInt64()));
 				Assert.IsTrue(EventToStore2.Data.SequenceEqual(reader.ReadBytes(size2)));
 				Assert.IsTrue(reader.BaseStream.Position == reader.BaseStream.Length);
 			}
@@ -92,7 +84,7 @@ namespace Yeast.EventStore.Provider.Test
 		[TestMethod, ExpectedException(typeof(ConcurrencyException))]
 		public void FileEventStoreProvider_Save_VersionExists()
 		{
-			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
+			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
 			fileEventStoreProvier.Save(EventToStore);
 			fileEventStoreProvier.Save(EventToStore);
@@ -101,7 +93,7 @@ namespace Yeast.EventStore.Provider.Test
 		[TestMethod]
 		public void FileEventStoreProvider_Load()
 		{
-			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
+			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
 			fileEventStoreProvier.Save(EventToStore);
 			var EventToStore2 = new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 2, Data = new byte[] { 4, 5, 6, 7 } };
@@ -133,7 +125,7 @@ namespace Yeast.EventStore.Provider.Test
 		[TestMethod]
 		public void FileEventStoreProvider_Load_FromVersion()
 		{
-			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
+			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
 			fileEventStoreProvier.Save(EventToStore);
 			fileEventStoreProvier.Save(new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 2, Data = new byte[] { 2 } });
@@ -149,7 +141,7 @@ namespace Yeast.EventStore.Provider.Test
 		public void FileEventStoreProvider_LoadAfterSaveOutOfOrder()
 		{
 			var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
-			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
+			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists();
 			var EventToStore3 = new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 3, Data = new byte[] { 1, 3, 5 } };
 			fileEventStoreProvier.Save(EventToStore3);
 			var EventToStore2 = new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 2, Data = new byte[] { 4, 5, 6, 7 } };
@@ -175,19 +167,6 @@ namespace Yeast.EventStore.Provider.Test
 			Assert.AreEqual(EventToStore3.AggregateRootId, se3.AggregateRootId);
 			Assert.AreEqual(EventToStore3.Version, se3.Version);
 			Assert.IsTrue(EventToStore3.Data.SequenceEqual(se3.Data));
-		}
-
-		[TestMethod]
-		public void LoadTest_FileEventStoreProvider()
-		{
-			foreach (var i in Enumerable.Range(1, 1))
-			{
-				var id = LoadTestAggregateIds.Keys.ToArray()[new Random().Next(99)];
-				var version = LoadTestAggregateIds[id];
-				LoadTestAggregateIds[id] = version + 1;
-				var eventToStore = new EventToStore() { AggregateRootId = id, Version = version, Timestamp = DateTime.Now, Data = new Byte[new Random().Next(99)] };
-				LoadTestProvider.Save(eventToStore);
-			}
 		}
 	}
 }

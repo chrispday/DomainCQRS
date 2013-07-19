@@ -12,24 +12,15 @@ namespace Yeast.EventStore.Provider.Test
 	public class SqlServerEventStoreProviderTests
 	{
 		string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
-		Dictionary<Guid, int> LoadTestAggregateIds;
-		SqlServerEventStoreProvider LoadTestProvider;
 
 		[TestInitialize]
 		public void Init()
 		{
-			LoadTestAggregateIds = new Dictionary<Guid, int>();
-			foreach (var i in Enumerable.Range(1, 100))
-			{
-				LoadTestAggregateIds.Add(Guid.NewGuid(), 1);
-			}
-
 			using (var conn = new SqlConnection(ConnectionString))
 			{
 				conn.Open();
 				new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
 			}
-			LoadTestProvider = new SqlServerEventStoreProvider() { ConnectionString = ConnectionString }.EnsureExists() as SqlServerEventStoreProvider;
 		}
 
 		[TestCleanup]
@@ -164,19 +155,6 @@ namespace Yeast.EventStore.Provider.Test
 			Assert.AreEqual(EventToStore3.AggregateRootId, se3.AggregateRootId);
 			Assert.AreEqual(EventToStore3.Version, se3.Version);
 			Assert.IsTrue(EventToStore3.Data.SequenceEqual(se3.Data));
-		}
-
-		[TestMethod]
-		public void LoadTest_SqlServerEventStoreProvider()
-		{
-			foreach (var i in Enumerable.Range(1, 1))
-			{
-				var id = LoadTestAggregateIds.Keys.ToArray()[new Random().Next(99)];
-				var version = LoadTestAggregateIds[id];
-				LoadTestAggregateIds[id] = version + 1;
-				var eventToStore = new EventToStore() { AggregateRootId = id, Version = version, Timestamp = DateTime.Now, Data = new Byte[new Random().Next(99)] };
-				LoadTestProvider.Save(eventToStore);
-			}
 		}
 	}
 }

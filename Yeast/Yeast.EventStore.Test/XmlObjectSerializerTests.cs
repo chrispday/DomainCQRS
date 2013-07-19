@@ -60,8 +60,8 @@ namespace Yeast.EventStore.Test
 			using (var provider = new FileEventStoreProvider() { Directory = Path.Combine(directory, Guid.NewGuid().ToString()) }.EnsureExists() as FileEventStoreProvider)
 			{
 				var typeModel = RuntimeTypeModel.Create();
-				typeModel.Add(typeof(MockEvent), true);
-				var serializer = new XmlProtoSerializer(typeModel, typeof(MockEvent));
+				typeModel.Add(typeof(MockCommand), true);
+				var serializer = new XmlProtoSerializer(typeModel, typeof(MockCommand));
 				var eventStore = new EventStore() { Serializer = new XmlObjectSerializer() { Serializer = serializer }, EventStoreProvider = provider };
 				var eventReceiver = new MessageReceiver() { EventStore = eventStore }
 					.Register<MockCommand, MockAggregateRoot>()
