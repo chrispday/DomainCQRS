@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
+using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore
 {
@@ -14,11 +12,19 @@ namespace Yeast.EventStore
 		public IEventStore EventStore { get; set; }
 		public string DefaultAggregateRootIdProperty { get; set; }
 		public string DefaultAggregateRootApplyCommandMethod { get; set; }
+		public int AggregateRootCacheSize { get; set; }
+		public class AggregateRootAndVersion
+		{
+			public object AggregateRoot;
+			public int Version;
+		}
+		private LRUDictionary<Guid, AggregateRootAndVersion> AggregateRootCache;
 
 		public MessageReceiver()
 		{
 			DefaultAggregateRootIdProperty = "AggregateRootId";
 			DefaultAggregateRootApplyCommandMethod = "Apply";
+			AggregateRootCacheSize = 1000;
 		}
 
 		public IMessageReceiver Receive(object message)
@@ -31,20 +37,30 @@ namespace Yeast.EventStore
 				throw new RegistrationException(string.Format("{0} is not registered.", messageType.Name)) { MessageType = messageType };
 			}
 
+			if (null == AggregateRootCache)
+			{
+				AggregateRootCache = new LRUDictionary<Guid, AggregateRootAndVersion>(AggregateRootCacheSize);
+			}
+
 			foreach (var aggregateRootType in aggregateRootTypes)
 			{
 				foreach (var propertyAndMethod in aggregateRootType.Value)
 				{
 					foreach (var aggregateRootId in ExtractAggregateRootIdsFromMessage(messageType, propertyAndMethod.Property, message))
 					{
-						var aggregateRoot = CreateAggregateRoot(aggregateRootType.Key);
-						var eventsToLoad = EventStore.Load(aggregateRootId, null, null, null, null);
-						var version = LoadAggreateRoot(aggregateRootType.Key, aggregateRoot, eventsToLoad);
-						var eventsToStore = ApplyCommandToAggregate(messageType, aggregateRootType.Key, propertyAndMethod.Method, message, aggregateRoot);
+						AggregateRootAndVersion aggregateRootAndVersion;
+						if (!AggregateRootCache.TryGetValue(aggregateRootId, out aggregateRootAndVersion))
+						{
+							var aggregateRoot = CreateAggregateRoot(aggregateRootType.Key);
+							var version = LoadAggreateRoot(aggregateRootType.Key, aggregateRoot, aggregateRootId);
+							aggregateRootAndVersion = new AggregateRootAndVersion() { AggregateRoot = aggregateRoot, Version = version };
+						}
+						var eventsToStore = ApplyCommandToAggregate(messageType, aggregateRootType.Key, propertyAndMethod.Method, message, aggregateRootAndVersion.AggregateRoot);
 						foreach (var @event in eventsToStore)
 						{
-							EventStore.Save(aggregateRootId, ++version, @event);
+							EventStore.Save(aggregateRootId, ++aggregateRootAndVersion.Version, @event);
 						}
+						AggregateRootCache[aggregateRootId] = aggregateRootAndVersion;
 					}
 				}
 			}
@@ -95,8 +111,12 @@ namespace Yeast.EventStore
 			return createAggregateRoot();
 		}
 
-		private int LoadAggreateRoot(Type aggregateRootType, object aggregateRoot, IEnumerable<StoredEvent> events)
+		private int LoadAggreateRoot(Type aggregateRootType, object aggregateRoot, Guid aggregateRootId)
 		{
+			
+
+			var events = EventStore.Load(aggregateRootId, null, null, null, null);
+
 			int version = 0;
 			foreach (var @event in events)
 			{

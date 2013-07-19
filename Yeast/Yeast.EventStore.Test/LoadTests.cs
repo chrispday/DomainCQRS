@@ -26,7 +26,7 @@ namespace Yeast.EventStore.Test
 			BaseDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
 			LoadTestAggregateIds = new Dictionary<Guid, int>();
-			foreach (var i in Enumerable.Range(1, 1000))
+			foreach (var i in Enumerable.Range(1, 10000))
 			{
 				LoadTestAggregateIds.Add(Guid.NewGuid(), 1);
 			}
@@ -61,7 +61,7 @@ namespace Yeast.EventStore.Test
 
 			foreach (var i in Enumerable.Range(1, 1))
 			{
-				var id = LoadTestAggregateIds.Keys.ToArray()[new Random().Next(99)];
+				var id = LoadTestAggregateIds.Keys.ToArray()[Ran(new Random(), LoadTestAggregateIds.Count - 1)];
 				var version = LoadTestAggregateIds[id];
 				LoadTestAggregateIds[id] = version + 1;
 				var eventToStore = new EventToStore() { AggregateRootId = id, Version = version, Timestamp = DateTime.Now, Data = new Byte[new Random().Next(99)] };
@@ -79,7 +79,7 @@ namespace Yeast.EventStore.Test
 
 			foreach (var i in Enumerable.Range(1, 1))
 			{
-				var id = LoadTestAggregateIds.Keys.ToArray()[new Random().Next(99)];
+				var id = LoadTestAggregateIds.Keys.ToArray()[Ran(new Random(), LoadTestAggregateIds.Count - 1)];
 				var version = LoadTestAggregateIds[id];
 				LoadTestAggregateIds[id] = version + 1;
 				var eventToStore = new EventToStore() { AggregateRootId = id, Version = version, Timestamp = DateTime.Now, Data = new Byte[new Random().Next(99)] };
@@ -103,15 +103,16 @@ namespace Yeast.EventStore.Test
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
-			var id = LoadTestAggregateIds.Keys.ToArray()[new Random().Next(999)];
+			var keys = LoadTestAggregateIds.Keys.ToArray();
+			var id = LoadTestAggregateIds.Keys.ToArray()[Ran(random, LoadTestAggregateIds.Count - 1)];
 			eventReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 });
 
 			var stopWatch = Stopwatch.StartNew();
 
-			var amount = 10000;
+			var amount = 1;
 			foreach (var i in Enumerable.Range(1, amount))
 			{
-				id = LoadTestAggregateIds.Keys.ToArray()[new Random().Next(999)];
+				id = keys[Ran(random, LoadTestAggregateIds.Count - 1)];
 				eventReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 });
 			}
 
@@ -122,6 +123,23 @@ namespace Yeast.EventStore.Test
 			Debug.WriteLine("Files in Event Store {0}", Directory.GetFiles(FileLoadTestProvider.Directory, "*.*", SearchOption.AllDirectories).Count());
 			Debug.WriteLine("Size of Event Store {0:#,##0.0} KB", Directory.GetFiles(FileLoadTestProvider.Directory, "*.*", SearchOption.AllDirectories).Sum(f => new FileInfo(f).Length) / 1024.0);
 			Debug.WriteLine("Avg Size of Event Store {0:#,##0.0} KB", Directory.GetFiles(FileLoadTestProvider.Directory, "*.*", SearchOption.AllDirectories).Average(f => new FileInfo(f).Length) / 1024.0);
+		}
+
+		private int Ran(Random random, int p)
+		{
+			var c = random.NextDouble();
+
+			if (0.5 > c)
+			{
+				return random.Next(p / 10);
+			}
+
+			if (0.75 > c)
+			{
+				return random.Next(p / 2);
+			}
+
+			return random.Next(p);
 		}
 	}
 }
