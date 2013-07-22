@@ -48,24 +48,29 @@ namespace Yeast.EventStore
 				{
 					foreach (var aggregateRootId in ExtractAggregateRootIdsFromMessage(messageType, propertyAndMethod.Property, message))
 					{
-						AggregateRootAndVersion aggregateRootAndVersion;
-						if (!AggregateRootCache.TryGetValue(aggregateRootId, out aggregateRootAndVersion))
-						{
-							var aggregateRoot = CreateAggregateRoot(aggregateRootType.Key);
-							var version = LoadAggreateRoot(aggregateRootType.Key, aggregateRoot, aggregateRootId);
-							aggregateRootAndVersion = new AggregateRootAndVersion() { AggregateRoot = aggregateRoot, Version = version };
-						}
+						AggregateRootAndVersion aggregateRootAndVersion = GetAggregateRootAndVersion(aggregateRootType.Key, aggregateRootId);
 						var eventsToStore = ApplyCommandToAggregate(messageType, aggregateRootType.Key, propertyAndMethod.Method, message, aggregateRootAndVersion.AggregateRoot);
 						foreach (var @event in eventsToStore)
 						{
 							EventStore.Save(aggregateRootId, ++aggregateRootAndVersion.Version, @event);
 						}
-						AggregateRootCache[aggregateRootId] = aggregateRootAndVersion;
 					}
 				}
 			}
 
 			return this;
+		}
+
+		private AggregateRootAndVersion GetAggregateRootAndVersion(Type aggregateRootType, Guid aggregateRootId)
+		{
+			AggregateRootAndVersion aggregateRootAndVersion;
+			if (!AggregateRootCache.TryGetValue(aggregateRootId, out aggregateRootAndVersion))
+			{
+				var aggregateRoot = CreateAggregateRoot(aggregateRootType);
+				var version = LoadAggreateRoot(aggregateRootType, aggregateRoot, aggregateRootId);
+				AggregateRootCache[aggregateRootId] = aggregateRootAndVersion = new AggregateRootAndVersion() { AggregateRoot = aggregateRoot, Version = version };
+			}
+			return aggregateRootAndVersion;
 		}
 
 		private delegate IEnumerable<Guid> GetAggregateRootIds(object message);
@@ -75,13 +80,25 @@ namespace Yeast.EventStore
 			Dictionary<PropertyInfo, GetAggregateRootIds> perPropertyGetAggregateRootIds;
 			if (!_perMessageTypePerPropertyGetAggregateRootIds.TryGetValue(messageType, out perPropertyGetAggregateRootIds))
 			{
-				_perMessageTypePerPropertyGetAggregateRootIds.Add(messageType, perPropertyGetAggregateRootIds = new Dictionary<PropertyInfo, GetAggregateRootIds>());
+				lock (_perMessageTypePerPropertyGetAggregateRootIds)
+				{
+					if (!_perMessageTypePerPropertyGetAggregateRootIds.TryGetValue(messageType, out perPropertyGetAggregateRootIds))
+					{
+						_perMessageTypePerPropertyGetAggregateRootIds.Add(messageType, perPropertyGetAggregateRootIds = new Dictionary<PropertyInfo, GetAggregateRootIds>());
+					}
+				}
 			}
 
 			GetAggregateRootIds getAggregateRootIds;
 			if (!perPropertyGetAggregateRootIds.TryGetValue(aggregateRootIdsProperty, out getAggregateRootIds))
 			{
-				perPropertyGetAggregateRootIds.Add(aggregateRootIdsProperty, getAggregateRootIds = GetGetAggregateRootIdsDelegate(messageType, aggregateRootIdsProperty));
+				lock (perPropertyGetAggregateRootIds)
+				{
+					if (!perPropertyGetAggregateRootIds.TryGetValue(aggregateRootIdsProperty, out getAggregateRootIds))
+					{
+						perPropertyGetAggregateRootIds.Add(aggregateRootIdsProperty, getAggregateRootIds = GetGetAggregateRootIdsDelegate(messageType, aggregateRootIdsProperty));
+					}
+				}
 			}
 
 			return getAggregateRootIds(message);
@@ -101,11 +118,17 @@ namespace Yeast.EventStore
 			CreateAggreateRoot createAggregateRoot;
 			if (!_createAggregateRoots.TryGetValue(aggregateRootType, out createAggregateRoot))
 			{
-				var dynamicMethod = new DynamicMethod(aggregateRootType.Name + "_Create", typeof(object), null);
-				var ilGenerator = dynamicMethod.GetILGenerator();
-				ilGenerator.Emit(OpCodes.Newobj, aggregateRootType.GetConstructor(Type.EmptyTypes));
-				ilGenerator.Emit(OpCodes.Ret);
-				_createAggregateRoots.Add(aggregateRootType, createAggregateRoot = (CreateAggreateRoot)dynamicMethod.CreateDelegate(typeof(CreateAggreateRoot)));
+				lock (_createAggregateRoots)
+				{
+					if (!_createAggregateRoots.TryGetValue(aggregateRootType, out createAggregateRoot))
+					{
+						var dynamicMethod = new DynamicMethod(aggregateRootType.Name + "_Create", typeof(object), null);
+						var ilGenerator = dynamicMethod.GetILGenerator();
+						ilGenerator.Emit(OpCodes.Newobj, aggregateRootType.GetConstructor(Type.EmptyTypes));
+						ilGenerator.Emit(OpCodes.Ret);
+						_createAggregateRoots.Add(aggregateRootType, createAggregateRoot = (CreateAggreateRoot)dynamicMethod.CreateDelegate(typeof(CreateAggreateRoot)));
+					}
+				}
 			}
 
 			return createAggregateRoot();
@@ -113,8 +136,6 @@ namespace Yeast.EventStore
 
 		private int LoadAggreateRoot(Type aggregateRootType, object aggregateRoot, Guid aggregateRootId)
 		{
-			
-
 			var events = EventStore.Load(aggregateRootId, null, null, null, null);
 
 			int version = 0;
@@ -138,52 +159,64 @@ namespace Yeast.EventStore
 			Dictionary<Type, ApplyEvent> perAggregateApplyEvents;
 			if (!_perMessagePerAggregateRootApplyEvents.TryGetValue(eventType, out perAggregateApplyEvents))
 			{
-				_perMessagePerAggregateRootApplyEvents.Add(eventType, perAggregateApplyEvents = new Dictionary<Type, ApplyEvent>());
+				lock (_perMessagePerAggregateRootApplyEvents)
+				{
+					if (!_perMessagePerAggregateRootApplyEvents.TryGetValue(eventType, out perAggregateApplyEvents))
+					{
+						_perMessagePerAggregateRootApplyEvents.Add(eventType, perAggregateApplyEvents = new Dictionary<Type, ApplyEvent>());
+					}
+				}
 			}
 
 			ApplyEvent applyEvent;
 			if (!perAggregateApplyEvents.TryGetValue(aggregateRootType, out applyEvent))
 			{
-				MethodInfo applyMethod = null;
-				foreach (var method in aggregateRootType.GetMethods())
+				lock (perAggregateApplyEvents)
 				{
-					if (null == method.ReturnType)
+					if (!perAggregateApplyEvents.TryGetValue(aggregateRootType, out applyEvent))
 					{
-						continue;
+						perAggregateApplyEvents.Add(aggregateRootType, applyEvent = CreateApplyEvent(eventType, aggregateRootType));
 					}
-
-					var parameters = method.GetParameters();
-					if (null == parameters)
-					{
-						continue;
-					}
-
-					if (1 != parameters.Length)
-					{
-						continue;
-					}
-
-					if (eventType != parameters[0].ParameterType)
-					{
-						continue;
-					}
-
-					applyMethod = method;
-					break;
 				}
-				if (null == applyMethod)
-				{
-					throw new RegistrationException(string.Format("{0} does not contain a method to apply {1}.", aggregateRootType.Name, eventType.Name));
-				}
-
-				perAggregateApplyEvents.Add(aggregateRootType, applyEvent = CreateApplyEvent(eventType, aggregateRootType, applyMethod));
 			}
 
 			applyEvent(aggregateRoot, @event);
 		}
 
-		private ApplyEvent CreateApplyEvent(Type eventType, Type aggregateRootType, MethodInfo applyMethod)
+		private ApplyEvent CreateApplyEvent(Type eventType, Type aggregateRootType)
 		{
+			MethodInfo applyMethod = null;
+			foreach (var method in aggregateRootType.GetMethods())
+			{
+				if (null == method.ReturnType)
+				{
+					continue;
+				}
+
+				var parameters = method.GetParameters();
+				if (null == parameters)
+				{
+					continue;
+				}
+
+				if (1 != parameters.Length)
+				{
+					continue;
+				}
+
+				if (eventType != parameters[0].ParameterType)
+				{
+					continue;
+				}
+
+				applyMethod = method;
+				break;
+			}
+			if (null == applyMethod)
+			{
+				throw new RegistrationException(string.Format("{0} does not contain a method to apply {1}.", aggregateRootType.Name, eventType.Name));
+			}
+
 			var dynamicMethod = new DynamicMethod(string.Format("ApplyEvent_{0}_{1}", aggregateRootType.Name, eventType.Name), null, new Type[] { typeof(object), typeof(object) });
 			var ilGenerator = dynamicMethod.GetILGenerator();
 
@@ -206,13 +239,25 @@ namespace Yeast.EventStore
 			Dictionary<Type, ApplyCommand> perAggregateApplyCommands;
 			if (!_perMessagePerAggregateRootApplyCommands.TryGetValue(messageType, out perAggregateApplyCommands))
 			{
-				_perMessagePerAggregateRootApplyCommands.Add(messageType, perAggregateApplyCommands = new Dictionary<Type, ApplyCommand>());
+				lock (_perMessagePerAggregateRootApplyCommands)
+				{
+					if (!_perMessagePerAggregateRootApplyCommands.TryGetValue(messageType, out perAggregateApplyCommands))
+					{
+						_perMessagePerAggregateRootApplyCommands.Add(messageType, perAggregateApplyCommands = new Dictionary<Type, ApplyCommand>());
+					}
+				}
 			}
 
 			ApplyCommand applyCommand;
 			if (!perAggregateApplyCommands.TryGetValue(aggregateRootType, out applyCommand))
 			{
-				perAggregateApplyCommands.Add(aggregateRootType, applyCommand = CreateApplyCommand(messageType, aggregateRootType, applyMethod));
+				lock (perAggregateApplyCommands)
+				{
+					if (!perAggregateApplyCommands.TryGetValue(aggregateRootType, out applyCommand))
+					{
+						perAggregateApplyCommands.Add(aggregateRootType, applyCommand = CreateApplyCommand(messageType, aggregateRootType, applyMethod));
+					}
+				}
 			}
 
 			return applyCommand(aggregateRoot, command);
@@ -287,19 +332,22 @@ namespace Yeast.EventStore
 				throw new RegistrationException();
 			}
 
-			Dictionary<Type, List<PropertyAndMethod>> aggregateRoots;
-			if (!_messages.TryGetValue(messageType, out aggregateRoots))
+			lock (_messages)
 			{
-				_messages.Add(messageType, aggregateRoots = new Dictionary<Type, List<PropertyAndMethod>>());
-			}
+				Dictionary<Type, List<PropertyAndMethod>> aggregateRoots;
+				if (!_messages.TryGetValue(messageType, out aggregateRoots))
+				{
+					_messages.Add(messageType, aggregateRoots = new Dictionary<Type, List<PropertyAndMethod>>());
+				}
 
-			List<PropertyAndMethod> propertyAndMethods;
-			if (!aggregateRoots.TryGetValue(aggregateRootType, out propertyAndMethods))
-			{
-				aggregateRoots.Add(aggregateRootType, propertyAndMethods = new List<PropertyAndMethod>());
-			}
+				List<PropertyAndMethod> propertyAndMethods;
+				if (!aggregateRoots.TryGetValue(aggregateRootType, out propertyAndMethods))
+				{
+					aggregateRoots.Add(aggregateRootType, propertyAndMethods = new List<PropertyAndMethod>());
+				}
 
-			propertyAndMethods.Add(new PropertyAndMethod() { Property = aggregateRootIds, Method = applyMethod });
+				propertyAndMethods.Add(new PropertyAndMethod() { Property = aggregateRootIds, Method = applyMethod });
+			}
 
 			return this;
 		}
@@ -346,6 +394,6 @@ namespace Yeast.EventStore
 		}
 
 		#endregion
-	
-}
+
+	}
 }

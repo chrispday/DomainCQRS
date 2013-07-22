@@ -32,25 +32,6 @@ namespace Yeast.EventStore.Provider.Test
 		}
 
 		[TestMethod]
-		public void FileEventStoreProvider_EnsuresExists()
-		{
-			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-			try
-			{
-				var fileEventStoreProvier = new FileEventStoreProvider() { Directory = directory }.EnsureExists();
-				Assert.IsTrue(Directory.Exists(directory));
-				(fileEventStoreProvier as FileEventStoreProvider).Dispose();
-			}
-			finally
-			{
-				if (Directory.Exists(directory))
-				{
-					Directory.Delete(directory, true);
-				}
-			}
-		}
-
-		[TestMethod]
 		public void FileEventStoreProvider_Save()
 		{
 			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
@@ -60,21 +41,21 @@ namespace Yeast.EventStore.Provider.Test
 			fileEventStoreProvier.Save(EventToStore2);
 			(fileEventStoreProvier as FileEventStoreProvider).Dispose();
 
-			var index = EventToStore.AggregateRootId.ToByteArray()[0];
-			var path = Path.Combine(BaseDirectory, "EventStore_" + index.ToString());
+			var idStr = EventToStore.AggregateRootId.ToString();
+			var path = Path.Combine(BaseDirectory, idStr);
 			Assert.IsTrue(File.Exists(path));
 			using (var reader = new BinaryReader(File.OpenRead(path)))
 			{
-				Assert.AreEqual(EventToStore.AggregateRootId, new Guid(reader.ReadBytes(16)));
+				//Assert.AreEqual(EventToStore.AggregateRootId, new Guid(reader.ReadBytes(16)));
+				Assert.AreEqual(EventToStore.Version, reader.ReadInt32());
 				var size = reader.ReadInt32();
 				Assert.AreEqual(EventToStore.Data.Length, size);
-				Assert.AreEqual(EventToStore.Version, reader.ReadInt32());
 				Assert.AreEqual(EventToStore.Timestamp, new DateTime(reader.ReadInt64()));
 				Assert.IsTrue(EventToStore.Data.SequenceEqual(reader.ReadBytes(size)));
-				Assert.AreEqual(EventToStore2.AggregateRootId, new Guid(reader.ReadBytes(16)));
+				//Assert.AreEqual(EventToStore2.AggregateRootId, new Guid(reader.ReadBytes(16)));
+				Assert.AreEqual(EventToStore2.Version, reader.ReadInt32());
 				var size2 = reader.ReadInt32();
 				Assert.AreEqual(EventToStore2.Data.Length, size2);
-				Assert.AreEqual(EventToStore2.Version, reader.ReadInt32());
 				Assert.AreEqual(EventToStore2.Timestamp, new DateTime(reader.ReadInt64()));
 				Assert.IsTrue(EventToStore2.Data.SequenceEqual(reader.ReadBytes(size2)));
 				Assert.IsTrue(reader.BaseStream.Position == reader.BaseStream.Length);

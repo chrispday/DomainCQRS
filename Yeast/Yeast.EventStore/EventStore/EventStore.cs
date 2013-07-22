@@ -40,10 +40,18 @@ namespace Yeast.EventStore
 
 		public IEnumerable<StoredEvent> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
-			return
-				from storedEvent in EventStoreProvider.Load(aggregateRootId, fromVersion, toVersion, fromTimestamp, toTimestamp)
-				orderby storedEvent.Version
-				select new StoredEvent() { AggregateRootId = aggregateRootId, Version = storedEvent.Version, Event = Deserialize(storedEvent.Data) };
+			var version = -1;
+			foreach (var storedEvent in EventStoreProvider.Load(aggregateRootId, fromVersion, toVersion, fromTimestamp, toTimestamp))
+			{
+				if (version != -1
+					&& version + 1 != storedEvent.Version)
+				{
+					throw new EventStoreException("Event stream does not contain concurrent events.");
+				}
+				version = storedEvent.Version;
+
+				yield return new StoredEvent() { AggregateRootId = aggregateRootId, Version = version, Event = Deserialize(storedEvent.Data) };
+			}
 		}
 
 		private object Deserialize(byte[] data)

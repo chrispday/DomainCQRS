@@ -16,6 +16,8 @@ namespace Yeast.EventStore.Common
 		private Dictionary<TKey, TValue> dictionary = new Dictionary<TKey, TValue>();
 		private LinkedList<TKey> linkedList = new LinkedList<TKey>();
 
+		public event EventHandler<EventArgs> Removed;
+
 		public LRUDictionary() : base() { }
 		public LRUDictionary(int capacity) : base() { _capacity = capacity; }
 
@@ -29,8 +31,14 @@ namespace Yeast.EventStore.Common
 
 			while (linkedList.Count > _capacity)
 			{
-				dictionary.Remove(linkedList.Last.Value);
-				linkedList.RemoveLast();
+				var lastKey = linkedList.Last.Value;
+				var lastValue = dictionary[lastKey];
+				dictionary.Remove(lastKey);
+				linkedList.Remove(lastKey);
+				if (null != Removed)
+				{
+					Removed(new KeyValuePair<TKey, TValue>(lastKey, lastValue), new EventArgs());
+				}
 			}
 		}
 
