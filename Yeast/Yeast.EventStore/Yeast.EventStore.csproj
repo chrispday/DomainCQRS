@@ -48,6 +48,8 @@
     <Compile Include="AggregateRoot\IHandlesCommand.cs" />
     <Compile Include="AggregateRoot\IHandlesEvent.cs" />
     <Compile Include="Commands\ICommand.cs" />
+    <Compile Include="Common\DebugLogger.cs" />
+    <Compile Include="Common\ILogger.cs" />
     <Compile Include="Common\LRUDictionary.cs" />
     <Compile Include="EventStore\EventStore.cs" />
     <Compile Include="Exceptions\CommandApplyException.cs" />

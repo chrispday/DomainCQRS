@@ -9,10 +9,10 @@ namespace Yeast.EventStore.Provider
 {
 	public class FileEventStoreProvider : IEventStoreProvider, IDisposable
 	{
-
 		public string Directory { get; set; }
 		public int EventStreamCapacity { get; set; }
 		public int EventStreamBuffer { get; set; }
+		public ILogger Logger { get; set; }
 		private LRUDictionary<Guid, FileEventStream> FileEventStreams;
 
 		public FileEventStoreProvider()
@@ -25,6 +25,7 @@ namespace Yeast.EventStore.Provider
 		{
 			if (!System.IO.Directory.Exists(Directory))
 			{
+				Logger.Information("Creating directory {0}", Directory);
 				System.IO.Directory.CreateDirectory(Directory);
 			}
 			FileEventStreams = new LRUDictionary<Guid, FileEventStream>(EventStreamCapacity);
@@ -34,16 +35,13 @@ namespace Yeast.EventStore.Provider
 
 		private void FileEventStreamRemoved(object sender, EventArgs e)
 		{
-			((KeyValuePair<Guid, FileEventStream>)sender).Value.Dispose();
+			var stream = (KeyValuePair<Guid, FileEventStream>)sender;
+			stream.Value.Dispose();
 		}
 
 		public IEventStoreProvider Save(EventToStore eventToStore)
 		{
-			FileEventStream fileEventStream;
-			if (!FileEventStreams.TryGetValue(eventToStore.AggregateRootId, out fileEventStream))
-			{
-				FileEventStreams.Add(eventToStore.AggregateRootId, fileEventStream = new FileEventStream(eventToStore.AggregateRootId, Directory, EventStreamBuffer));
-			}
+			FileEventStream fileEventStream = GetFileEventStream(eventToStore.AggregateRootId);
 			fileEventStream.Save(eventToStore);
 
 			return this;
@@ -51,12 +49,18 @@ namespace Yeast.EventStore.Provider
 
 		public IEnumerable<EventToStore> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
+			FileEventStream fileEventStream = GetFileEventStream(aggregateRootId);
+			return fileEventStream.Load(aggregateRootId, fromVersion, toVersion, fromTimestamp, toTimestamp);
+		}
+
+		private FileEventStream GetFileEventStream(Guid aggregateRootId)
+		{
 			FileEventStream fileEventStream;
 			if (!FileEventStreams.TryGetValue(aggregateRootId, out fileEventStream))
 			{
-				FileEventStreams.Add(aggregateRootId, fileEventStream = new FileEventStream(aggregateRootId, Directory, EventStreamBuffer));
+				FileEventStreams.Add(aggregateRootId, fileEventStream = new FileEventStream(Logger, aggregateRootId, Directory, EventStreamBuffer));
 			}
-			return fileEventStream.Load(aggregateRootId, fromVersion, toVersion, fromTimestamp, toTimestamp);
+			return fileEventStream;
 		}
 
 		private byte GetIndex(Guid aggregateRootId)

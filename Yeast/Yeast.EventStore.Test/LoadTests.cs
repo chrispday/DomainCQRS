@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ProtoBuf.Meta;
 using ProtoBuf.ServiceModel;
+using Yeast.EventStore.Common;
 using Yeast.EventStore.Provider;
 
 namespace Yeast.EventStore.Test
@@ -27,7 +28,7 @@ namespace Yeast.EventStore.Test
 			BaseDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
 			LoadTestAggregateIds = new Dictionary<Guid, int>();
-			foreach (var i in Enumerable.Range(1, 10000))
+			foreach (var i in Enumerable.Range(1, 100000))
 			{
 				LoadTestAggregateIds.Add(Guid.NewGuid(), 1);
 			}
@@ -95,7 +96,7 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void LoadTest_MessageReceiver_FileStore()
 		{
-			var fileLoadTestProvider = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists() as FileEventStoreProvider;
+			var fileLoadTestProvider = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists() as FileEventStoreProvider;
 			var typeModel = RuntimeTypeModel.Create();
 			typeModel.Add(typeof(MockCommand), true);
 			var serializer = new XmlProtoSerializer(typeModel, typeof(MockCommand));
@@ -113,7 +114,7 @@ namespace Yeast.EventStore.Test
 
 			var stopWatch = Stopwatch.StartNew();
 
-			var amount = 100000;
+			var amount = 1;
 			foreach (var i in Enumerable.Range(1, amount))
 			{
 				id = keys[Ran(random, LoadTestAggregateIds.Count - 1)];
@@ -199,10 +200,15 @@ namespace Yeast.EventStore.Test
 
 			if (0.5 > c)
 			{
-				return random.Next(p / 10);
+				return random.Next(p / 100);
 			}
 
 			if (0.75 > c)
+			{
+				return random.Next(p / 10);
+			}
+
+			if (0.95 > c)
 			{
 				return random.Next(p / 2);
 			}

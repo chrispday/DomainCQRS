@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore
 {
@@ -13,20 +14,34 @@ namespace Yeast.EventStore
 		private BinaryReader _reader;
 		private int _versionTracker;
 		private Guid _id;
+		private string _name;
 
-		public FileEventStream(Guid id, string directory, int bufferSize)
+		public ILogger Logger { get; set; }
+		public string Name { get { return _name; } }
+
+		public FileEventStream(ILogger logger, Guid id, string directory, int bufferSize)
 		{
+			Logger = logger;
 			_id = id;
-			var idStr = id.ToString();
-			var file = GetStreamName(directory, idStr);
-			//if (!Directory.Exists(Path.GetDirectoryName(file)))
-			//{
-			//	Directory.CreateDirectory(Path.GetDirectoryName(file));
-			//}
-			_writer = new BinaryWriter(File.Open(file, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite));
-			_writer.Seek(0, SeekOrigin.End);
-			_reader = new BinaryReader(_readerStream = new BufferedStream(File.Open(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), bufferSize));
+			_name = GetName(directory, id);
+
+			var stream = _name + "_Stream";
+			_writer = new BinaryWriter(File.Open(stream, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite));
+			var end = _writer.Seek(0, SeekOrigin.End);
+			_reader = new BinaryReader(_readerStream = new BufferedStream(File.Open(stream, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), bufferSize));
+
+			if (0 == end)
+			{
+				var position = _name + "_Position";
+				using (var writer = new BinaryWriter(File.Open(position, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite)))
+				{
+					writer.Write((int)0);
+				}
+			}
+
 			_versionTracker = GetLastVersion();
+
+			logger.Verbose("Creating for id {0} stream {1} with last version {2}", id, "", _versionTracker);
 		}
 
 		public void Save(EventToStore eventToStore)
@@ -68,7 +83,7 @@ namespace Yeast.EventStore
 
 		private int GetLastVersion()
 		{
-			_readerStream.Seek(0, SeekOrigin.End);
+			_readerStream.Seek(0, SeekOrigin.Begin);
 			
 			EventToStore eventToStore;
 			var lastVersion = 0;
@@ -135,14 +150,15 @@ namespace Yeast.EventStore
 			_versionTracker = @event.Version;
 		}
 
-		private static string GetStreamName(string directory, string idStr)
+		private static string GetName(string directory, Guid id)
 		{
 			//return Path.Combine(directory, Path.Combine(idStr.Substring(0, 4), Path.Combine(idStr.Substring(4, 4), "EventStream_" + idStr)));
-			return Path.Combine(directory,  idStr);
+			return Path.Combine(directory,  id.ToString());
 		}
 
 		public void Dispose()
 		{
+			Logger.Verbose("Disposing for {0} stream {1} last version {2}", _id, _name, _versionTracker);
 			_writer.Close();
 			_reader.Close();
 		}
