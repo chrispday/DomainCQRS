@@ -6,6 +6,15 @@ using System.Text;
 
 namespace Yeast.EventStore
 {
+	public static class BinaryFormatterSerializerConfigure
+	{
+		public static IConfigure BinaryFormatterSerializer(this IConfigure configure)
+		{
+			(configure as Configure).EventSerializer = new BinaryFormatterSerializer();
+			return configure;
+		}
+	}
+
 	public class BinaryFormatterSerializer : IEventSerializer
 	{
 		public BinaryFormatterSerializer()

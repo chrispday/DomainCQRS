@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore
 {
 	public interface IMessageReceiver
 	{
+		ILogger Logger { get; set; }
 		IEventStore EventStore { get; set; }
 
 		IMessageReceiver Receive(object message);

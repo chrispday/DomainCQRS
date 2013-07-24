@@ -6,6 +6,15 @@ using System.Text;
 
 namespace Yeast.EventStore.Common
 {
+	public static class DebugLoggerConfigure
+	{
+		public static IConfigure DebugLogger(this IConfigure configure)
+		{
+			(configure as Configure).Logger = new DebugLogger();
+			return configure;
+		}
+	}
+
 	public class DebugLogger : ILogger
 	{
 		public void Verbose(string format, params object[] pars)

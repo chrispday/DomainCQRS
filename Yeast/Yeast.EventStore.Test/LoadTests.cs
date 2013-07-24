@@ -58,7 +58,7 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void LoadTest_FileEventStoreProvider()
 		{
-			var fileLoadTestProvider = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists() as FileEventStoreProvider;
+			var fileLoadTestProvider = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists() as FileEventStoreProvider;
 
 			var stopWatch = Stopwatch.StartNew();
 
@@ -96,21 +96,25 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void LoadTest_MessageReceiver_FileStore()
 		{
-			var fileLoadTestProvider = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists() as FileEventStoreProvider;
 			var typeModel = RuntimeTypeModel.Create();
 			typeModel.Add(typeof(MockCommand), true);
 			var serializer = new XmlProtoSerializer(typeModel, typeof(MockCommand));
-			//var serializer = new DataContractSerializer(typeof(object), new Type[] { typeof(MockCommand), typeof(MockEvent), typeof(MockCommand2) });
-			var eventStore = new EventStore() { Serializer = new XmlObjectSerializer() { Serializer = serializer }, EventStoreProvider = fileLoadTestProvider };
-			var random = new Random();
 
-			var eventReceiver = new MessageReceiver() { EventStore = eventStore }
+			var configure = Configure.With()
+				.DebugLogger()
+				.FileEventStoreProvider(Path.Combine(BaseDirectory, Guid.NewGuid().ToString()))
+				.XmlObjectSerializer(serializer)
+				.MessageReceiver()
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
+			//var serializer = new DataContractSerializer(typeof(object), new Type[] { typeof(MockCommand), typeof(MockEvent), typeof(MockCommand2) });
+			var random = new Random();
+
 			var keys = LoadTestAggregateIds.Keys.ToArray();
 			var id = LoadTestAggregateIds.Keys.ToArray()[Ran(random, LoadTestAggregateIds.Count - 1)];
-			eventReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 });
+			var messageReceiver = (configure as Configure).MessageReceiver;
+			messageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 });
 
 			var stopWatch = Stopwatch.StartNew();
 
@@ -118,12 +122,12 @@ namespace Yeast.EventStore.Test
 			foreach (var i in Enumerable.Range(1, amount))
 			{
 				id = keys[Ran(random, LoadTestAggregateIds.Count - 1)];
-				eventReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 });
+				messageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 });
 			}
 
 			stopWatch.Stop();
 
-			var fileInfos = Directory.GetFiles(fileLoadTestProvider.Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
+			var fileInfos = Directory.GetFiles(((configure as Configure).EventStoreProvider as FileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
 			Debug.WriteLine("Time taken {0}", stopWatch.Elapsed);
 			Debug.WriteLine("Per sec {0:#,##0.0}", amount / stopWatch.Elapsed.TotalSeconds);
 			Debug.WriteLine("Files in Event Store {0}", fileInfos.Count());
@@ -135,12 +139,12 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void LoadTest_MessageReceiver_FileStore_Parallel()
 		{
-			var fileLoadTestProvider = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists() as FileEventStoreProvider;
+			var fileLoadTestProvider = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists() as FileEventStoreProvider;
 			var typeModel = RuntimeTypeModel.Create();
 			typeModel.Add(typeof(MockCommand), true);
 			var serializer = new XmlProtoSerializer(typeModel, typeof(MockCommand));
 			//var serializer = new DataContractSerializer(typeof(object), new Type[] { typeof(MockCommand), typeof(MockEvent), typeof(MockCommand2) });
-			var eventStore = new EventStore() { Serializer = new XmlObjectSerializer() { Serializer = serializer }, EventStoreProvider = fileLoadTestProvider };
+			var eventStore = new EventStore() { EventSerializer = new XmlObjectSerializer() { Serializer = serializer }, EventStoreProvider = fileLoadTestProvider };
 			var random = new Random();
 
 			var eventReceiver = new MessageReceiver() { EventStore = eventStore }

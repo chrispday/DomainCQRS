@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using ProtoBuf.ServiceModel;
 using ProtoBuf.Meta;
 using System.Diagnostics;
+using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore.Test
 {
@@ -30,9 +31,9 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void XmlObjectSerializer_DataContractSerializer()
 		{
-			using (var provider = new FileEventStoreProvider() { Directory = Path.Combine(directory, Guid.NewGuid().ToString()) }.EnsureExists() as FileEventStoreProvider)
+			using (var provider = new FileEventStoreProvider() { Directory = Path.Combine(directory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists() as FileEventStoreProvider)
 			{
-				var eventStore = new EventStore() { Serializer = new XmlObjectSerializer() { Serializer = new DataContractSerializer(typeof(object), new Type[] { typeof(MockEvent) }) }, EventStoreProvider = provider };
+				var eventStore = new EventStore() { EventSerializer = new XmlObjectSerializer() { Serializer = new DataContractSerializer(typeof(object), new Type[] { typeof(MockEvent) }) }, EventStoreProvider = provider };
 				var eventReceiver = new MessageReceiver() { EventStore = eventStore }
 					.Register<MockCommand, MockAggregateRoot>()
 					.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
@@ -57,12 +58,12 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void XmlObjectSerializer_ProtoBufSerializer()
 		{
-			using (var provider = new FileEventStoreProvider() { Directory = Path.Combine(directory, Guid.NewGuid().ToString()) }.EnsureExists() as FileEventStoreProvider)
+			using (var provider = new FileEventStoreProvider() { Directory = Path.Combine(directory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists() as FileEventStoreProvider)
 			{
 				var typeModel = RuntimeTypeModel.Create();
 				typeModel.Add(typeof(MockCommand), true);
 				var serializer = new XmlProtoSerializer(typeModel, typeof(MockCommand));
-				var eventStore = new EventStore() { Serializer = new XmlObjectSerializer() { Serializer = serializer }, EventStoreProvider = provider };
+				var eventStore = new EventStore() { EventSerializer = new XmlObjectSerializer() { Serializer = serializer }, EventStoreProvider = provider };
 				var eventReceiver = new MessageReceiver() { EventStore = eventStore }
 					.Register<MockCommand, MockAggregateRoot>()
 					.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");

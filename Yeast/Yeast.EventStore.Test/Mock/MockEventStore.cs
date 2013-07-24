@@ -33,5 +33,29 @@ namespace Yeast.EventStore.Test
 					 where s.Item1 == aggregateRootId
 					 select new StoredEvent() { AggregateRootId = aggregateRootId, Version = s.Item2, Event = s.Item3 };
 		}
+
+		public Common.ILogger Logger
+		{
+			get
+			{
+				throw new NotImplementedException();
+			}
+			set
+			{
+				throw new NotImplementedException();
+			}
+		}
+
+		public IEventSerializer EventSerializer
+		{
+			get
+			{
+				throw new NotImplementedException();
+			}
+			set
+			{
+				throw new NotImplementedException();
+			}
+		}
 	}
 }

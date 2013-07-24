@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore.Provider
 {
 	public class SqlServerEventStoreProvider : IEventStoreProvider
 	{
+		public ILogger Logger { get; set; }
 		public string ConnectionString { get; set; }
 
 		#region Sql Commands

@@ -5,6 +5,15 @@ using System.Text;
 
 namespace Yeast.EventStore
 {
+	public static class XmlObjectSerializerConfigure
+	{
+		public static IConfigure XmlObjectSerializer(this IConfigure configure, System.Runtime.Serialization.XmlObjectSerializer serializer)
+		{
+			(configure as Configure).EventSerializer = new XmlObjectSerializer() { Serializer = serializer };
+			return configure;
+		}
+	}
+
 	public class XmlObjectSerializer : IEventSerializer
 	{
 		public System.Runtime.Serialization.XmlObjectSerializer Serializer { get; set; }

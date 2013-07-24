@@ -51,6 +51,7 @@
     <Compile Include="Common\DebugLogger.cs" />
     <Compile Include="Common\ILogger.cs" />
     <Compile Include="Common\LRUDictionary.cs" />
+    <Compile Include="EventStore\Configure.cs" />
     <Compile Include="EventStore\EventStore.cs" />
     <Compile Include="Exceptions\CommandApplyException.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />

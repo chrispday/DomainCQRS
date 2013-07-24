@@ -3,11 +3,12 @@ using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Yeast.EventStore.Provider;
 using System.Linq;
+using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore.Test
 {
 	[TestClass]
-	public class EventReceiverTests
+	public class MessageReceiverTests
 	{
 		static IEventStore EventStore;
 
@@ -15,7 +16,7 @@ namespace Yeast.EventStore.Test
 		public static void ClassInit(TestContext ctx)
 		{
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-			EventStore = new EventStore() { Serializer = new BinaryFormatterSerializer(), EventStoreProvider = new FileEventStoreProvider() { Directory = directory }.EnsureExists() };
+			EventStore = new EventStore() { EventSerializer = new BinaryFormatterSerializer(), EventStoreProvider = new FileEventStoreProvider() { Directory = directory, Logger = new DebugLogger() }.EnsureExists() };
 		}
 
 		[ClassCleanup]
@@ -26,12 +27,12 @@ namespace Yeast.EventStore.Test
 		}
 
 		[TestMethod]
-		public void EventReceiver_Receive()
+		public void MessageReceiver_Receive()
 		{
 			var eventStore = new MockEventStore();
-			var eventReceiver = new MessageReceiver() { EventStore = eventStore }.Register<MockCommand, MockAggregateRoot>();
+			var MessageReceiver = new MessageReceiver() { EventStore = eventStore }.Register<MockCommand, MockAggregateRoot>();
 			var command = new MockCommand() { AggregateRootId = Guid.NewGuid(), Increment = 1 };
-			eventReceiver.Receive(command);
+			MessageReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
 			Assert.AreEqual(command.AggregateRootId, eventStore.Saved[0].Item1);
 			Assert.IsInstanceOfType(eventStore.Saved[0].Item3, typeof(MockEvent));
@@ -39,12 +40,12 @@ namespace Yeast.EventStore.Test
 		}
 
 		[TestMethod]
-		public void EventReceiver_Receive_CustomNames_NotICommand()
+		public void MessageReceiver_Receive_CustomNames_NotICommand()
 		{
 			var eventStore = new MockEventStore();
-			var eventReceiver = new MessageReceiver() { EventStore = eventStore, DefaultAggregateRootIdProperty = "Id" }.Register<MockCommand2, MockAggregateRoot>();
+			var MessageReceiver = new MessageReceiver() { EventStore = eventStore, DefaultAggregateRootIdProperty = "Id" }.Register<MockCommand2, MockAggregateRoot>();
 			var command = new MockCommand2() { Id = Guid.NewGuid(), Increment = 0 };
-			eventReceiver.Receive(command);
+			MessageReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
 			Assert.AreEqual(command.Id, eventStore.Saved[0].Item1);
 			Assert.IsInstanceOfType(eventStore.Saved[0].Item3, typeof(MockEvent));
@@ -52,15 +53,15 @@ namespace Yeast.EventStore.Test
 		}
 
 		[TestMethod]
-		public void EventReceiver_Receive2Commands()
+		public void MessageReceiver_Receive2Commands()
 		{
-			var eventReceiver = new MessageReceiver() { EventStore = EventStore }
+			var MessageReceiver = new MessageReceiver() { EventStore = EventStore }
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
 			var id = Guid.NewGuid();
 
-			eventReceiver
+			MessageReceiver
 				.Receive(new MockCommand() { AggregateRootId = id, Increment = 1 })
 				.Receive(new MockCommand2() { Id = id, Increment = 2 });
 
@@ -73,9 +74,9 @@ namespace Yeast.EventStore.Test
 		}
 
 		[TestMethod]
-		public void EventReceiver_Receive3Aggregates3Commands()
+		public void MessageReceiver_Receive3Aggregates3Commands()
 		{
-			var eventReceiver = new MessageReceiver() { EventStore = EventStore }
+			var MessageReceiver = new MessageReceiver() { EventStore = EventStore }
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
@@ -83,7 +84,7 @@ namespace Yeast.EventStore.Test
 			var id2 = Guid.NewGuid();
 			var id3 = Guid.NewGuid();
 
-			eventReceiver
+			MessageReceiver
 				.Receive(new MockCommand() { AggregateRootId = id, Increment = 1 })
 				.Receive(new MockCommand() { AggregateRootId = id2, Increment = 4 })
 				.Receive(new MockCommand() { AggregateRootId = id3, Increment = 7 })

@@ -29,16 +29,6 @@ namespace Yeast.EventStore
 			_writer = new BinaryWriter(File.Open(stream, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite));
 			var end = _writer.Seek(0, SeekOrigin.End);
 			_reader = new BinaryReader(_readerStream = new BufferedStream(File.Open(stream, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), bufferSize));
-
-			if (0 == end)
-			{
-				var position = _name + "_Position";
-				using (var writer = new BinaryWriter(File.Open(position, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite)))
-				{
-					writer.Write((int)0);
-				}
-			}
-
 			_versionTracker = GetLastVersion();
 
 			logger.Verbose("Creating for id {0} stream {1} with last version {2}", id, "", _versionTracker);

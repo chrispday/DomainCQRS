@@ -4,12 +4,14 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Linq;
+using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore
 {
 	public class EventStore : IEventStore
 	{
-		public IEventSerializer Serializer { get; set; }
+		public ILogger Logger { get; set; }
+		public IEventSerializer EventSerializer { get; set; }
 		public int SerializationDefaultBufferSize { get; set; }
 		public IEventStoreProvider _eventStoreProvider;
 		public IEventStoreProvider EventStoreProvider
@@ -56,13 +58,13 @@ namespace Yeast.EventStore
 
 		private object Deserialize(byte[] data)
 		{
-			return Serializer.Deserialize<object>(new MemoryStream(data));
+			return EventSerializer.Deserialize<object>(new MemoryStream(data));
 		}
 
 		private byte[] Serialize<T>(T data)
 		{
 			var stream = new MemoryStream(SerializationDefaultBufferSize);
-			Serializer.Serialize(stream, data);
+			EventSerializer.Serialize(stream, data);
 			stream.Flush();
 			return stream.ToArray();
 		}

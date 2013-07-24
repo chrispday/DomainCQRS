@@ -7,8 +7,31 @@ using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore
 {
+	public static class MessageReceiverConfigure
+	{
+		public static IConfigure MessageReceiver(this IConfigure configure)
+		{
+			var c = configure as Configure;
+			c.MessageReceiver = new MessageReceiver() { Logger = c.Logger, EventStore = c.EventStore };
+			return configure;
+		}
+
+		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure)
+		{
+			(configure as Configure).MessageReceiver.Register<Message, AggregateRoot>();
+			return configure;
+		}
+
+		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure, string aggregateRootIdsProperty, string aggregateRootApplyCommandMethod)
+		{
+			(configure as Configure).MessageReceiver.Register<Message, AggregateRoot>(aggregateRootIdsProperty, aggregateRootApplyCommandMethod);
+			return configure;
+		}
+	}
+
 	public class MessageReceiver : IMessageReceiver
 	{
+		public ILogger Logger { get; set; }
 		public IEventStore EventStore { get; set; }
 		public string DefaultAggregateRootIdProperty { get; set; }
 		public string DefaultAggregateRootApplyCommandMethod { get; set; }

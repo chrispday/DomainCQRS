@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore.Provider.Test
 {
@@ -34,14 +35,14 @@ namespace Yeast.EventStore.Provider.Test
 		[TestMethod]
 		public void FileEventStoreProvider_Save()
 		{
-			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory }.EnsureExists();
+			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = BaseDirectory, Logger = new DebugLogger() }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
 			fileEventStoreProvier.Save(EventToStore);
 			var EventToStore2 = new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 2, Data = new byte[] { 4, 5, 6, 7 } };
 			fileEventStoreProvier.Save(EventToStore2);
 			(fileEventStoreProvier as FileEventStoreProvider).Dispose();
 
-			var idStr = EventToStore.AggregateRootId.ToString();
+			var idStr = EventToStore.AggregateRootId.ToString() + "_Stream";
 			var path = Path.Combine(BaseDirectory, idStr);
 			Assert.IsTrue(File.Exists(path));
 			using (var reader = new BinaryReader(File.OpenRead(path)))
@@ -65,7 +66,7 @@ namespace Yeast.EventStore.Provider.Test
 		[TestMethod, ExpectedException(typeof(ConcurrencyException))]
 		public void FileEventStoreProvider_Save_VersionExists()
 		{
-			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists();
+			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
 			fileEventStoreProvier.Save(EventToStore);
 			fileEventStoreProvier.Save(EventToStore);
@@ -74,7 +75,7 @@ namespace Yeast.EventStore.Provider.Test
 		[TestMethod]
 		public void FileEventStoreProvider_Load()
 		{
-			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists();
+			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
 			fileEventStoreProvier.Save(EventToStore);
 			var EventToStore2 = new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 2, Data = new byte[] { 4, 5, 6, 7 } };
@@ -106,7 +107,7 @@ namespace Yeast.EventStore.Provider.Test
 		[TestMethod]
 		public void FileEventStoreProvider_Load_FromVersion()
 		{
-			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists();
+			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists();
 			var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
 			fileEventStoreProvier.Save(EventToStore);
 			fileEventStoreProvier.Save(new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 2, Data = new byte[] { 2 } });
@@ -122,7 +123,7 @@ namespace Yeast.EventStore.Provider.Test
 		public void FileEventStoreProvider_LoadAfterSaveOutOfOrder()
 		{
 			var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Data = new byte[] { 1, 2, 3 } };
-			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()) }.EnsureExists();
+			var fileEventStoreProvier = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists();
 			var EventToStore3 = new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 3, Data = new byte[] { 1, 3, 5 } };
 			fileEventStoreProvier.Save(EventToStore3);
 			var EventToStore2 = new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 2, Data = new byte[] { 4, 5, 6, 7 } };

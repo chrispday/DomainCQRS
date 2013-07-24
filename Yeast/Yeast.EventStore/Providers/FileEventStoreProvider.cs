@@ -4,6 +4,20 @@ using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using Yeast.EventStore.Common;
+using Yeast.EventStore.Provider;
+
+namespace Yeast.EventStore
+{
+	public static class FileEventStoreProviderConfigure
+	{
+		public static IConfigure FileEventStoreProvider(this IConfigure configure, string directory)
+		{
+			var c = configure as Configure;
+			c.EventStoreProvider = new FileEventStoreProvider() { Directory = directory, Logger = c.Logger }.EnsureExists();
+			return configure;
+		}
+	}
+}
 
 namespace Yeast.EventStore.Provider
 {
@@ -11,14 +25,14 @@ namespace Yeast.EventStore.Provider
 	{
 		public string Directory { get; set; }
 		public int EventStreamCapacity { get; set; }
-		public int EventStreamBuffer { get; set; }
+		public int EventStreamBufferSize { get; set; }
 		public ILogger Logger { get; set; }
 		private LRUDictionary<Guid, FileEventStream> FileEventStreams;
 
 		public FileEventStoreProvider()
 		{
 			EventStreamCapacity = 10000;
-			EventStreamBuffer = 1024 * 8;
+			EventStreamBufferSize = 1024 * 8;
 		}
 
 		public IEventStoreProvider EnsureExists()
@@ -58,14 +72,9 @@ namespace Yeast.EventStore.Provider
 			FileEventStream fileEventStream;
 			if (!FileEventStreams.TryGetValue(aggregateRootId, out fileEventStream))
 			{
-				FileEventStreams.Add(aggregateRootId, fileEventStream = new FileEventStream(Logger, aggregateRootId, Directory, EventStreamBuffer));
+				FileEventStreams.Add(aggregateRootId, fileEventStream = new FileEventStream(Logger, aggregateRootId, Directory, EventStreamBufferSize));
 			}
 			return fileEventStream;
-		}
-
-		private byte GetIndex(Guid aggregateRootId)
-		{
-			return aggregateRootId.ToByteArray()[0];
 		}
 
 		public void Dispose()
