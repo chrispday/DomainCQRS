@@ -83,6 +83,20 @@ namespace Yeast.EventStore
 			set { _messageReceiver = value; }
 		}
 
+		private IAggregateRootCache _aggregateRootCache;
+		public IAggregateRootCache AggregateRootCache
+		{
+			get { return _aggregateRootCache; }
+			set
+			{
+				_aggregateRootCache = value;
+				if (null != MessageReceiver)
+				{
+					MessageReceiver.AggregateRootCache = value;
+				}
+			}
+		}
+
 		public static IConfigure With()
 		{
 			return new Configure() { EventStore = new EventStore() };

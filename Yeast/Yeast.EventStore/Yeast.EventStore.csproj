@@ -47,6 +47,8 @@
     <Compile Include="AggregateRoot\IApplies.cs" />
     <Compile Include="AggregateRoot\IHandlesCommand.cs" />
     <Compile Include="AggregateRoot\IHandlesEvent.cs" />
+    <Compile Include="Cache\AggregateRootAndVersion.cs" />
+    <Compile Include="Cache\LRUAggregateRootCache.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Common\DebugLogger.cs" />
     <Compile Include="Common\ILogger.cs" />
@@ -59,10 +61,10 @@
     <Compile Include="Exceptions\RegistrationException.cs" />
     <Compile Include="Exceptions\EventStoreException.cs" />
     <Compile Include="Exceptions\EventToStoreException.cs" />
-    <Compile Include="EventStore\IEventCache.cs" />
+    <Compile Include="Cache\IAggregateRootCache.cs" />
     <Compile Include="EventStore\IEventDeduper.cs" />
     <Compile Include="EventStore\IEventPartitioner.cs" />
-    <Compile Include="Providers\FileEventStream.cs" />
+    <Compile Include="Providers\File\FileEventStream.cs" />
     <Compile Include="Receiver\MessageReceiver.cs" />
     <Compile Include="Receiver\IMessageReceiver.cs" />
     <Compile Include="EventStore\IEventResequencer.cs" />
@@ -71,8 +73,8 @@
     <Compile Include="Providers\IEventStoreProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="EventStore\EventToStore.cs" />
-    <Compile Include="Providers\FileEventStoreProvider.cs" />
-    <Compile Include="Providers\SqlServerEventStoreProvider.cs" />
+    <Compile Include="Providers\File\FileEventStoreProvider.cs" />
+    <Compile Include="Providers\SQL\SqlServerEventStoreProvider.cs" />
     <Compile Include="EventStore\StoredEvent.cs" />
     <Compile Include="Serializers\BinaryFormatterSerializer.cs" />
     <Compile Include="Serializers\XmlObjectSerializer.cs" />

@@ -33,21 +33,14 @@ namespace Yeast.EventStore
 	{
 		public ILogger Logger { get; set; }
 		public IEventStore EventStore { get; set; }
+		public IAggregateRootCache AggregateRootCache { get; set; }
 		public string DefaultAggregateRootIdProperty { get; set; }
 		public string DefaultAggregateRootApplyCommandMethod { get; set; }
-		public int AggregateRootCacheSize { get; set; }
-		public class AggregateRootAndVersion
-		{
-			public object AggregateRoot;
-			public int Version;
-		}
-		private LRUDictionary<Guid, AggregateRootAndVersion> AggregateRootCache;
 
 		public MessageReceiver()
 		{
 			DefaultAggregateRootIdProperty = "AggregateRootId";
 			DefaultAggregateRootApplyCommandMethod = "Apply";
-			AggregateRootCacheSize = 1000;
 		}
 
 		public IMessageReceiver Receive(object message)
@@ -60,11 +53,6 @@ namespace Yeast.EventStore
 				throw new RegistrationException(string.Format("{0} is not registered.", messageType.Name)) { MessageType = messageType };
 			}
 
-			if (null == AggregateRootCache)
-			{
-				AggregateRootCache = new LRUDictionary<Guid, AggregateRootAndVersion>(AggregateRootCacheSize);
-			}
-
 			foreach (var aggregateRootType in aggregateRootTypes)
 			{
 				foreach (var propertyAndMethod in aggregateRootType.Value)
@@ -75,7 +63,7 @@ namespace Yeast.EventStore
 						var eventsToStore = ApplyCommandToAggregate(messageType, aggregateRootType.Key, propertyAndMethod.Method, message, aggregateRootAndVersion.AggregateRoot);
 						foreach (var @event in eventsToStore)
 						{
-							EventStore.Save(aggregateRootId, ++aggregateRootAndVersion.Version, @event);
+							EventStore.Save(aggregateRootId, ++aggregateRootAndVersion.LatestVersion, @event);
 						}
 					}
 				}
@@ -91,7 +79,7 @@ namespace Yeast.EventStore
 			{
 				var aggregateRoot = CreateAggregateRoot(aggregateRootType);
 				var version = LoadAggreateRoot(aggregateRootType, aggregateRoot, aggregateRootId);
-				AggregateRootCache[aggregateRootId] = aggregateRootAndVersion = new AggregateRootAndVersion() { AggregateRoot = aggregateRoot, Version = version };
+				AggregateRootCache[aggregateRootId] = aggregateRootAndVersion = new AggregateRootAndVersion() { AggregateRoot = aggregateRoot, LatestVersion = version };
 			}
 			return aggregateRootAndVersion;
 		}

@@ -105,6 +105,7 @@ namespace Yeast.EventStore.Test
 				.FileEventStoreProvider(Path.Combine(BaseDirectory, Guid.NewGuid().ToString()))
 				.XmlObjectSerializer(serializer)
 				.MessageReceiver()
+				.LRUAggregateRootCache()
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
@@ -147,7 +148,7 @@ namespace Yeast.EventStore.Test
 			var eventStore = new EventStore() { EventSerializer = new XmlObjectSerializer() { Serializer = serializer }, EventStoreProvider = fileLoadTestProvider };
 			var random = new Random();
 
-			var eventReceiver = new MessageReceiver() { EventStore = eventStore }
+			var eventReceiver = new MessageReceiver() { EventStore = eventStore, AggregateRootCache = new LRUAggregateRootCache(1000) }
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 

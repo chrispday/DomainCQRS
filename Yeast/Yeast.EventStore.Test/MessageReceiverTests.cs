@@ -30,7 +30,7 @@ namespace Yeast.EventStore.Test
 		public void MessageReceiver_Receive()
 		{
 			var eventStore = new MockEventStore();
-			var MessageReceiver = new MessageReceiver() { EventStore = eventStore }.Register<MockCommand, MockAggregateRoot>();
+			var MessageReceiver = new MessageReceiver() { EventStore = eventStore, AggregateRootCache = new LRUAggregateRootCache(1000) }.Register<MockCommand, MockAggregateRoot>();
 			var command = new MockCommand() { AggregateRootId = Guid.NewGuid(), Increment = 1 };
 			MessageReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
@@ -43,7 +43,7 @@ namespace Yeast.EventStore.Test
 		public void MessageReceiver_Receive_CustomNames_NotICommand()
 		{
 			var eventStore = new MockEventStore();
-			var MessageReceiver = new MessageReceiver() { EventStore = eventStore, DefaultAggregateRootIdProperty = "Id" }.Register<MockCommand2, MockAggregateRoot>();
+			var MessageReceiver = new MessageReceiver() { EventStore = eventStore, DefaultAggregateRootIdProperty = "Id", AggregateRootCache = new LRUAggregateRootCache(1000) }.Register<MockCommand2, MockAggregateRoot>();
 			var command = new MockCommand2() { Id = Guid.NewGuid(), Increment = 0 };
 			MessageReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
@@ -55,7 +55,7 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void MessageReceiver_Receive2Commands()
 		{
-			var MessageReceiver = new MessageReceiver() { EventStore = EventStore }
+			var MessageReceiver = new MessageReceiver() { EventStore = EventStore, AggregateRootCache = new LRUAggregateRootCache(1000) }
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
@@ -76,7 +76,7 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void MessageReceiver_Receive3Aggregates3Commands()
 		{
-			var MessageReceiver = new MessageReceiver() { EventStore = EventStore }
+			var MessageReceiver = new MessageReceiver() { EventStore = EventStore, AggregateRootCache = new LRUAggregateRootCache(1000) }
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 

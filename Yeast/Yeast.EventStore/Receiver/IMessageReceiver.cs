@@ -10,6 +10,7 @@ namespace Yeast.EventStore
 	{
 		ILogger Logger { get; set; }
 		IEventStore EventStore { get; set; }
+		IAggregateRootCache AggregateRootCache { get; set; }
 
 		IMessageReceiver Receive(object message);
 		IMessageReceiver Register<Message, AggregateRoot>();

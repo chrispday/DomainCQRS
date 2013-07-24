@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Yeast.EventStore
 {
-	public interface IEventCache
+	public interface IAggregateRootCache : IDictionary<Guid, AggregateRootAndVersion>
 	{
 	}
 }
