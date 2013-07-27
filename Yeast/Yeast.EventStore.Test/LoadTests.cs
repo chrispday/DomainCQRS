@@ -119,7 +119,7 @@ namespace Yeast.EventStore.Test
 
 			var stopWatch = Stopwatch.StartNew();
 
-			var amount = 10000;
+			var amount = 1;
 			foreach (var i in Enumerable.Range(1, amount))
 			{
 				id = keys[Ran(random, LoadTestAggregateIds.Count - 1)];
@@ -163,7 +163,7 @@ namespace Yeast.EventStore.Test
 
 			var stopWatch = Stopwatch.StartNew();
 
-			var amount = 100000;
+			var amount = 1;
 			Parallel.ForEach(Enumerable.Range(1, amount), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, i =>
 			{
 				id = keys[Ran(random, LoadTestAggregateIds.Count - 1)];

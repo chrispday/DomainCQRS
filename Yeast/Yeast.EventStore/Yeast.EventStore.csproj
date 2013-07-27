@@ -44,7 +44,6 @@
   <ItemGroup>
     <Compile Include="AggregateRoot\AggregateRootBase.cs" />
     <Compile Include="AggregateRoot\IAggregateRoot.cs" />
-    <Compile Include="AggregateRoot\IApplies.cs" />
     <Compile Include="AggregateRoot\IHandlesCommand.cs" />
     <Compile Include="AggregateRoot\IHandlesEvent.cs" />
     <Compile Include="Cache\AggregateRootAndVersion.cs" />
