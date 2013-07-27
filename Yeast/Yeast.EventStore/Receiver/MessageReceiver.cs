@@ -35,12 +35,12 @@ namespace Yeast.EventStore
 		public IEventStore EventStore { get; set; }
 		public IAggregateRootCache AggregateRootCache { get; set; }
 		public string DefaultAggregateRootIdProperty { get; set; }
-		public string DefaultAggregateRootApplyCommandMethod { get; set; }
+		public string DefaultAggregateRootApplyMethod { get; set; }
 
 		public MessageReceiver()
 		{
 			DefaultAggregateRootIdProperty = "AggregateRootId";
-			DefaultAggregateRootApplyCommandMethod = "Apply";
+			DefaultAggregateRootApplyMethod = "Apply";
 		}
 
 		public IMessageReceiver Receive(object message)
@@ -74,14 +74,17 @@ namespace Yeast.EventStore
 
 		private AggregateRootAndVersion GetAggregateRootAndVersion(Type aggregateRootType, Guid aggregateRootId)
 		{
-			AggregateRootAndVersion aggregateRootAndVersion;
-			if (!AggregateRootCache.TryGetValue(aggregateRootId, out aggregateRootAndVersion))
+			lock (AggregateRootCache)
 			{
-				var aggregateRoot = CreateAggregateRoot(aggregateRootType);
-				var version = LoadAggreateRoot(aggregateRootType, aggregateRoot, aggregateRootId);
-				AggregateRootCache[aggregateRootId] = aggregateRootAndVersion = new AggregateRootAndVersion() { AggregateRoot = aggregateRoot, LatestVersion = version };
+				AggregateRootAndVersion aggregateRootAndVersion;
+				if (!AggregateRootCache.TryGetValue(aggregateRootId, out aggregateRootAndVersion))
+				{
+					var aggregateRoot = CreateAggregateRoot(aggregateRootType);
+					var version = LoadAggreateRoot(aggregateRootType, aggregateRoot, aggregateRootId);
+					AggregateRootCache[aggregateRootId] = aggregateRootAndVersion = new AggregateRootAndVersion() { AggregateRoot = aggregateRoot, LatestVersion = version };
+				}
+				return aggregateRootAndVersion;
 			}
-			return aggregateRootAndVersion;
 		}
 
 		private delegate IEnumerable<Guid> GetAggregateRootIds(object message);
@@ -293,7 +296,7 @@ namespace Yeast.EventStore
 
 		public IMessageReceiver Register<Message, AggregateRoot>()
 		{
-			return Register<Message, AggregateRoot>(DefaultAggregateRootIdProperty, DefaultAggregateRootApplyCommandMethod);
+			return Register<Message, AggregateRoot>(DefaultAggregateRootIdProperty, DefaultAggregateRootApplyMethod);
 		}
 
 		private class PropertyAndMethod
@@ -302,7 +305,7 @@ namespace Yeast.EventStore
 			public MethodInfo Method { get; set; }
 		}
 		private Dictionary<Type, Dictionary<Type, List<PropertyAndMethod>>> _messages = new Dictionary<Type, Dictionary<Type, List<PropertyAndMethod>>>();
-		public IMessageReceiver Register<Message, AggregateRoot>(string aggregateRootIdsProperty, string aggregateRootApplyCommandMethod)
+		public IMessageReceiver Register<Message, AggregateRoot>(string aggregateRootIdsProperty, string aggregateRootApplyMethod)
 		{
 			if (string.IsNullOrEmpty(aggregateRootIdsProperty))
 			{
@@ -329,7 +332,7 @@ namespace Yeast.EventStore
 				throw new RegistrationException(string.Format("{0} does not have an empty constructor.", aggregateRootType.Name));
 			}
 
-			var applyMethod = aggregateRootType.GetMethod(aggregateRootApplyCommandMethod, new Type[] { messageType });
+			var applyMethod = aggregateRootType.GetMethod(aggregateRootApplyMethod, new Type[] { messageType });
 			if (null == applyMethod)
 			{
 				throw new RegistrationException();

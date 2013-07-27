@@ -16,6 +16,19 @@ namespace Yeast.EventStore
 			c.EventStoreProvider = new FileEventStoreProvider() { Directory = directory, Logger = c.Logger }.EnsureExists();
 			return configure;
 		}
+
+		public static IConfigure FileEventStoreProvider(this IConfigure configure, string directory, int eventStreamCacheCapacity, int eventStreamBufferSize)
+		{
+			var c = configure as Configure;
+			c.EventStoreProvider = new FileEventStoreProvider()
+			{ 
+				Directory = directory, 
+				Logger = c.Logger, 
+				EventStreamCacheCapacity = eventStreamCacheCapacity,
+				EventStreamBufferSize = eventStreamBufferSize
+			}.EnsureExists();
+			return configure;
+		}
 	}
 }
 
@@ -24,14 +37,14 @@ namespace Yeast.EventStore.Provider
 	public class FileEventStoreProvider : IEventStoreProvider, IDisposable
 	{
 		public string Directory { get; set; }
-		public int EventStreamCapacity { get; set; }
+		public int EventStreamCacheCapacity { get; set; }
 		public int EventStreamBufferSize { get; set; }
 		public ILogger Logger { get; set; }
 		private LRUDictionary<Guid, FileEventStream> FileEventStreams;
 
 		public FileEventStoreProvider()
 		{
-			EventStreamCapacity = 10000;
+			EventStreamCacheCapacity = 10000;
 			EventStreamBufferSize = 1024 * 8;
 		}
 
@@ -42,7 +55,7 @@ namespace Yeast.EventStore.Provider
 				Logger.Information("Creating directory {0}", Directory);
 				System.IO.Directory.CreateDirectory(Directory);
 			}
-			FileEventStreams = new LRUDictionary<Guid, FileEventStream>(EventStreamCapacity);
+			FileEventStreams = new LRUDictionary<Guid, FileEventStream>(EventStreamCacheCapacity);
 			FileEventStreams.Removed += FileEventStreamRemoved;
 			return this;
 		}

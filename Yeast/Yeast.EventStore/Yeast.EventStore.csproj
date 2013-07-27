@@ -63,22 +63,24 @@
     <Compile Include="Exceptions\EventToStoreException.cs" />
     <Compile Include="Cache\IAggregateRootCache.cs" />
     <Compile Include="EventStore\IEventDeduper.cs" />
-    <Compile Include="EventStore\IEventPartitioner.cs" />
-    <Compile Include="Providers\File\FileEventStream.cs" />
+    <Compile Include="Provider\IPartitionedEventStoreProvider.cs" />
+    <Compile Include="Provider\File\FileEventStream.cs" />
+    <Compile Include="Provider\File\PartitionedFileEventStoreProvider.cs" />
     <Compile Include="Receiver\MessageReceiver.cs" />
     <Compile Include="Receiver\IMessageReceiver.cs" />
     <Compile Include="EventStore\IEventResequencer.cs" />
     <Compile Include="Serializers\IEventSerializer.cs" />
     <Compile Include="EventStore\IEventStore.cs" />
-    <Compile Include="Providers\IEventStoreProvider.cs" />
+    <Compile Include="Provider\IEventStoreProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="EventStore\EventToStore.cs" />
-    <Compile Include="Providers\File\FileEventStoreProvider.cs" />
-    <Compile Include="Providers\SQL\SqlServerEventStoreProvider.cs" />
+    <Compile Include="Provider\File\FileEventStoreProvider.cs" />
+    <Compile Include="Provider\SQL\SqlServerEventStoreProvider.cs" />
     <Compile Include="EventStore\StoredEvent.cs" />
     <Compile Include="Serializers\BinaryFormatterSerializer.cs" />
     <Compile Include="Serializers\XmlObjectSerializer.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

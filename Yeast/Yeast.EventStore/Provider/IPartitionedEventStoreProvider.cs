@@ -5,7 +5,8 @@ using System.Text;
 
 namespace Yeast.EventStore
 {
-	public interface IEventPartitioner
+	public interface IPartitionedEventStoreProvider : IEventStoreProvider
 	{
+		int MaximumPartitions { get; set; }
 	}
 }

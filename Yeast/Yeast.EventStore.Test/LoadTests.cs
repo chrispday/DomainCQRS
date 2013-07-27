@@ -102,7 +102,7 @@ namespace Yeast.EventStore.Test
 
 			var configure = Configure.With()
 				.DebugLogger()
-				.FileEventStoreProvider(Path.Combine(BaseDirectory, Guid.NewGuid().ToString()))
+				.PartitionedFileEventStoreProvider(2, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 5000, 8 * 1024)
 				.XmlObjectSerializer(serializer)
 				.MessageReceiver()
 				.LRUAggregateRootCache()
@@ -119,7 +119,7 @@ namespace Yeast.EventStore.Test
 
 			var stopWatch = Stopwatch.StartNew();
 
-			var amount = 1;
+			var amount = 10000;
 			foreach (var i in Enumerable.Range(1, amount))
 			{
 				id = keys[Ran(random, LoadTestAggregateIds.Count - 1)];
@@ -128,7 +128,7 @@ namespace Yeast.EventStore.Test
 
 			stopWatch.Stop();
 
-			var fileInfos = Directory.GetFiles(((configure as Configure).EventStoreProvider as FileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
+			var fileInfos = Directory.GetFiles(((configure as Configure).EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
 			Debug.WriteLine("Time taken {0}", stopWatch.Elapsed);
 			Debug.WriteLine("Per sec {0:#,##0.0}", amount / stopWatch.Elapsed.TotalSeconds);
 			Debug.WriteLine("Files in Event Store {0}", fileInfos.Count());
@@ -140,45 +140,49 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void LoadTest_MessageReceiver_FileStore_Parallel()
 		{
-			var fileLoadTestProvider = new FileEventStoreProvider() { Directory = Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists() as FileEventStoreProvider;
 			var typeModel = RuntimeTypeModel.Create();
 			typeModel.Add(typeof(MockCommand), true);
 			var serializer = new XmlProtoSerializer(typeModel, typeof(MockCommand));
-			//var serializer = new DataContractSerializer(typeof(object), new Type[] { typeof(MockCommand), typeof(MockEvent), typeof(MockCommand2) });
-			var eventStore = new EventStore() { EventSerializer = new XmlObjectSerializer() { Serializer = serializer }, EventStoreProvider = fileLoadTestProvider };
-			var random = new Random();
 
-			var eventReceiver = new MessageReceiver() { EventStore = eventStore, AggregateRootCache = new LRUAggregateRootCache(1000) }
+			var configure = Configure.With()
+				.DebugLogger()
+				.PartitionedFileEventStoreProvider(8, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1500, 8 * 1024)
+				.XmlObjectSerializer(serializer)
+				.MessageReceiver()
+				.LRUAggregateRootCache()
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
+			var random = new Random();
+
 			var keys = LoadTestAggregateIds.Keys.ToArray();
 			var id = LoadTestAggregateIds.Keys.ToArray()[Ran(random, LoadTestAggregateIds.Count - 1)];
-			eventReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 });
+			var messageReceiver = (configure as Configure).MessageReceiver;
+			messageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 });
 			var concurrencyExceptions = 0;
 
 			var stopWatch = Stopwatch.StartNew();
 
-			var amount = 1;
-			Parallel.ForEach(Enumerable.Range(1, amount), new ParallelOptions() { MaxDegreeOfParallelism = 4 }, i =>
+			var amount = 100000;
+			Parallel.ForEach(Enumerable.Range(1, amount), new ParallelOptions() { MaxDegreeOfParallelism = 8 }, i =>
 			{
 				id = keys[Ran(random, LoadTestAggregateIds.Count - 1)];
 				var cmd = new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 };
 					try
 					{
-						eventReceiver.Receive(cmd);
+						messageReceiver.Receive(cmd);
 					}
 					catch (ConcurrencyException)
 					{
 						try
 						{
-							eventReceiver.Receive(cmd);
+							messageReceiver.Receive(cmd);
 						}
 						catch (ConcurrencyException)
 						{
 							try
 							{
-								eventReceiver.Receive(cmd);
+								messageReceiver.Receive(cmd);
 							}
 							catch (ConcurrencyException)
 							{
@@ -190,7 +194,7 @@ namespace Yeast.EventStore.Test
 
 			stopWatch.Stop();
 
-			var fileInfos = Directory.GetFiles(fileLoadTestProvider.Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
+			var fileInfos = Directory.GetFiles(((configure as Configure).EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
 			Debug.WriteLine("Time taken {0}", stopWatch.Elapsed);
 			Debug.WriteLine("Per sec {0:#,##0.0}", amount / stopWatch.Elapsed.TotalSeconds);
 			Debug.WriteLine("Files in Event Store {0}", fileInfos.Count());

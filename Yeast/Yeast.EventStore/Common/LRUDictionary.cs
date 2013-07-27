@@ -13,13 +13,22 @@ namespace Yeast.EventStore.Common
 			get { return _capacity; }
 		}
 
-		private Dictionary<TKey, TValue> dictionary = new Dictionary<TKey, TValue>();
-		private LinkedList<TKey> linkedList = new LinkedList<TKey>();
+		private Dictionary<TKey, TValue> dictionary;
+		private LinkedList<TKey> linkedList;
 
 		public event EventHandler<EventArgs> Removed;
 
-		public LRUDictionary() : base() { }
-		public LRUDictionary(int capacity) : base() { _capacity = capacity; }
+		public LRUDictionary() : base() 
+		{
+			dictionary = new Dictionary<TKey, TValue>();
+			linkedList = new LinkedList<TKey>();
+		}
+		public LRUDictionary(int capacity)
+		{
+			_capacity = capacity;
+			dictionary = new Dictionary<TKey, TValue>(capacity);
+			linkedList = new LinkedList<TKey>();
+		}
 
 		private void UpdateLRU(TKey key, bool contains)
 		{
@@ -29,15 +38,19 @@ namespace Yeast.EventStore.Common
 			}
 			linkedList.AddFirst(key);
 
-			while (linkedList.Count > _capacity)
+			if (linkedList.Count > _capacity)
 			{
-				var lastKey = linkedList.Last.Value;
-				var lastValue = dictionary[lastKey];
-				dictionary.Remove(lastKey);
-				linkedList.Remove(lastKey);
-				if (null != Removed)
+				var targetCapacity = (int)(_capacity * 0.9);
+				while (linkedList.Count > targetCapacity)
 				{
-					Removed(new KeyValuePair<TKey, TValue>(lastKey, lastValue), new EventArgs());
+					var lastKey = linkedList.Last.Value;
+					var lastValue = dictionary[lastKey];
+					dictionary.Remove(lastKey);
+					linkedList.Remove(lastKey);
+					if (null != Removed)
+					{
+						Removed(new KeyValuePair<TKey, TValue>(lastKey, lastValue), new EventArgs());
+					}
 				}
 			}
 		}

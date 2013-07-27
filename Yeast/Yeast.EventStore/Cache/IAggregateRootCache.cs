@@ -7,5 +7,6 @@ namespace Yeast.EventStore
 {
 	public interface IAggregateRootCache : IDictionary<Guid, AggregateRootAndVersion>
 	{
+		event EventHandler<EventArgs> Removed;
 	}
 }
