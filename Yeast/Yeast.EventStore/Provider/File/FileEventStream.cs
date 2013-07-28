@@ -191,7 +191,10 @@ namespace Yeast.EventStore
 			Logger.Verbose("Disposing for {0} stream {1} last version {2}", _id, _name, _versionTracker);
 			_writer.Close();
 			_reader.Close();
-			_publisherReader.Close();
+			if (null != _publisherReader)
+			{
+				_publisherReader.Close();
+			}
 		}
 	}
 }
