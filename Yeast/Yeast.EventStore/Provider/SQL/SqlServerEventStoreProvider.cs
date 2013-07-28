@@ -14,9 +14,23 @@ namespace Yeast.EventStore.Provider
 
 		#region Sql Commands
 
-		private static string InsertCommand = "insert into [Event] ([AggregateId], [Version], [Timestamp], [Data]) values (@AggregateId, @Version, @Timestamp, @Data)";
-		private static string SelectCommand = "select [Version], [Timestamp], [Data] from [Event] where [AggregateId] = @AggregateId and [Version] >= @FromVersion and [Version] <= @ToVersion order by Version";
-		private static string SelectCommandWithTimestamp = "select [Version], [Timestamp], [Data] from [Event] where [AggregateId] = @AggregateId and [Version] >= @FromVersion and [Version] <= @ToVersion and [Timestamp] >= @FromTimestamp and [Timestamp] <= @ToTimestamp order by Version";
+		private static string InsertCommand = @"
+insert into [Event] ([AggregateId], [Version], [Timestamp], [Data]) values (@AggregateId, @Version, @Timestamp, @Data)
+";
+		private static string SelectCommand = @"
+select [Version], [Timestamp], [Data] 
+from [Event] with (NOLOCK) 
+where [AggregateId] = @AggregateId and [Version] >= @FromVersion and [Version] <= @ToVersion order by Version
+";
+		private static string SelectCommandWithTimestamp = @"
+select [Version], [Timestamp], [Data] 
+from [Event] with (NOLOCK) 
+where [AggregateId] = @AggregateId and [Version] >= @FromVersion and [Version] <= @ToVersion and [Timestamp] >= @FromTimestamp and [Timestamp] <= @ToTimestamp order by Version
+";
+		private static string SelectCommandWithSequence = @"
+select [Version], [Timestamp], [Data] 
+from [Event] with (NOLOCK)
+where [Sequence] > @FromSequence";
 		private static string CreateTableCommand = @"
 -- --------------------------------------------------
 -- Creating all tables
@@ -24,13 +38,14 @@ namespace Yeast.EventStore.Provider
 
 -- Creating table 'Event'
 CREATE TABLE [Event] (
-    [AggregateId] uniqueidentifier  NOT NULL,
-    [Version] int  NOT NULL,
-    [Timestamp] datetime NOT NULL,
-    [Data] varbinary(max)  NOT NULL
+	[AggregateId] uniqueidentifier  NOT NULL,
+	[Version] int  NOT NULL,
+	[Timestamp] datetime NOT NULL,
+	[Sequence] int IDENTITY(1, 1) NOT NULL,
+	[Data] varbinary(max)  NOT NULL
 );";
 
-		private static string CreateTablePKCommand = @"
+		private static string CreateTableIndexesCommand = @"
 -- --------------------------------------------------
 -- Creating all PRIMARY KEY constraints
 -- --------------------------------------------------
@@ -39,6 +54,8 @@ CREATE TABLE [Event] (
 ALTER TABLE [Event]
 ADD CONSTRAINT [PK_Events]
     PRIMARY KEY CLUSTERED ([AggregateId], [Version] ASC);
+
+CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);
 ";
 
 		private static string CreateTableDefaultCommand = @"
@@ -62,7 +79,7 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 					{
 						cmd.ExecuteNonQuery();
 					}
-					using (var pkCmd = new SqlCommand() { Connection = conn, CommandText = CreateTablePKCommand })
+					using (var pkCmd = new SqlCommand() { Connection = conn, CommandText = CreateTableIndexesCommand })
 					{
 						pkCmd.ExecuteNonQuery();
 					}
@@ -140,6 +157,26 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 					}
 				}
 			}
+		}
+
+
+		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
+		{
+			throw new NotImplementedException();
+		}
+
+		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition to)
+		{
+			throw new NotImplementedException();
+		}
+
+		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		{
+			throw new NotImplementedException();
+		}
+
+		public void Dispose()
+		{
 		}
 	}
 }

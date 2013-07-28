@@ -80,6 +80,53 @@ namespace Yeast.EventStore.Provider
 			return fileEventStream.Load(aggregateRootId, fromVersion, toVersion, fromTimestamp, toTimestamp);
 		}
 
+		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
+		{
+			return new FileEventStoreProviderPosition();
+		}
+
+		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition to)
+		{
+			return Load(CreateEventStoreProviderPosition(), to);
+		}
+
+		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		{
+			return Load(from as FileEventStoreProviderPosition, to as FileEventStoreProviderPosition);
+		}
+
+		private IEnumerable<EventToStore> Load(FileEventStoreProviderPosition from, FileEventStoreProviderPosition to)
+		{
+			Logger.Verbose("Loading from {0} to {1}.", from, to);
+
+			foreach (var file in System.IO.Directory.GetFiles(Directory))
+			{
+				var aggregateRootId = new Guid(Path.GetFileName(file));
+
+				bool dispose;
+				FileEventStream fileEventStream;
+				if (dispose = !FileEventStreams.TryGetValue(aggregateRootId, out fileEventStream))
+				{
+					fileEventStream = new FileEventStream(Logger, aggregateRootId, Directory, EventStreamBufferSize);
+				}
+
+				try
+				{
+					foreach (var @event in fileEventStream.Load(aggregateRootId, from, to))
+					{
+						yield return @event;
+					}
+				}
+				finally
+				{
+					if (dispose)
+					{
+						fileEventStream.Dispose();
+					}
+				}
+			}
+		}
+
 		private FileEventStream GetFileEventStream(Guid aggregateRootId)
 		{
 			FileEventStream fileEventStream;

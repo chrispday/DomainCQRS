@@ -56,6 +56,19 @@ namespace Yeast.EventStore
 			}
 		}
 
+		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
+		{
+			return EventStoreProvider.CreateEventStoreProviderPosition();
+		}
+
+		public IEnumerable<StoredEvent> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		{
+			foreach (var storedEvent in EventStoreProvider.Load(from, to))
+			{
+				yield return new StoredEvent() { AggregateRootId = storedEvent.AggregateRootId, Version = storedEvent.Version, Event = Deserialize(storedEvent.Data) };
+			}
+		}
+
 		private object Deserialize(byte[] data)
 		{
 			return EventSerializer.Deserialize<object>(new MemoryStream(data));
@@ -68,6 +81,5 @@ namespace Yeast.EventStore
 			stream.Flush();
 			return stream.ToArray();
 		}
-
 	}
 }

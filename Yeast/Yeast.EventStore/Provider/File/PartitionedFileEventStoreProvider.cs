@@ -94,6 +94,32 @@ namespace Yeast.EventStore.Provider
 			}
 		}
 
+		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
+		{
+			return new PartitionedFileEventStoreProviderPosition(MaximumPartitions);
+		}
+
+		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition to)
+		{
+			return Load(CreateEventStoreProviderPosition(), to);
+		}
+
+		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		{
+			return Load(from as PartitionedFileEventStoreProviderPosition, to as PartitionedFileEventStoreProviderPosition);
+		}
+
+		public IEnumerable<EventToStore> Load(PartitionedFileEventStoreProviderPosition from, PartitionedFileEventStoreProviderPosition to)
+		{
+			for (int i = 0; i < MaximumPartitions; i++)
+			{
+				foreach (var @event in _fileEventStoreProviders[i].Load(from.Positions[i], to.Positions[i]))
+				{
+					yield return @event;
+				}
+			}
+		}
+
 		public void Dispose()
 		{
 			foreach (var fileEventStoreProvider in _fileEventStoreProviders)

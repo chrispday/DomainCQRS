@@ -9,5 +9,6 @@ namespace Yeast.EventStore
 		public int Version { get; set; }
 		public DateTime Timestamp { get; set; }
 		public byte[] Data { get; set; }
+		public int Size { get; set; }
 	}
 }

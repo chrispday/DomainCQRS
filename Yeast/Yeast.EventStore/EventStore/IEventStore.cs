@@ -15,5 +15,9 @@ namespace Yeast.EventStore
 		// Messages
 		IEventStore Save<T>(Guid aggregateRootId, int version, T data);
 		IEnumerable<StoredEvent> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp);
+
+		// Publishing
+		IEventStoreProviderPosition CreateEventStoreProviderPosition();
+		IEnumerable<StoredEvent> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to);
 	}
 }

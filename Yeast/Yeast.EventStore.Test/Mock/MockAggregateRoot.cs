@@ -24,7 +24,7 @@ namespace Yeast.EventStore.Test
 		public IEnumerable Apply(MockCommand command)
 		{
 			Amount += command.Increment;
-			return new object[] { new MockEvent() { Increment = command.Increment } };
+			return new object[] { new MockEvent() { AggregateRootId = command.AggregateRootId, Increment = command.Increment } };
 		}
 
 		public void Apply(MockEvent @event)
@@ -35,7 +35,7 @@ namespace Yeast.EventStore.Test
 		public IEnumerable Apply(MockCommand2 command)
 		{
 			Amount += command.Increment;
-			return new object[] { new MockEvent() { Increment = command.Increment } };
+			return new object[] { new MockEvent() { AggregateRootId = command.Id, Increment = command.Increment } };
 		}
 	}
 }

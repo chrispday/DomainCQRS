@@ -57,5 +57,16 @@ namespace Yeast.EventStore.Test
 				throw new NotImplementedException();
 			}
 		}
+
+
+		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
+		{
+			throw new NotImplementedException();
+		}
+
+		public IEnumerable<StoredEvent> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

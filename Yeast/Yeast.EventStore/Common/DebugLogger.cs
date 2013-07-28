@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using Yeast.EventStore.Common;
 
-namespace Yeast.EventStore.Common
+namespace Yeast.EventStore
 {
 	public static class DebugLoggerConfigure
 	{
@@ -13,13 +14,24 @@ namespace Yeast.EventStore.Common
 			(configure as Configure).Logger = new DebugLogger();
 			return configure;
 		}
-	}
 
+		public static IConfigure DebugLogger(this IConfigure configure, bool logVerbose)
+		{
+			(configure as Configure).Logger = new DebugLogger() { LogVerbose = logVerbose };
+			return configure;
+		}
+	}
+}
+
+namespace Yeast.EventStore.Common
+{
 	public class DebugLogger : ILogger
 	{
+		public bool LogVerbose = false;
+
 		public void Verbose(string format, params object[] pars)
 		{
-			//Debug.WriteLine(string.Format("Verbose\t" + format, pars));
+			Debug.WriteLine(string.Format("Verbose\t" + format, pars));
 		}
 
 		public void Information(string format, params object[] pars)

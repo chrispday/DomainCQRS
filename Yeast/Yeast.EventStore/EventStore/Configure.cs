@@ -6,7 +6,7 @@ using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore
 {
-	public interface IConfigure
+	public interface IConfigure : IDisposable
 	{
 	}
 
@@ -45,6 +45,10 @@ namespace Yeast.EventStore
 				{
 					MessageReceiver.Logger = value;
 				}
+				if (null != EventPublisher)
+				{
+					EventPublisher.Logger = value;
+				}
 			}
 		}
 
@@ -58,6 +62,10 @@ namespace Yeast.EventStore
 				if (null != MessageReceiver)
 				{
 					MessageReceiver.EventStore = value;
+				}
+				if (null != EventPublisher)
+				{
+					EventPublisher.EventStore = value;
 				}
 			}
 		}
@@ -97,9 +105,31 @@ namespace Yeast.EventStore
 			}
 		}
 
+		private IEventPublisher _eventPublisher;
+		public IEventPublisher EventPublisher
+		{
+			get { return _eventPublisher; }
+			set
+			{
+				_eventPublisher = value;
+			}
+		}
+
 		public static IConfigure With()
 		{
 			return new Configure() { EventStore = new EventStore() };
+		}
+
+		public void Dispose()
+		{
+			if (null != EventPublisher)
+			{
+				EventPublisher.Dispose();
+			}
+			if (null != EventStoreProvider)
+			{
+				EventStoreProvider.Dispose();
+			}
 		}
 	}
 }

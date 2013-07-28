@@ -9,10 +9,24 @@ namespace Yeast.EventStore
 {
 	public static class MessageReceiverConfigure
 	{
+		public static IConfigure MessageReceiver(this IConfigure configure, string defaultAggregateRootIdProperty, string defaultAggregateRootApplyMethod)
+		{
+			var c = configure as Configure;
+			c.MessageReceiver = new MessageReceiver()
+			{
+				Logger = c.Logger, 
+				EventStore = c.EventStore, 
+				AggregateRootCache = c.AggregateRootCache, 
+				DefaultAggregateRootIdProperty = defaultAggregateRootIdProperty,
+				DefaultAggregateRootApplyMethod = defaultAggregateRootApplyMethod
+			};
+			return configure;
+		}
+
 		public static IConfigure MessageReceiver(this IConfigure configure)
 		{
 			var c = configure as Configure;
-			c.MessageReceiver = new MessageReceiver() { Logger = c.Logger, EventStore = c.EventStore };
+			c.MessageReceiver = new MessageReceiver() { Logger = c.Logger, EventStore = c.EventStore, AggregateRootCache = c.AggregateRootCache };
 			return configure;
 		}
 
