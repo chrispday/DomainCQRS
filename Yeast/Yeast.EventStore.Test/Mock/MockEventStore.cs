@@ -64,9 +64,30 @@ namespace Yeast.EventStore.Test
 			throw new NotImplementedException();
 		}
 
-		public IEnumerable<StoredEvent> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		public IEnumerable<StoredEvent> Load(int batchSize, IEventStoreProviderPosition from, IEventStoreProviderPosition to)
 		{
 			throw new NotImplementedException();
+		}
+	}
+
+	public class MockEventStore2 : EventStore
+	{
+		public override IEnumerable<StoredEvent> Load(int batchSize, IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		{
+			foreach (var storedEvent in EventStoreProvider.Load(from, to))
+			{
+				var e = new StoredEvent() { AggregateRootId = storedEvent.AggregateRootId, Version = storedEvent.Version, Event = Deserialize(storedEvent.Data) };
+				if (e.Event is MockEvent)
+				{
+					(e.Event as MockEvent).BatchNo = batchSize;
+				}
+				yield return e;
+
+				if (0 >= --batchSize)
+				{
+					break;
+				}
+			}
 		}
 	}
 }

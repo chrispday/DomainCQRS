@@ -104,10 +104,9 @@ namespace Yeast.EventStore
 				&& (null != (eventToStore = Read(_publisherStream, _publisherReader, aggregateRootId, true))))
 			{
 				_publisherPosition += eventToStore.Size;
+				to.Positions[aggregateRootId] = _publisherPosition;
 				yield return eventToStore;
 			}
-
-			to.Positions[aggregateRootId] = _publisherPosition;
 		}
 
 		private int GetLastVersion()

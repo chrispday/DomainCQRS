@@ -19,11 +19,15 @@ namespace Yeast.EventStore.Test.Mock
 		public Common.ILogger Logger { get;  set; }
 
 		public AutoResetEvent ReceivedEvent = new AutoResetEvent(false);
+		public static int SignalOnCount = 1;
 		public List<object> Received = new List<object>();
 		public IEventSubscriber Receive(object @event)
 		{
 			Received.Add(@event);
-			ReceivedEvent.Set();
+			if (SignalOnCount <= Received.Count)
+			{
+				ReceivedEvent.Set();
+			}
 			return this;
 		}
 	}

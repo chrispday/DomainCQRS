@@ -27,6 +27,7 @@ namespace Yeast.EventStore
 	[ProtoContract]
 	public class MockEvent : MockCommand
 	{
+		public int BatchNo;
 	}
 
 	[Serializable]
