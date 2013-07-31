@@ -36,7 +36,12 @@ namespace Yeast.EventStore
 		public Common.ILogger Logger { get; set; }
 		public IEventStore EventStore { get; set; }
 		public int BatchSize { get; set; }
-		private Dictionary<Guid, IEventSubscriber> _subscribers = new Dictionary<Guid, IEventSubscriber>();
+		protected class SubscriberAndPosition
+		{
+			public IEventSubscriber Subscriber;
+			public IEventStoreProviderPosition Position;
+		}
+		protected Dictionary<Guid, SubscriberAndPosition> _subscribers = new Dictionary<Guid, SubscriberAndPosition>();
 		private Thread _publisherThread;
 		private volatile bool _continuePublishing = true;
 		private AutoResetEvent _finishedPublishing = new AutoResetEvent(false);
@@ -49,7 +54,7 @@ namespace Yeast.EventStore
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId)
 			where Subscriber : IEventSubscriber, new()
 		{
-			_subscribers.Add(subscriptionId, new Subscriber());
+			_subscribers.Add(subscriptionId, new SubscriberAndPosition() { Subscriber = new Subscriber() });
 
 			if (null == _publisherThread)
 			{
@@ -70,32 +75,35 @@ namespace Yeast.EventStore
 		{
 			Logger.Information("Starting publishing thread.");
 
-			IEventStoreProviderPosition from = EventStore.CreateEventStoreProviderPosition();
-			IEventStoreProviderPosition to = EventStore.CreateEventStoreProviderPosition();
-
 			while (_continuePublishing)
 			{
 				Logger.Verbose("Next publish run.");
 
-				foreach (var subscription in _subscribers)
+				foreach (var subscription in new Dictionary<Guid,SubscriberAndPosition>(_subscribers))
 				{
-					Logger.Verbose("Publishing for {0} {1}.", subscription.Value.GetType().Name, subscription.Key);
 					try
 					{
-						foreach (var @event in EventStore.Load(BatchSize, from, to))
+						Logger.Verbose("Publishing for {0} {1}.", subscription.Value.Subscriber.GetType().Name, subscription.Key);
+
+						if (null == subscription.Value.Position)
 						{
-							subscription.Value.Receive(@event);
+							subscription.Value.Position = EventStore.CreateEventStoreProviderPosition();
 						}
 
-						from = to;
-						to = EventStore.CreateEventStoreProviderPosition();
+						var to = EventStore.CreateEventStoreProviderPosition();
+						foreach (var @event in EventStore.Load(BatchSize, subscription.Value.Position, to))
+						{
+							subscription.Value.Subscriber.Receive(@event);
+						}
+
+						subscription.Value.Position = to;
 					}
 					catch (Exception ex)
 					{
 						Logger.Error("{0}", ex);
 					}
 				}
-				Thread.Sleep(100);
+				Thread.Sleep(750);
 			}
 
 			Logger.Information("Shutting down publishing thread.");

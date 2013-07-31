@@ -99,14 +99,17 @@ namespace Yeast.EventStore
 				toPosition = _publisherStream.Length;
 			}
 
+			Logger.Verbose("Publishing from {1} to {2} for {0}", aggregateRootId, fromPosition, toPosition);
+
 			EventToStore eventToStore;
 			while ((_publisherPosition < toPosition)
 				&& (null != (eventToStore = Read(_publisherStream, _publisherReader, aggregateRootId, true))))
 			{
-				_publisherPosition += eventToStore.Size;
-				to.Positions[aggregateRootId] = _publisherPosition;
+				to.Positions[aggregateRootId] = _publisherPosition += eventToStore.Size;
 				yield return eventToStore;
 			}
+
+			to.Positions[aggregateRootId] = _publisherPosition;
 		}
 
 		private int GetLastVersion()

@@ -97,8 +97,6 @@ namespace Yeast.EventStore.Provider
 
 		private IEnumerable<EventToStore> Load(FileEventStoreProviderPosition from, FileEventStoreProviderPosition to)
 		{
-			Logger.Verbose("Loading from {0} to {1}.", from, to);
-
 			foreach (var file in System.IO.Directory.GetFiles(Directory))
 			{
 				var aggregateRootId = new Guid(Path.GetFileName(file));
@@ -119,7 +117,8 @@ namespace Yeast.EventStore.Provider
 				}
 				finally
 				{
-					if (dispose)
+					if (dispose
+						&& null != fileEventStream)
 					{
 						fileEventStream.Dispose();
 					}
