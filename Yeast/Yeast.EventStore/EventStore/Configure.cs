@@ -8,6 +8,8 @@ namespace Yeast.EventStore
 {
 	public interface IConfigure : IDisposable
 	{
+		IMessageReceiver MessageReceiver { get; }
+		IEventPublisher EventPublisher { get; }
 	}
 
 	public class Configure : IConfigure
@@ -18,6 +20,11 @@ namespace Yeast.EventStore
 			get { return _eventStoreProvider; }
 			set
 			{
+				if (null == value)
+				{
+					throw new ArgumentNullException("EventStoreProvider");
+				}
+
 				_eventStoreProvider = value;
 				if (null != EventStore)
 				{
@@ -32,6 +39,11 @@ namespace Yeast.EventStore
 			get { return _logger; }
 			set
 			{
+				if (null == value)
+				{
+					throw new ArgumentNullException("Logger");
+				}
+
 				_logger = value;
 				if (null != EventStoreProvider)
 				{
@@ -58,6 +70,11 @@ namespace Yeast.EventStore
 			get { return _eventStore; }
 			set
 			{
+				if (null == value)
+				{
+					throw new ArgumentNullException("EventStore");
+				}
+
 				_eventStore = value;
 				if (null != MessageReceiver)
 				{
@@ -76,6 +93,11 @@ namespace Yeast.EventStore
 			get { return _eventSerializer; }
 			set
 			{
+				if (null == value)
+				{
+					throw new ArgumentNullException("EventSerializer");
+				}
+
 				_eventSerializer = value;
 				if (null != EventStore)
 				{
@@ -88,7 +110,15 @@ namespace Yeast.EventStore
 		public IMessageReceiver MessageReceiver
 		{
 			get { return _messageReceiver; }
-			set { _messageReceiver = value; }
+			set
+			{
+				if (null == value)
+				{
+					throw new ArgumentNullException("MessageReceiver");
+				}
+
+				_messageReceiver = value;
+			}
 		}
 
 		private IAggregateRootCache _aggregateRootCache;
@@ -97,6 +127,11 @@ namespace Yeast.EventStore
 			get { return _aggregateRootCache; }
 			set
 			{
+				if (null == value)
+				{
+					throw new ArgumentNullException("AggregateRootCache");
+				}
+
 				_aggregateRootCache = value;
 				if (null != MessageReceiver)
 				{
@@ -111,13 +146,18 @@ namespace Yeast.EventStore
 			get { return _eventPublisher; }
 			set
 			{
+				if (null == value)
+				{
+					throw new ArgumentNullException("EventPublisher");
+				}
+
 				_eventPublisher = value;
 			}
 		}
 
 		public static IConfigure With()
 		{
-			return new Configure() { EventStore = new EventStore() };
+			return new Configure();
 		}
 
 		public void Dispose()

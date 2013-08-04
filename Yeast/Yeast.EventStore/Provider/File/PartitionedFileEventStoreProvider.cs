@@ -9,13 +9,10 @@ namespace Yeast.EventStore
 {
 	public static class PartitionedFileEventStoreProviderConfigure
 	{
-		public static IConfigure PartitionedFileEventStoreProvider(this IConfigure configure, int maximumPartitions, string directory)
-		{
-			var c = configure as Configure;
-			c.EventStoreProvider = new PartitionedFileEventStoreProvider() { MaximumPartitions = maximumPartitions, Directory = directory, Logger = c.Logger }.EnsureExists();
-			return configure;
-		}
+		public static int DefaultEventStreamCacheCapacityPerPartition = 50;
+		public static int DefaultEventStreamBufferSize = 1024 * 8;
 
+		public static IConfigure PartitionedFileEventStoreProvider(this IConfigure configure, int maximumPartitions, string directory) { return configure.PartitionedFileEventStoreProvider(maximumPartitions, directory, DefaultEventStreamCacheCapacityPerPartition, DefaultEventStreamBufferSize); }
 		public static IConfigure PartitionedFileEventStoreProvider(this IConfigure configure, int maximumPartitions, string directory, int eventStreamCacheCapacityPerPartition, int eventStreamBufferSize)
 		{
 			var c = configure as Configure;
@@ -45,8 +42,8 @@ namespace Yeast.EventStore.Provider
 
 		public PartitionedFileEventStoreProvider()
 		{
-			EventStreamCacheCapacityPerPartition = 50;
-			EventStreamBufferSize = 1024 * 8;
+			EventStreamCacheCapacityPerPartition = PartitionedFileEventStoreProviderConfigure.DefaultEventStreamCacheCapacityPerPartition;
+			EventStreamBufferSize = PartitionedFileEventStoreProviderConfigure.DefaultEventStreamBufferSize;
 		}
 
 		public IEventStoreProvider EnsureExists()

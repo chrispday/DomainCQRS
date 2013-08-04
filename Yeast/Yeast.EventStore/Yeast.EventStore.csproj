@@ -42,21 +42,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AggregateRoot\AggregateRootBase.cs" />
-    <Compile Include="AggregateRoot\IAggregateRoot.cs" />
-    <Compile Include="AggregateRoot\IHandlesCommand.cs" />
-    <Compile Include="AggregateRoot\IHandlesEvent.cs" />
+    <Compile Include="Domain\AggregateRoot\AggregateRootBase.cs" />
+    <Compile Include="Domain\AggregateRoot\IAggregateRoot.cs" />
+    <Compile Include="Domain\AggregateRoot\IHandlesCommand.cs" />
+    <Compile Include="Domain\AggregateRoot\IHandlesEvent.cs" />
     <Compile Include="Cache\AggregateRootAndVersion.cs" />
+    <Compile Include="Common\KeyValueRemovedArgs.cs" />
     <Compile Include="Cache\LRUAggregateRootCache.cs" />
-    <Compile Include="Commands\ICommand.cs" />
+    <Compile Include="Domain\Commands\ICommand.cs" />
     <Compile Include="Common\DebugLogger.cs" />
     <Compile Include="Common\ILogger.cs" />
     <Compile Include="Common\LRUDictionary.cs" />
+    <Compile Include="Domain\Events\IEvent.cs" />
     <Compile Include="EventStore\Configure.cs" />
     <Compile Include="EventStore\EventStore.cs" />
-    <Compile Include="Exceptions\CommandApplyException.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
-    <Compile Include="Exceptions\EventWhenException.cs" />
     <Compile Include="Exceptions\RegistrationException.cs" />
     <Compile Include="Exceptions\EventStoreException.cs" />
     <Compile Include="Exceptions\EventToStoreException.cs" />

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Yeast.EventStore
+namespace Yeast.EventStore.Domain
 {
-	public interface IHandlesEvent<E>
+	public interface IEvent
 	{
-		void Apply(E @event);
+		Guid AggregateRootId { get; set; }
 	}
 }

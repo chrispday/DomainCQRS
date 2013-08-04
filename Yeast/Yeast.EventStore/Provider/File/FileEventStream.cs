@@ -19,21 +19,26 @@ namespace Yeast.EventStore
 		private Guid _id;
 		private string _name;
 		private int _bufferSize;
+		private bool _storeAggregateId;
 
 		public ILogger Logger { get; set; }
 		public string Name { get { return _name; } }
 
-		public FileEventStream(ILogger logger, Guid id, string directory, int bufferSize)
+		public FileEventStream(ILogger logger, Guid id, string directory, int bufferSize, bool publishingOnly, bool storeAggregateId)
 		{
 			Logger = logger;
 			_id = id;
 			_bufferSize = bufferSize;
 			_name = GetName(directory, id);
+			_storeAggregateId = storeAggregateId;
 
-			_writer = new BinaryWriter(File.Open(_name, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite));
-			var end = _writer.Seek(0, SeekOrigin.End);
-			_reader = new BinaryReader(_readerStream = new BufferedStream(File.Open(_name, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), _bufferSize));
-			_versionTracker = GetLastVersion();
+			if (publishingOnly)
+			{
+				_writer = new BinaryWriter(File.Open(_name, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite));
+				_writer.Seek(0, SeekOrigin.End);
+				_reader = new BinaryReader(_readerStream = new BufferedStream(File.Open(_name, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), _bufferSize));
+				_versionTracker = GetLastVersion();
+			}
 
 			logger.Verbose("Creating for id {0} stream {1} with last version {2}", id, "", _versionTracker);
 		}
@@ -130,13 +135,15 @@ namespace Yeast.EventStore
 
 		private EventToStore Read(Stream readerStream, BinaryReader reader, Guid aggregateRootId, bool readData)
 		{
-			//var aggregateRootIdBuf = _reader.ReadBytes(16);
-			//if (16 != aggregateRootIdBuf.Length)
-			//{
-			//	return null;
-			//}
-
-			//var aggregateRootId = new Guid(aggregateRootIdBuf);
+			if (_storeAggregateId)
+			{
+				var aggregateRootIdBuf = _reader.ReadBytes(16);
+				if (16 != aggregateRootIdBuf.Length)
+				{
+					return null;
+				}
+				aggregateRootId = new Guid(aggregateRootIdBuf);
+			}
 
 			var versionBuf = reader.ReadBytes(sizeof(int));
 			if (sizeof(int) != versionBuf.Length)
@@ -169,22 +176,28 @@ namespace Yeast.EventStore
 
 		private void Write(EventToStore @event)
 		{
-			byte[] buffer = new byte[/*16 + */sizeof(int) + sizeof(int) + sizeof(long) + @event.Data.Length];
-			Array.Copy(@event.AggregateRootId.ToByteArray(), buffer, 16);
-			Array.Copy(BitConverter.GetBytes(@event.Version), 0, buffer, /*16*/0, sizeof(int));
-			Array.Copy(BitConverter.GetBytes(@event.Data.Length), 0, buffer, /*16 +*/ sizeof(int), sizeof(int));
-			Array.Copy(BitConverter.GetBytes(@event.Timestamp.Ticks), 0, buffer, /*16 +*/ sizeof(int) + sizeof(int), sizeof(long));
-			Array.Copy(@event.Data, 0, buffer, /*16 +*/ sizeof(int) + sizeof(int) + sizeof(long), @event.Data.Length);
+			var guidOffset = _storeAggregateId ? 16 : 0;
+
+			byte[] buffer = new byte[guidOffset + sizeof(int) + sizeof(int) + sizeof(long) + @event.Data.Length];
+			if (_storeAggregateId)
+			{
+				Array.Copy(@event.AggregateRootId.ToByteArray(), buffer, 16);
+			}
+			Array.Copy(BitConverter.GetBytes(@event.Version), 0, buffer, guidOffset, sizeof(int));
+			Array.Copy(BitConverter.GetBytes(@event.Data.Length), 0, buffer, guidOffset + sizeof(int), sizeof(int));
+			Array.Copy(BitConverter.GetBytes(@event.Timestamp.Ticks), 0, buffer, guidOffset + sizeof(int) + sizeof(int), sizeof(long));
+			Array.Copy(@event.Data, 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(long), @event.Data.Length);
 
 			_writer.Write(buffer);
 			_writer.Flush();
+
+			Logger.Verbose("{0} new length {1}", _name, _writer.BaseStream.Length);
 
 			_versionTracker = @event.Version;
 		}
 
 		private static string GetName(string directory, Guid id)
 		{
-			//return Path.Combine(directory, Path.Combine(idStr.Substring(0, 4), Path.Combine(idStr.Substring(4, 4), "EventStream_" + idStr)));
 			return Path.Combine(directory,  id.ToString());
 		}
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 
-namespace Yeast.EventStore
+namespace Yeast.EventStore.Domain
 {
 	public interface IAggregateRoot
 	{

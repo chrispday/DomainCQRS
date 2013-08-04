@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
-namespace Yeast.EventStore
+namespace Yeast.EventStore.Domain
 {
 	public abstract class AggregateRootBase : IAggregateRoot
 	{

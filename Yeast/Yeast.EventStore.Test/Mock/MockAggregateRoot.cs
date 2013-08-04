@@ -4,10 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Yeast.EventStore.Domain;
 
 namespace Yeast.EventStore.Test
 {
-	public class MockAggregateRoot : AggregateRootBase, IHandlesCommand<MockCommand>, IHandlesEvent<MockEvent>, IHandlesCommand<MockCommand2>
+	public class MockAggregateRoot : AggregateRootBase, IHandlesCommand<MockCommand>, IHandlesEvent<MockEvent>
 	{
 		public int Amount { get; set; }
 

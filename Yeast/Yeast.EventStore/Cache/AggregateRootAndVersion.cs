@@ -13,6 +13,11 @@ namespace Yeast.EventStore
 
 		public bool Equals(AggregateRootAndVersion other)
 		{
+			if (null == other)
+			{
+				throw new ArgumentNullException("other");
+			}
+
 			return AggregateRootId.Equals(other.AggregateRootId);
 		}
 

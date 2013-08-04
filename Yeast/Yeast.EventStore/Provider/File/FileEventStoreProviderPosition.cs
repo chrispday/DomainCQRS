@@ -12,6 +12,11 @@ namespace Yeast.EventStore
 
 		public override string ToString()
 		{
+			if (0 == Positions.Count)
+			{
+				return "<Empty>";
+			}
+
 			var sb = new StringBuilder();
 			foreach (var p in Positions)
 			{

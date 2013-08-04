@@ -8,17 +8,13 @@ namespace Yeast.EventStore
 {
 	public static class EventPublisherConfigure
 	{
-		public static IConfigure EventPublisher(this IConfigure configure)
-		{
-			var c = configure as Configure;
-			c.EventPublisher = new EventPublisher() { Logger = c.Logger, EventStore = c.EventStore };
-			return configure;
-		}
-
+		public static int DefaultBatchSize = 100;
+		public static TimeSpan DefaultPublishThreadSleep = TimeSpan.FromSeconds(1);
+		public static IConfigure EventPublisher(this IConfigure configure) { return configure.EventPublisher(DefaultBatchSize); }
 		public static IConfigure EventPublisher(this IConfigure configure, int batchSize)
 		{
 			var c = configure as Configure;
-			c.EventPublisher = new EventPublisher() { Logger = c.Logger, EventStore = c.EventStore, BatchSize = batchSize };
+			c.EventPublisher = new EventPublisher() { Logger = c.Logger, EventStore = c.EventStore, BatchSize = batchSize, PublishThreadSleep = DefaultPublishThreadSleep };
 			return configure;
 		}
 
@@ -36,6 +32,7 @@ namespace Yeast.EventStore
 		public Common.ILogger Logger { get; set; }
 		public IEventStore EventStore { get; set; }
 		public int BatchSize { get; set; }
+		public TimeSpan PublishThreadSleep { get; set; }
 		protected class SubscriberAndPosition
 		{
 			public IEventSubscriber Subscriber;
@@ -48,7 +45,7 @@ namespace Yeast.EventStore
 
 		public EventPublisher()
 		{
-			BatchSize = 100;
+			BatchSize = EventPublisherConfigure.DefaultBatchSize;
 		}
 
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId)
@@ -79,6 +76,8 @@ namespace Yeast.EventStore
 			{
 				Logger.Verbose("Next publish run.");
 
+				var eventsPublished = 0;
+
 				foreach (var subscription in new Dictionary<Guid,SubscriberAndPosition>(_subscribers))
 				{
 					try
@@ -94,6 +93,7 @@ namespace Yeast.EventStore
 						foreach (var @event in EventStore.Load(BatchSize, subscription.Value.Position, to))
 						{
 							subscription.Value.Subscriber.Receive(@event);
+							eventsPublished++;
 						}
 
 						subscription.Value.Position = to;
@@ -103,7 +103,10 @@ namespace Yeast.EventStore
 						Logger.Error("{0}", ex);
 					}
 				}
-				Thread.Sleep(750);
+
+				Logger.Verbose("{0} events published.", eventsPublished);
+
+				Thread.Sleep(PublishThreadSleep);
 			}
 
 			Logger.Information("Shutting down publishing thread.");

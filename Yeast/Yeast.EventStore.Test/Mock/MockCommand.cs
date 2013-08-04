@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using ProtoBuf;
+using Yeast.EventStore.Domain;
 
 namespace Yeast.EventStore
 {
@@ -25,7 +26,7 @@ namespace Yeast.EventStore
 	[Serializable]
 	[DataContract]
 	[ProtoContract]
-	public class MockEvent : MockCommand
+	public class MockEvent : MockCommand, IEvent
 	{
 		public int BatchNo;
 	}

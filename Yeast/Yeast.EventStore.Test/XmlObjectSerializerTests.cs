@@ -34,7 +34,7 @@ namespace Yeast.EventStore.Test
 			using (var provider = new FileEventStoreProvider() { Directory = Path.Combine(directory, Guid.NewGuid().ToString()), Logger = new DebugLogger() }.EnsureExists() as FileEventStoreProvider)
 			{
 				var eventStore = new EventStore() { EventSerializer = new XmlObjectSerializer() { Serializer = new DataContractSerializer(typeof(object), new Type[] { typeof(MockEvent) }) }, EventStoreProvider = provider };
-				var eventReceiver = new MessageReceiver() { EventStore = eventStore, AggregateRootCache = new LRUAggregateRootCache(1000) }
+				var eventReceiver = new MessageReceiver() { EventStore = eventStore, AggregateRootCache = new LRUAggregateRootCache(1000), Logger = new DebugLogger() }
 					.Register<MockCommand, MockAggregateRoot>()
 					.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
@@ -64,7 +64,7 @@ namespace Yeast.EventStore.Test
 				typeModel.Add(typeof(MockCommand), true);
 				var serializer = new XmlProtoSerializer(typeModel, typeof(MockCommand));
 				var eventStore = new EventStore() { EventSerializer = new XmlObjectSerializer() { Serializer = serializer }, EventStoreProvider = provider };
-				var eventReceiver = new MessageReceiver() { EventStore = eventStore, AggregateRootCache = new LRUAggregateRootCache(1000) }
+				var eventReceiver = new MessageReceiver() { EventStore = eventStore, AggregateRootCache = new LRUAggregateRootCache(1000), Logger = new DebugLogger() }
 					.Register<MockCommand, MockAggregateRoot>()
 					.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 

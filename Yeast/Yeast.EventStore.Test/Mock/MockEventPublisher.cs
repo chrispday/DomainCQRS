@@ -15,10 +15,10 @@ namespace Yeast.EventStore.Test.Mock
 			return configure;
 		}
 
-		public static IConfigure MockEventPublisher(this IConfigure configure, int batchSize)
+		public static IConfigure MockEventPublisher(this IConfigure configure, int batchSize, TimeSpan publishThreadSleep)
 		{
 			var c = configure as Configure;
-			c.EventPublisher = new MockEventPublisher() { Logger = c.Logger, EventStore = c.EventStore, BatchSize = batchSize };
+			c.EventPublisher = new MockEventPublisher() { Logger = c.Logger, EventStore = c.EventStore, BatchSize = batchSize, PublishThreadSleep = publishThreadSleep };
 			return configure;
 		}
 	}

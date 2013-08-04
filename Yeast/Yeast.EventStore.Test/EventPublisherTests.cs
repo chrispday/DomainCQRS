@@ -19,9 +19,10 @@ namespace Yeast.EventStore.Test
 				.BinaryFormatterSerializer()
 				.FileEventStoreProvider(directory)
 				.LRUAggregateRootCache(100)
+				.EventStore()
 				.MessageReceiver()
 				.Register<MockCommand, MockAggregateRoot>()
-				.MockEventPublisher()
+				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
 				.Subscribe<MockSubscriber>(Guid.NewGuid());
 
 			try
@@ -32,7 +33,7 @@ namespace Yeast.EventStore.Test
 
 				var id = Guid.NewGuid();
 				(config as Configure).MessageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = 5 });
-				subscriber.ReceivedEvent.WaitOne(-1);
+				subscriber.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
 
 				Assert.AreEqual(1, subscriber.Received.Count);
 				Assert.IsInstanceOfType(subscriber.Received[0], typeof(StoredEvent));
@@ -66,15 +67,16 @@ namespace Yeast.EventStore.Test
 			MockSubscriber.SignalOnCount = 5;
 
 			var config = Configure.With();
-			(config as Configure).EventStore = new MockEventStore2();
 			config.DebugLogger()
 			.BinaryFormatterSerializer()
 			.FileEventStoreProvider(directory)
 			.LRUAggregateRootCache(100)
+			.EventStore()
 			.MessageReceiver()
 			.Register<MockCommand, MockAggregateRoot>()
-			.MockEventPublisher(2)
+			.MockEventPublisher(2, TimeSpan.FromSeconds(1))
 			.Subscribe<MockSubscriber>(Guid.NewGuid());
+			(config as Configure).EventStore = new MockEventStore2() { EventSerializer = (config as Configure).EventSerializer, EventStoreProvider = (config as Configure).EventStoreProvider, Logger = (config as Configure).Logger };
 
 
 			try
@@ -127,20 +129,21 @@ namespace Yeast.EventStore.Test
 			MockSubscriber.SignalOnCount = 5;
 
 			var config = Configure.With();
-			(config as Configure).EventStore = new MockEventStore2();
 				config.DebugLogger()
 				.BinaryFormatterSerializer()
 				.FileEventStoreProvider(directory)
 				.LRUAggregateRootCache(100)
+				.EventStore()
 				.MessageReceiver()
 				.Register<MockCommand, MockAggregateRoot>()
-				.MockEventPublisher()
+				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
 				.Subscribe<MockSubscriber>(Guid.NewGuid());
 
 
 			try
 			{
 				var publisher = (config as Configure).EventPublisher as MockEventPublisher;
+				var logger = (config as Configure).Logger;
 				Assert.AreEqual(1, publisher.Subscribers.Count);
 				var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
 
@@ -172,10 +175,13 @@ namespace Yeast.EventStore.Test
 				Assert.AreEqual(2, ((subscriber2.Received[3] as StoredEvent).Event as MockEvent).Increment);
 				Assert.AreEqual(1, ((subscriber2.Received[4] as StoredEvent).Event as MockEvent).Increment);
 
+				System.Threading.Thread.Sleep(5000);
+
 				MockSubscriber.SignalOnCount = 6;
 				subscriber.ReceivedEvent.Reset();
 				subscriber2.ReceivedEvent.Reset();
 				messageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = 10 });
+				logger.Information("*****Sent Command");
 				subscriber.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
 				subscriber2.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
 

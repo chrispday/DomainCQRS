@@ -59,6 +59,8 @@ namespace Yeast.EventStore
 
 		public IMessageReceiver Receive(object message)
 		{
+			Logger.Verbose("Received message {0}", message ?? "<NULL>");
+
 			var messageType = message.GetType();
 
 			Dictionary<Type, List<PropertyAndMethod>> aggregateRootTypes;
