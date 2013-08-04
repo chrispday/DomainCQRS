@@ -11,6 +11,7 @@ using ProtoBuf.Meta;
 using ProtoBuf.ServiceModel;
 using Yeast.EventStore.Common;
 using Yeast.EventStore.Provider;
+using Yeast.EventStore.Test.Mock;
 
 namespace Yeast.EventStore.Test
 {
@@ -203,6 +204,70 @@ namespace Yeast.EventStore.Test
 			Debug.WriteLine("Size of Event Store {0:#,##0.0} KB", fileInfos.Sum(f => f.Length / 1024.0));
 			Debug.WriteLine("Avg Size of Event Store {0:#,##0.0} KB", fileInfos.Average(f => f.Length / 1024.0));
 			Debug.WriteLine("Largest Size of Event Store {0:#,##0.0} KB", fileInfos.Max(f => f.Length / 1024.0));
+		}
+
+		[TestMethod]
+		public void LoadTest_EventPublisher()
+		{
+			var amount = 1;
+
+			var typeModel = RuntimeTypeModel.Create();
+			typeModel.Add(typeof(MockCommand), true);
+			var serializer = new XmlProtoSerializer(typeModel, typeof(MockCommand));
+
+			var configure = Configure.With()
+				.DebugLogger(false)
+				.PartitionedFileEventStoreProvider(8, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1500, 8 * 1024)
+				.XmlObjectSerializer(serializer)
+				.EventStore()
+				.MessageReceiver()
+				.LRUAggregateRootCache()
+				.Register<MockCommand, MockAggregateRoot>()
+				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply")
+				.MockEventPublisher()
+				.Subscribe<MockSubscriber>(Guid.NewGuid());
+
+			var publisher = (configure as Configure).EventPublisher as MockEventPublisher;
+			Assert.AreEqual(1, publisher.Subscribers.Count);
+			var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
+
+			var random = new Random();
+
+			var keys = LoadTestAggregateIds.Keys.ToArray();
+			var id = LoadTestAggregateIds.Keys.ToArray()[Ran(random, LoadTestAggregateIds.Count - 1)];
+			var messageReceiver = (configure as Configure).MessageReceiver;
+			messageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 });
+			var concurrencyExceptions = 0;
+
+			var stopWatch = Stopwatch.StartNew();
+
+			subscriber.SignalOnCount = amount;
+			Parallel.ForEach(Enumerable.Range(1, amount), new ParallelOptions() { MaxDegreeOfParallelism = 4 }, i =>
+			{
+				id = keys[Ran(random, LoadTestAggregateIds.Count - 1)];
+				var cmd = new MockCommand() { AggregateRootId = id, Increment = random.Next(10) - 5 };
+				try
+				{
+					messageReceiver.Receive(cmd);
+				}
+				catch (ConcurrencyException)
+				{
+					concurrencyExceptions++;
+				}
+			});
+			subscriber.ReceivedEvent.WaitOne(-1);
+
+			stopWatch.Stop();
+
+			var fileInfos = Directory.GetFiles(((configure as Configure).EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
+			Debug.WriteLine("Time taken {0}", stopWatch.Elapsed);
+			Debug.WriteLine("Per sec {0:#,##0.0}", amount / stopWatch.Elapsed.TotalSeconds);
+			Debug.WriteLine("Files in Event Store {0}", fileInfos.Count());
+			Debug.WriteLine("Size of Event Store {0:#,##0.0} KB", fileInfos.Sum(f => f.Length / 1024.0));
+			Debug.WriteLine("Avg Size of Event Store {0:#,##0.0} KB", fileInfos.Average(f => f.Length / 1024.0));
+			Debug.WriteLine("Largest Size of Event Store {0:#,##0.0} KB", fileInfos.Max(f => f.Length / 1024.0));
+
+			configure.Dispose();
 		}
 
 		private int Ran(Random random, int p)

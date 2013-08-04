@@ -16,7 +16,7 @@ namespace Yeast.EventStore.Test.Mock
 		public Common.ILogger Logger { get;  set; }
 
 		public AutoResetEvent ReceivedEvent = new AutoResetEvent(false);
-		public volatile static int SignalOnCount = 1;
+		public volatile int SignalOnCount = 1;
 		public List<object> Received = new List<object>();
 		public IEventSubscriber Receive(object @event)
 		{

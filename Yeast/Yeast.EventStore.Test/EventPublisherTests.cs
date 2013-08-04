@@ -64,10 +64,8 @@ namespace Yeast.EventStore.Test
 		{
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
-			MockSubscriber.SignalOnCount = 5;
-
 			var config = Configure.With();
-			config.DebugLogger()
+			config.DebugLogger(true)
 			.BinaryFormatterSerializer()
 			.FileEventStoreProvider(directory)
 			.LRUAggregateRootCache(100)
@@ -84,6 +82,7 @@ namespace Yeast.EventStore.Test
 				var publisher = (config as Configure).EventPublisher as MockEventPublisher;
 				Assert.AreEqual(1, publisher.Subscribers.Count);
 				var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
+				subscriber.SignalOnCount = 5;
 
 				var id = Guid.NewGuid();
 				(config as Configure).MessageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = 5 });
@@ -126,8 +125,6 @@ namespace Yeast.EventStore.Test
 		{
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
-			MockSubscriber.SignalOnCount = 5;
-
 			var config = Configure.With();
 				config.DebugLogger()
 				.BinaryFormatterSerializer()
@@ -146,6 +143,7 @@ namespace Yeast.EventStore.Test
 				var logger = (config as Configure).Logger;
 				Assert.AreEqual(1, publisher.Subscribers.Count);
 				var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
+				subscriber.SignalOnCount = 5;
 
 				var id = Guid.NewGuid();
 				var messageReceiver = (config as Configure).MessageReceiver;
@@ -166,6 +164,7 @@ namespace Yeast.EventStore.Test
 				config.Subscribe<MockSubscriber>(Guid.NewGuid());
 				Assert.AreEqual(2, publisher.Subscribers.Count);
 				var subscriber2 = publisher.Subscribers.Skip(1).First().Value.Item1 as MockSubscriber;
+				subscriber2.SignalOnCount = 5;
 				subscriber2.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
 
 				Assert.AreEqual(5, subscriber2.Received.Count);
@@ -177,7 +176,9 @@ namespace Yeast.EventStore.Test
 
 				System.Threading.Thread.Sleep(5000);
 
-				MockSubscriber.SignalOnCount = 6;
+				subscriber.SignalOnCount = 6;
+				subscriber2.SignalOnCount = 6;
+
 				subscriber.ReceivedEvent.Reset();
 				subscriber2.ReceivedEvent.Reset();
 				messageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = 10 });

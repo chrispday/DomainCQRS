@@ -27,7 +27,10 @@ namespace Yeast.EventStore.Common
 
 		public void Verbose(string format, params object[] pars)
 		{
-			Debug.WriteLine(string.Format("Verbose\t" + (format ?? ""), pars));
+			if (LogVerbose)
+			{
+				Debug.WriteLine(string.Format("Verbose\t" + (format ?? ""), pars));
+			}
 		}
 
 		public void Information(string format, params object[] pars)
