@@ -1,0 +1,9 @@
+﻿Story is Event Upgrading
+In order to support new versions of events 
+As a Programmer
+I want event upgrading
+With Scenario Event Upgrading
+Given event upgrader has been registered
+And an event has been saved
+When the event is loaded
+Then expect the upgraded event

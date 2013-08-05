@@ -12,7 +12,6 @@ namespace Yeast.EventStore
 		IEnumerable<EventToStore> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp);
 
 		IEventStoreProviderPosition CreateEventStoreProviderPosition();
-		IEnumerable<EventToStore> Load(IEventStoreProviderPosition to);
 		IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to);
 	}
 }

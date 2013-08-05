@@ -17,12 +17,13 @@ namespace Yeast.EventStore.Test
 			var config = Configure.With()
 				.DebugLogger()
 				.BinaryFormatterSerializer()
-				.FileEventStoreProvider(directory)
+				//.FileEventStoreProvider(directory)
+				.MemoryEventStoreProvider()
 				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MessageReceiver()
 				.Register<MockCommand, MockAggregateRoot>()
-				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
+				.MockEventPublisher(100, TimeSpan.FromSeconds(0.1))
 				.Subscribe<MockSubscriber>(Guid.NewGuid());
 
 			try
@@ -67,12 +68,13 @@ namespace Yeast.EventStore.Test
 			var config = Configure.With();
 			config.DebugLogger(true)
 			.BinaryFormatterSerializer()
-			.FileEventStoreProvider(directory)
+			//.FileEventStoreProvider(directory)
+			.MemoryEventStoreProvider()
 			.LRUAggregateRootCache(100)
 			.EventStore()
 			.MessageReceiver()
 			.Register<MockCommand, MockAggregateRoot>()
-			.MockEventPublisher(2, TimeSpan.FromSeconds(1))
+			.MockEventPublisher(2, TimeSpan.FromSeconds(0.1))
 			.Subscribe<MockSubscriber>(Guid.NewGuid());
 			(config as Configure).EventStore = new MockEventStore2() { EventSerializer = (config as Configure).EventSerializer, EventStoreProvider = (config as Configure).EventStoreProvider, Logger = (config as Configure).Logger };
 
@@ -128,12 +130,13 @@ namespace Yeast.EventStore.Test
 			var config = Configure.With();
 				config.DebugLogger()
 				.BinaryFormatterSerializer()
-				.FileEventStoreProvider(directory)
+				//.FileEventStoreProvider(directory)
+				.MemoryEventStoreProvider()
 				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MessageReceiver()
 				.Register<MockCommand, MockAggregateRoot>()
-				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
+				.MockEventPublisher(100, TimeSpan.FromSeconds(0.1))
 				.Subscribe<MockSubscriber>(Guid.NewGuid());
 
 
@@ -174,7 +177,7 @@ namespace Yeast.EventStore.Test
 				Assert.AreEqual(2, ((subscriber2.Received[3] as StoredEvent).Event as MockEvent).Increment);
 				Assert.AreEqual(1, ((subscriber2.Received[4] as StoredEvent).Event as MockEvent).Increment);
 
-				System.Threading.Thread.Sleep(5000);
+				//System.Threading.Thread.Sleep(5000);
 
 				subscriber.SignalOnCount = 6;
 				subscriber2.SignalOnCount = 6;

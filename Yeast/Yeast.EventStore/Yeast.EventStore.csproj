@@ -67,6 +67,8 @@
     <Compile Include="Provider\IPartitionedEventStoreProvider.cs" />
     <Compile Include="Provider\File\FileEventStream.cs" />
     <Compile Include="Provider\File\PartitionedFileEventStoreProvider.cs" />
+    <Compile Include="Provider\Memory\MemoryEventStoreProvider.cs" />
+    <Compile Include="Provider\Memory\MemoryEventStoreProviderPostion.cs" />
     <Compile Include="Publisher\EventPublisher.cs" />
     <Compile Include="Publisher\IEventPublisher.cs" />
     <Compile Include="Publisher\IEventSubscriber.cs" />

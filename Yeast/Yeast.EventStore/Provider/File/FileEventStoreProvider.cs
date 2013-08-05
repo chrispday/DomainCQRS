@@ -46,8 +46,6 @@ namespace Yeast.EventStore.Provider
 		public int EventStreamBufferSize { get; set; }
 		public ILogger Logger { get; set; }
 		private LRUDictionary<Guid, FileEventStream> _fileEventStreams;
-		private volatile bool _newEvents = true;
-		private volatile bool _newEventsSince = false;
 		private bool _storeAggregateId = false;
 
 		public FileEventStoreProvider()
@@ -76,10 +74,6 @@ namespace Yeast.EventStore.Provider
 		public IEventStoreProvider Save(EventToStore eventToStore)
 		{
 			GetFileEventStream(eventToStore.AggregateRootId).Save(eventToStore);
-
-			_newEvents = true;
-			_newEventsSince = true;
-
 			return this;
 		}
 
@@ -93,11 +87,6 @@ namespace Yeast.EventStore.Provider
 			return new FileEventStoreProviderPosition();
 		}
 
-		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition to)
-		{
-			return Load(CreateEventStoreProviderPosition(), to);
-		}
-
 		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
 		{
 			return Load(from as FileEventStoreProviderPosition, to as FileEventStoreProviderPosition);
@@ -105,13 +94,6 @@ namespace Yeast.EventStore.Provider
 
 		private IEnumerable<EventToStore> Load(FileEventStoreProviderPosition from, FileEventStoreProviderPosition to)
 		{
-			if (!_newEvents)
-			{
-				Logger.Verbose("No new events.");
-				//yield break;
-			}
-			_newEventsSince = false;
-
 			foreach (var file in new DirectoryInfo(Directory).GetFiles())
 			{
 				var aggregateRootId = new Guid(file.Name);
@@ -147,8 +129,6 @@ namespace Yeast.EventStore.Provider
 					}
 				}
 			}
-
-			_newEvents = _newEventsSince;
 		}
 
 		private FileEventStream GetFileEventStream(Guid aggregateRootId)

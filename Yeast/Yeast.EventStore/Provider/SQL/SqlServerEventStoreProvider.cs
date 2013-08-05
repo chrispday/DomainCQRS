@@ -165,11 +165,6 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 			throw new NotImplementedException();
 		}
 
-		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition to)
-		{
-			throw new NotImplementedException();
-		}
-
 		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
 		{
 			throw new NotImplementedException();
