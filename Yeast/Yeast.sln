@@ -5,18 +5,23 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yeast.EventStore", "Yeast.E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yeast.EventStore.Test", "Yeast.EventStore.Test\Yeast.EventStore.Test.csproj", "{EF252056-B571-4A05-BB15-F6ECC9DA9990}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yeast.EventStore.Azure", "Yeast.EventStore.Azure\Yeast.EventStore.Azure.csproj", "{9B6CFD63-ADDC-4C3C-8C23-9BC7DBEE2521}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 3
+		SccNumberOfProjects = 4
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://chrispday.visualstudio.com/defaultcollection
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = Yeast.EventStore\\Yeast.EventStore.csproj
-		SccProjectName1 = Yeast.EventStore
-		SccLocalPath1 = Yeast.EventStore
-		SccProjectUniqueName2 = Yeast.EventStore.Test\\Yeast.EventStore.Test.csproj
-		SccProjectName2 = Yeast.EventStore.Test
-		SccLocalPath2 = Yeast.EventStore.Test
+		SccProjectUniqueName0 = Yeast.EventStore\\Yeast.EventStore.csproj
+		SccProjectName0 = Yeast.EventStore
+		SccLocalPath0 = Yeast.EventStore
+		SccProjectUniqueName1 = Yeast.EventStore.Test\\Yeast.EventStore.Test.csproj
+		SccProjectName1 = Yeast.EventStore.Test
+		SccLocalPath1 = Yeast.EventStore.Test
+		SccLocalPath2 = .
+		SccProjectUniqueName3 = Yeast.EventStore.Azure\\Yeast.EventStore.Azure.csproj
+		SccProjectName3 = Yeast.EventStore.Azure
+		SccLocalPath3 = Yeast.EventStore.Azure
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +36,10 @@ Global
 		{EF252056-B571-4A05-BB15-F6ECC9DA9990}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF252056-B571-4A05-BB15-F6ECC9DA9990}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EF252056-B571-4A05-BB15-F6ECC9DA9990}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B6CFD63-ADDC-4C3C-8C23-9BC7DBEE2521}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B6CFD63-ADDC-4C3C-8C23-9BC7DBEE2521}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B6CFD63-ADDC-4C3C-8C23-9BC7DBEE2521}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B6CFD63-ADDC-4C3C-8C23-9BC7DBEE2521}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
