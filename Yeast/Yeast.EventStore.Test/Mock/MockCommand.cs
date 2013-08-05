@@ -34,6 +34,20 @@ namespace Yeast.EventStore
 	[Serializable]
 	[DataContract]
 	[ProtoContract]
+	public class MockEvent2 : MockEvent, IEvent
+	{
+		public MockEvent2() { }
+		public MockEvent2(MockEvent mockEvent)
+		{
+			Increment = -1 * mockEvent.Increment;
+			AggregateRootId = mockEvent.AggregateRootId;
+			BatchNo = mockEvent.BatchNo;
+		}
+	}
+
+	[Serializable]
+	[DataContract]
+	[ProtoContract]
 	public class MockCommand2
 	{
 		[DataMember]

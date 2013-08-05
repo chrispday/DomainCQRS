@@ -43,6 +43,9 @@
     <Reference Include="protobuf-net">
       <HintPath>..\..\..\..\..\Downloads\protobuf-net r640\Full\net30\protobuf-net.dll</HintPath>
     </Reference>
+    <Reference Include="StoryQ">
+      <HintPath>..\..\..\..\..\Downloads\StoryQ-2.0.4\StoryQ.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
@@ -66,6 +69,7 @@
     <Compile Include="EventPublisherTests.cs" />
     <Compile Include="Mock\MockEventPublisher.cs" />
     <Compile Include="Mock\MockSubscriber.cs" />
+    <Compile Include="EventStoreTests.cs" />
     <Compile Include="XmlObjectSerializerTests.cs" />
     <Compile Include="Mock\MockAggregateRoot.cs" />
     <Compile Include="Mock\MockCommand.cs" />

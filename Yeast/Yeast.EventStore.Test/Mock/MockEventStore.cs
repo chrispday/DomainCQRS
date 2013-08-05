@@ -68,6 +68,12 @@ namespace Yeast.EventStore.Test
 		{
 			throw new NotImplementedException();
 		}
+
+
+		public IEventStore Upgrade<Event, UpgradedEvent>()
+		{
+			throw new NotImplementedException();
+		}
 	}
 
 	public class MockEventStore2 : EventStore

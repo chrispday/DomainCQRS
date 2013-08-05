@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Linq;
 using Yeast.EventStore.Common;
+using System.Reflection.Emit;
 
 namespace Yeast.EventStore
 {
@@ -21,6 +22,13 @@ namespace Yeast.EventStore
 
 			var c = configure as Configure;
 			c.EventStore = new EventStore() { EventSerializer = c.EventSerializer, EventStoreProvider = c.EventStoreProvider, Logger = c.Logger, DefaultSerializationBufferSize = defaultSerializationBufferSize };
+			return configure;
+		}
+
+		public static IConfigure Upgrade<Event, UpgradedEvent>(this IConfigure configure)
+		{
+			var c = configure as Configure;
+			c.EventStore.Upgrade<Event, UpgradedEvent>();
 			return configure;
 		}
 	}
@@ -43,8 +51,6 @@ namespace Yeast.EventStore
 				}
 			}
 		}
-		private volatile bool _newEvents = true;
-		private volatile bool _newEventsSince = false;
 
 		public EventStore()
 		{
@@ -67,10 +73,6 @@ namespace Yeast.EventStore
 			}
 
 			EventStoreProvider.Save(new EventToStore() { AggregateRootId = aggregateRootId, Version = version, Timestamp = DateTime.Now, Data = Serialize<T>(data) });
-
-			_newEvents = true;
-			_newEventsSince = true;
-
 			return this;
 		}
 
@@ -101,13 +103,6 @@ namespace Yeast.EventStore
 
 		public virtual IEnumerable<StoredEvent> Load(int batchSize, IEventStoreProviderPosition from, IEventStoreProviderPosition to)
 		{
-			if (!_newEvents)
-			{
-				Logger.Verbose("No new events.");
-				//yield break;
-			}
-			_newEventsSince = false;
-
 			if (1 > batchSize)
 			{
 				throw new ArgumentOutOfRangeException("batchSize", batchSize, "batchSize cannot be less than 1.");
@@ -130,13 +125,19 @@ namespace Yeast.EventStore
 					break;
 				}
 			}
-
-			_newEvents = _newEventsSince;
 		}
 
 		protected object Deserialize(byte[] data)
 		{
-			return EventSerializer.Deserialize<object>(new MemoryStream(data));
+			var @event = EventSerializer.Deserialize<object>(new MemoryStream(data));
+			
+			EventUpgrader eventUpgrader;
+			if (_eventUpgraders.TryGetValue(@event.GetType(), out eventUpgrader))
+			{
+				@event = eventUpgrader(@event);
+			}
+
+			return @event;
 		}
 
 		protected byte[] Serialize<T>(T data)
@@ -145,6 +146,38 @@ namespace Yeast.EventStore
 			EventSerializer.Serialize(stream, data);
 			stream.Flush();
 			return stream.ToArray();
+		}
+
+		private delegate object EventUpgrader(object @event);
+		private Dictionary<Type, EventUpgrader> _eventUpgraders = new Dictionary<Type, EventUpgrader>();
+		public IEventStore Upgrade<Event, UpgradedEvent>()
+		{
+			var eventType = typeof(Event);
+			var upgradedEventType = typeof(UpgradedEvent);
+
+			lock (_eventUpgraders)
+			{
+				if (_eventUpgraders.ContainsKey(eventType))
+				{
+					throw new ArgumentException(string.Format("An upgrade has already been registered for {0}.", eventType.Name));
+				}
+
+				var upgradedEventConstructor = upgradedEventType.GetConstructor(new Type[] { eventType });
+				if (null == upgradedEventConstructor)
+				{
+					throw new ArgumentOutOfRangeException(string.Format("{0} does not have a constructor \"public {0}({1})\".", upgradedEventType.Name, eventType.Name));
+				}
+
+				var dynamicMethod = new DynamicMethod(upgradedEventType.Name + "_Upgrade", typeof(object), new Type[] { typeof(object) });
+				var ilGenerator = dynamicMethod.GetILGenerator();
+				ilGenerator.Emit(OpCodes.Ldarg_0);
+				ilGenerator.Emit(OpCodes.Castclass, eventType);
+				ilGenerator.Emit(OpCodes.Newobj, upgradedEventConstructor);
+				ilGenerator.Emit(OpCodes.Ret);
+				_eventUpgraders.Add(eventType, (EventUpgrader)dynamicMethod.CreateDelegate(typeof(EventUpgrader)));
+			}
+
+			return this;
 		}
 	}
 }
