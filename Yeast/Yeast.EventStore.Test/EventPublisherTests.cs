@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -12,13 +13,20 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void EventPublisher_Subscribe()
 		{
+			string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
+			using (var conn = new SqlConnection(ConnectionString))
+			{
+				conn.Open();
+				new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
+			}
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
 			var config = Configure.With()
 				.DebugLogger()
 				.BinaryFormatterSerializer()
 				//.FileEventStoreProvider(directory)
-				.MemoryEventStoreProvider()
+				//.MemoryEventStoreProvider()
+				.SqlServerEventStoreProvider(@"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True")
 				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MessageReceiver()
@@ -63,13 +71,20 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void EventPublisher_Subscribe_MultipleBatches()
 		{
+			string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
+			using (var conn = new SqlConnection(ConnectionString))
+			{
+				conn.Open();
+				new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
+			}
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
 			var config = Configure.With();
 			config.DebugLogger(true)
 			.BinaryFormatterSerializer()
 			//.FileEventStoreProvider(directory)
-			.MemoryEventStoreProvider()
+			//.MemoryEventStoreProvider()
+			.SqlServerEventStoreProvider(@"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True")
 			.LRUAggregateRootCache(100)
 			.EventStore()
 			.MessageReceiver()
@@ -125,13 +140,20 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void EventPublisher_Subscribe_MultipleSubscribers()
 		{
+			string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
+			using (var conn = new SqlConnection(ConnectionString))
+			{
+				conn.Open();
+				new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
+			}
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
 			var config = Configure.With();
 				config.DebugLogger()
 				.BinaryFormatterSerializer()
 				//.FileEventStoreProvider(directory)
-				.MemoryEventStoreProvider()
+				//.MemoryEventStoreProvider()
+				.SqlServerEventStoreProvider(@"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True")
 				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MessageReceiver()

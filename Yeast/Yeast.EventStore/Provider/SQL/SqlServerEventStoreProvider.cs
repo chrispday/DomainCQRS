@@ -4,6 +4,25 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using Yeast.EventStore.Common;
+using Yeast.EventStore.Provider;
+
+namespace Yeast.EventStore
+{
+	public static class SqlServerEventStoreProviderConfigure
+	{
+		public static IConfigure SqlServerEventStoreProvider(this IConfigure configure, string connectionString)
+		{
+			if (string.IsNullOrEmpty(connectionString))
+			{
+				throw new ArgumentNullException("connectionString");
+			}
+
+			var c = configure as Configure;
+			c.EventStoreProvider = new SqlServerEventStoreProvider() { ConnectionString = connectionString, Logger = c.Logger };
+			return configure;
+		}
+	}
+}
 
 namespace Yeast.EventStore.Provider
 {
@@ -15,22 +34,27 @@ namespace Yeast.EventStore.Provider
 		#region Sql Commands
 
 		private static string InsertCommand = @"
-insert into [Event] ([AggregateId], [Version], [Timestamp], [Data]) values (@AggregateId, @Version, @Timestamp, @Data)
+insert into [Event] ([AggregateRootId], [Version], [Timestamp], [Data]) values (@AggregateRootId, @Version, @Timestamp, @Data)
 ";
 		private static string SelectCommand = @"
 select [Version], [Timestamp], [Data] 
 from [Event] with (NOLOCK) 
-where [AggregateId] = @AggregateId and [Version] >= @FromVersion and [Version] <= @ToVersion order by Version
-";
-		private static string SelectCommandWithTimestamp = @"
-select [Version], [Timestamp], [Data] 
-from [Event] with (NOLOCK) 
-where [AggregateId] = @AggregateId and [Version] >= @FromVersion and [Version] <= @ToVersion and [Timestamp] >= @FromTimestamp and [Timestamp] <= @ToTimestamp order by Version
+where [AggregateRootId] = @AggregateRootId and [Version] >= @FromVersion and [Version] <= @ToVersion and [Timestamp] >= @FromTimestamp and [Timestamp] <= @ToTimestamp order by Version
 ";
 		private static string SelectCommandWithSequence = @"
-select [Version], [Timestamp], [Data] 
+select [Sequence], [AggregateRootId], [Version], [Timestamp], [Data] 
 from [Event] with (NOLOCK)
-where [Sequence] > @FromSequence";
+where [Sequence] > @FromSequence
+order by [Sequence]";
+
+		private static string DropDefault = @"
+IF  EXISTS (SELECT * FROM dbo.sysobjects WHERE id = OBJECT_ID(N'[DF_Event_Timestamp]') AND type = 'D')
+BEGIN
+ALTER TABLE [dbo].[Event] DROP CONSTRAINT [DF_Event_Timestamp]
+END";
+		private static string DropTable = @"
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Event]') AND type in (N'U'))
+DROP TABLE [dbo].[Event]";
 		private static string CreateTableCommand = @"
 -- --------------------------------------------------
 -- Creating all tables
@@ -38,7 +62,7 @@ where [Sequence] > @FromSequence";
 
 -- Creating table 'Event'
 CREATE TABLE [Event] (
-	[AggregateId] uniqueidentifier  NOT NULL,
+	[AggregateRootId] uniqueidentifier  NOT NULL,
 	[Version] int  NOT NULL,
 	[Timestamp] datetime NOT NULL,
 	[Sequence] int IDENTITY(1, 1) NOT NULL,
@@ -50,10 +74,10 @@ CREATE TABLE [Event] (
 -- Creating all PRIMARY KEY constraints
 -- --------------------------------------------------
 
--- Creating primary key on [AggregateId], [Version] in table 'Event'
+-- Creating primary key on [AggregateRootId], [Version] in table 'Event'
 ALTER TABLE [Event]
 ADD CONSTRAINT [PK_Events]
-    PRIMARY KEY CLUSTERED ([AggregateId], [Version] ASC);
+    PRIMARY KEY CLUSTERED ([AggregateRootId], [Version] ASC);
 
 CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);
 ";
@@ -69,12 +93,21 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 			try
 			{
 				Load(Guid.Empty, null, null, null, null).FirstOrDefault();
+				Load(new SqlServerEventStoreProviderPosition() { Position = Int32.MaxValue }, new SqlServerEventStoreProviderPosition()).FirstOrDefault();
 			}
 			catch (SqlException)
 			{
 				using (var conn = new SqlConnection(ConnectionString))
 				{
 					conn.Open();
+					using (var cmd = new SqlCommand() { Connection = conn, CommandText = DropDefault })
+					{
+						cmd.ExecuteNonQuery();
+					}
+					using (var cmd = new SqlCommand() { Connection = conn, CommandText = DropTable })
+					{
+						cmd.ExecuteNonQuery();
+					}
 					using (var cmd = new SqlCommand() { Connection = conn, CommandText = CreateTableCommand })
 					{
 						cmd.ExecuteNonQuery();
@@ -107,7 +140,7 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 			using (var conn = new SqlConnection(ConnectionString))
 			using (var cmd = new SqlCommand() { Connection = conn, CommandText = InsertCommand })
 			{
-				cmd.Parameters.Add(new SqlParameter("@AggregateId", eventToStore.AggregateRootId));
+				cmd.Parameters.Add(new SqlParameter("@AggregateRootId", eventToStore.AggregateRootId));
 				cmd.Parameters.Add(new SqlParameter("@Version", eventToStore.Version));
 				cmd.Parameters.Add(new SqlParameter("@Timestamp", eventToStore.Timestamp));
 				cmd.Parameters.Add(new SqlParameter("@Data", eventToStore.Data));
@@ -132,12 +165,10 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 
 		public IEnumerable<EventToStore> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
-			string commandText = fromTimestamp.HasValue && toTimestamp.HasValue ? SelectCommandWithTimestamp : SelectCommand;
-
 			using (var conn = new SqlConnection(ConnectionString))
-			using (var cmd = new SqlCommand() { Connection = conn, CommandText =  commandText })
+			using (var cmd = new SqlCommand() { Connection = conn, CommandText =  SelectCommand })
 			{
-				cmd.Parameters.Add(new SqlParameter("@AggregateId", aggregateRootId));
+				cmd.Parameters.Add(new SqlParameter("@AggregateRootId", aggregateRootId));
 				cmd.Parameters.Add(new SqlParameter("@FromVersion", fromVersion.GetValueOrDefault(-1)));
 				cmd.Parameters.Add(new SqlParameter("@ToVersion", toVersion.GetValueOrDefault(System.Data.SqlTypes.SqlInt32.MaxValue.Value)));
 				cmd.Parameters.Add(new SqlParameter("@FromTimestamp", fromTimestamp.GetValueOrDefault(System.Data.SqlTypes.SqlDateTime.MinValue.Value)));
@@ -162,12 +193,40 @@ ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate
 
 		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
 		{
-			throw new NotImplementedException();
+			return new SqlServerEventStoreProviderPosition();
 		}
 
 		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
 		{
-			throw new NotImplementedException();
+			return Load(from as SqlServerEventStoreProviderPosition, to as SqlServerEventStoreProviderPosition);
+		}
+
+		public IEnumerable<EventToStore> Load(SqlServerEventStoreProviderPosition from, SqlServerEventStoreProviderPosition to)
+		{
+			Logger.Verbose("from {0} to {1}", from, to);
+
+			to.Position = from.Position;
+
+			using (var conn = new SqlConnection(ConnectionString))
+			using (var cmd = new SqlCommand() { Connection = conn, CommandText = SelectCommandWithSequence })
+			{
+				cmd.Parameters.Add(new SqlParameter("@FromSequence", from.Position));
+				conn.Open();
+				using (var reader = cmd.ExecuteReader())
+				{
+					while (reader.Read())
+					{
+						to.Position = reader.GetInt32(0);
+						yield return new EventToStore()
+						{
+							AggregateRootId = reader.GetGuid(1),
+							Version = reader.GetInt32(2),
+							Timestamp = reader.GetDateTime(3),
+							Data = reader.GetSqlBinary(4).Value
+						};
+					}
+				}
+			}
 		}
 
 		public void Dispose()

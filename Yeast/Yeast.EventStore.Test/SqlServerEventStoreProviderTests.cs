@@ -54,7 +54,7 @@ namespace Yeast.EventStore.Provider.Test
 			using (var conn = new SqlConnection(ConnectionString))
 			{
 				conn.Open();
-				using (var reader = new SqlCommand("select [AggregateId], [Version], [Data] from [Event] where [AggregateId] = '" + EventToStore.AggregateRootId.ToString() + "' order by [Version]", conn).ExecuteReader())
+				using (var reader = new SqlCommand("select [AggregateRootId], [Version], [Data] from [Event] where [AggregateRootId] = '" + EventToStore.AggregateRootId.ToString() + "' order by [Version]", conn).ExecuteReader())
 				{
 					Assert.IsTrue(reader.Read());
 					Assert.AreEqual(EventToStore.Version, reader.GetInt32(1));
