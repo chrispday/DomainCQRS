@@ -31,7 +31,7 @@ namespace Yeast.EventStore
 
 namespace Yeast.EventStore.Provider
 {
-	public class PartitionedFileEventStoreProvider : IPartitionedEventStoreProvider, IDisposable
+	public class PartitionedFileEventStoreProvider : IPartitionedEventStoreProvider
 	{
 		public int MaximumPartitions { get; set; }
 		public Common.ILogger Logger { get; set; }
@@ -91,14 +91,31 @@ namespace Yeast.EventStore.Provider
 			}
 		}
 
-		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
+		public IEventStoreProviderPosition CreatePosition()
 		{
 			return new PartitionedFileEventStoreProviderPosition(MaximumPartitions);
 		}
 
+		public IEventStoreProviderPosition LoadPosition(Guid subscriberId)
+		{
+			return _fileEventStoreProviders[GetIndex(subscriberId)].LoadPosition(subscriberId);
+		}
+
+		public IEventStoreProvider SavePosition(Guid subscriberId, IEventStoreProviderPosition position)
+		{
+			return SavePosition(subscriberId, position as PartitionedFileEventStoreProviderPosition);
+		}
+
+		public IEventStoreProvider SavePosition(Guid subscriberId, PartitionedFileEventStoreProviderPosition position)
+		{
+			var index = GetIndex(subscriberId);
+			_fileEventStoreProviders[index].SavePosition(subscriberId, position.Positions[index]);
+			return this;
+		}
+
 		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition to)
 		{
-			return Load(CreateEventStoreProviderPosition(), to);
+			return Load(CreatePosition(), to);
 		}
 
 		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
@@ -108,6 +125,11 @@ namespace Yeast.EventStore.Provider
 
 		public IEnumerable<EventToStore> Load(PartitionedFileEventStoreProviderPosition from, PartitionedFileEventStoreProviderPosition to)
 		{
+			if (null == from)
+			{
+				from = new PartitionedFileEventStoreProviderPosition(MaximumPartitions);
+			}
+
 			for (int i = 0; i < MaximumPartitions; i++)
 			{
 				foreach (var @event in _fileEventStoreProviders[i].Load(from.Positions[i], to.Positions[i]))

@@ -39,7 +39,7 @@ namespace Yeast.EventStore
 
 namespace Yeast.EventStore.Provider
 {
-	public class FileEventStoreProvider : IEventStoreProvider, IDisposable
+	public class FileEventStoreProvider : IEventStoreProvider
 	{
 		public string Directory { get; set; }
 		public int EventStreamCacheCapacity { get; set; }
@@ -47,6 +47,8 @@ namespace Yeast.EventStore.Provider
 		public ILogger Logger { get; set; }
 		private LRUDictionary<Guid, FileEventStream> _fileEventStreams;
 		private bool _storeAggregateId = false;
+		private string _eventDirectory;
+		private string _subscriberDirectory;
 
 		public FileEventStoreProvider()
 		{
@@ -60,6 +62,22 @@ namespace Yeast.EventStore.Provider
 			{
 				Logger.Information("Creating directory {0}", Directory);
 				System.IO.Directory.CreateDirectory(Directory);
+				_eventDirectory = Path.Combine(Directory, "Event");
+				System.IO.Directory.CreateDirectory(_eventDirectory);
+				_subscriberDirectory = Path.Combine(Directory, "Subscriber");
+				System.IO.Directory.CreateDirectory(_subscriberDirectory);
+			}
+			_eventDirectory = Path.Combine(Directory, "Event");
+			if (!System.IO.Directory.Exists(_eventDirectory))
+			{
+				Logger.Information("Creating directory {0}", _eventDirectory);
+				System.IO.Directory.CreateDirectory(_eventDirectory);
+			}
+			_subscriberDirectory = Path.Combine(Directory, "Subscriber");
+			if (!System.IO.Directory.Exists(_subscriberDirectory))
+			{
+				Logger.Information("Creating directory {0}", _subscriberDirectory);
+				System.IO.Directory.CreateDirectory(_subscriberDirectory);
 			}
 			_fileEventStreams = new LRUDictionary<Guid, FileEventStream>(EventStreamCacheCapacity);
 			_fileEventStreams.Removed += FileEventStream_Removed;
@@ -82,9 +100,60 @@ namespace Yeast.EventStore.Provider
 			return GetFileEventStream(aggregateRootId).Load(aggregateRootId, fromVersion, toVersion, fromTimestamp, toTimestamp);
 		}
 
-		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
+		public IEventStoreProviderPosition CreatePosition()
 		{
 			return new FileEventStoreProviderPosition();
+		}
+
+		public IEventStoreProviderPosition LoadPosition(Guid subscriberId)
+		{
+			var positions = new FileEventStoreProviderPosition();
+
+			try
+			{
+				using (var reader = new BinaryReader(new MemoryStream(File.ReadAllBytes(GetSubscribtionFilename(subscriberId)))))
+				{
+					while (true)
+					{
+						var guidBuffer = reader.ReadBytes(16);
+						if (0 == guidBuffer.Length)
+						{
+							break;
+						}
+						var position = reader.ReadInt64();
+						positions.Positions[new Guid(guidBuffer)] = position;
+					}
+				}
+			}
+			catch (FileNotFoundException) { }
+
+			return positions;
+		}
+
+		public IEventStoreProvider SavePosition(Guid subscriberId, IEventStoreProviderPosition position)
+		{
+			return SaveEventStoreProviderPosition(subscriberId, position as FileEventStoreProviderPosition);
+		}
+
+		public IEventStoreProvider SaveEventStoreProviderPosition(Guid subscriberId, FileEventStoreProviderPosition position)
+		{
+			var stream = new MemoryStream();
+			var writer = new BinaryWriter(stream);
+			foreach (var item in position.Positions)
+			{
+				writer.Write(item.Key.ToByteArray());
+				writer.Write(item.Value);
+			}
+			stream.Flush();
+
+			File.WriteAllBytes(GetSubscribtionFilename(subscriberId), stream.ToArray());
+
+			return this;
+		}
+
+		private string GetSubscribtionFilename(Guid subscriberId)
+		{
+			return Path.Combine(_subscriberDirectory, subscriberId.ToString());
 		}
 
 		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
@@ -94,7 +163,7 @@ namespace Yeast.EventStore.Provider
 
 		private IEnumerable<EventToStore> Load(FileEventStoreProviderPosition from, FileEventStoreProviderPosition to)
 		{
-			foreach (var file in new DirectoryInfo(Directory).GetFiles())
+			foreach (var file in new DirectoryInfo(_eventDirectory).GetFiles())
 			{
 				var aggregateRootId = new Guid(file.Name);
 
@@ -136,7 +205,7 @@ namespace Yeast.EventStore.Provider
 			FileEventStream fileEventStream;
 			if (!_fileEventStreams.TryGetValue(aggregateRootId, out fileEventStream))
 			{
-				_fileEventStreams.Add(aggregateRootId, fileEventStream = new FileEventStream(Logger, aggregateRootId, Directory, EventStreamBufferSize, true, _storeAggregateId));
+				_fileEventStreams.Add(aggregateRootId, fileEventStream = new FileEventStream(Logger, aggregateRootId, _eventDirectory, EventStreamBufferSize, true, _storeAggregateId));
 			}
 			return fileEventStream;
 		}

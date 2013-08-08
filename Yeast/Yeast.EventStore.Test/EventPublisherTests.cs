@@ -10,15 +10,25 @@ namespace Yeast.EventStore.Test
 	[TestClass]
 	public class EventPublisherTests
 	{
+		string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
+
+		[TestInitialize]
+		public void Init()
+		{
+			try
+			{
+				using (var conn = new SqlConnection(ConnectionString))
+				{
+					conn.Open();
+					new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
+				}
+			}
+			catch { }
+		}
+
 		[TestMethod]
 		public void EventPublisher_Subscribe()
 		{
-			string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
-			using (var conn = new SqlConnection(ConnectionString))
-			{
-				conn.Open();
-				new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
-			}
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
 			var config = Configure.With()
@@ -71,12 +81,6 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void EventPublisher_Subscribe_MultipleBatches()
 		{
-			string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
-			using (var conn = new SqlConnection(ConnectionString))
-			{
-				conn.Open();
-				new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
-			}
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
 			var config = Configure.With();
@@ -140,12 +144,6 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void EventPublisher_Subscribe_MultipleSubscribers()
 		{
-			string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
-			using (var conn = new SqlConnection(ConnectionString))
-			{
-				conn.Open();
-				new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
-			}
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
 			var config = Configure.With();
@@ -223,6 +221,107 @@ namespace Yeast.EventStore.Test
 					config.Dispose();
 				}
 				catch { }
+				try
+				{
+					Directory.Delete(directory, true);
+				}
+				catch { }
+			}
+		}
+
+		[TestMethod]
+		public void EventPublisher_Subscribe_StopStart()
+		{
+			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+			try
+			{
+				var subId = Guid.NewGuid();
+				var config = Configure.With()
+					.DebugLogger(true)
+					.BinaryFormatterSerializer()
+					.FileEventStoreProvider(directory)
+					//.MemoryEventStoreProvider()
+					//.SqlServerEventStoreProvider(@"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True")
+					.LRUAggregateRootCache(100)
+					.EventStore()
+					.MessageReceiver()
+					.Register<MockCommand, MockAggregateRoot>()
+					.MockEventPublisher(100, TimeSpan.FromSeconds(0.1))
+					.Subscribe<MockSubscriber>(subId);
+
+				var publisher = (config as Configure).EventPublisher as MockEventPublisher;
+				Assert.AreEqual(1, publisher.Subscribers.Count);
+				var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
+
+				var id = Guid.NewGuid();
+				(config as Configure).MessageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = 5 });
+				subscriber.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
+
+				Assert.AreEqual(1, subscriber.Received.Count);
+				Assert.IsInstanceOfType(subscriber.Received[0], typeof(StoredEvent));
+				var storedEvent = subscriber.Received[0] as StoredEvent;
+				Assert.IsInstanceOfType(storedEvent.Event, typeof(MockEvent));
+				var @event = storedEvent.Event as MockEvent;
+				Assert.AreEqual(id, @event.AggregateRootId);
+				Assert.AreEqual(5, @event.Increment);
+
+				config.Dispose();
+
+				config = Configure.With()
+				.DebugLogger(true)
+				.BinaryFormatterSerializer()
+				.FileEventStoreProvider(directory)
+				//.MemoryEventStoreProvider()
+				//.SqlServerEventStoreProvider(@"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True")
+				.LRUAggregateRootCache(100)
+				.EventStore()
+				.MessageReceiver()
+				.Register<MockCommand, MockAggregateRoot>()
+				.MockEventPublisher(100, TimeSpan.FromSeconds(0.1))
+				.Subscribe<MockSubscriber>(subId);
+
+				publisher = (config as Configure).EventPublisher as MockEventPublisher;
+				Assert.AreEqual(1, publisher.Subscribers.Count);
+				subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
+
+				(config as Configure).MessageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = 4 });
+				subscriber.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
+
+				Assert.AreEqual(1, subscriber.Received.Count);
+				Assert.IsInstanceOfType(subscriber.Received[0], typeof(StoredEvent));
+				storedEvent = subscriber.Received[0] as StoredEvent;
+				Assert.IsInstanceOfType(storedEvent.Event, typeof(MockEvent));
+				@event = storedEvent.Event as MockEvent;
+				Assert.AreEqual(id, @event.AggregateRootId);
+				Assert.AreEqual(4, @event.Increment);
+
+				config.Subscribe<MockSubscriber>(Guid.NewGuid());
+				Assert.AreEqual(2, publisher.Subscribers.Count);
+				var subscriber2 = publisher.Subscribers.Skip(1).First().Value.Item1 as MockSubscriber;
+				var c = 600;
+				while (subscriber2.Received.Count < 2 && --c > 0)
+				{
+					System.Threading.Thread.Sleep(100);
+				}
+				Assert.AreEqual(2, subscriber2.Received.Count);
+
+				Assert.IsInstanceOfType(subscriber2.Received[0], typeof(StoredEvent));
+				storedEvent = subscriber2.Received[0] as StoredEvent;
+				Assert.IsInstanceOfType(storedEvent.Event, typeof(MockEvent));
+				@event = storedEvent.Event as MockEvent;
+				Assert.AreEqual(id, @event.AggregateRootId);
+				Assert.AreEqual(5, @event.Increment);
+
+				Assert.IsInstanceOfType(subscriber2.Received[1], typeof(StoredEvent));
+				storedEvent = subscriber2.Received[1] as StoredEvent;
+				Assert.IsInstanceOfType(storedEvent.Event, typeof(MockEvent));
+				@event = storedEvent.Event as MockEvent;
+				Assert.AreEqual(id, @event.AggregateRootId);
+				Assert.AreEqual(4, @event.Increment);
+			}
+			finally
+			{
 				try
 				{
 					Directory.Delete(directory, true);

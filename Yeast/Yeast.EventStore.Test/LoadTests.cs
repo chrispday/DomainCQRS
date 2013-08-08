@@ -35,11 +35,15 @@ namespace Yeast.EventStore.Test
 			}
 
 
-			using (var conn = new SqlConnection(ConnectionString))
+			try
 			{
-				conn.Open();
-				new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
+				using (var conn = new SqlConnection(ConnectionString))
+				{
+					conn.Open();
+					new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
+				}
 			}
+			catch { }
 			SqlLoadTestProvider = new SqlServerEventStoreProvider() { ConnectionString = ConnectionString }.EnsureExists() as SqlServerEventStoreProvider;
 		}
 
@@ -209,7 +213,7 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void LoadTest_EventPublisher()
 		{
-			var amount = 1;
+			var amount = 2;
 
 			var typeModel = RuntimeTypeModel.Create();
 			typeModel.Add(typeof(MockCommand), true);

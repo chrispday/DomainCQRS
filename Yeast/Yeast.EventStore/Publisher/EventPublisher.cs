@@ -51,7 +51,7 @@ namespace Yeast.EventStore
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId)
 			where Subscriber : IEventSubscriber, new()
 		{
-			_subscribers.Add(subscriptionId, new SubscriberAndPosition() { Subscriber = new Subscriber() });
+			_subscribers.Add(subscriptionId, new SubscriberAndPosition() { Subscriber = new Subscriber(), Position = EventStore.EventStoreProvider.LoadPosition(subscriptionId) });
 
 			if (null == _publisherThread)
 			{
@@ -96,7 +96,7 @@ namespace Yeast.EventStore
 							eventsPublished++;
 						}
 
-						subscription.Value.Position = to;
+						EventStore.EventStoreProvider.SavePosition(subscription.Key, subscription.Value.Position = to);
 					}
 					catch (Exception ex)
 					{

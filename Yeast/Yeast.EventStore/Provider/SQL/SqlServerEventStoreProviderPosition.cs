@@ -7,7 +7,7 @@ namespace Yeast.EventStore.Provider
 {
 	public class SqlServerEventStoreProviderPosition : IEventStoreProviderPosition
 	{
-		public int Position;
+		public long Position;
 
 		public override string ToString()
 		{

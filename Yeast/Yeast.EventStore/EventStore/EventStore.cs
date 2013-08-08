@@ -98,7 +98,7 @@ namespace Yeast.EventStore
 
 		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
 		{
-			return EventStoreProvider.CreateEventStoreProviderPosition();
+			return EventStoreProvider.CreatePosition();
 		}
 
 		public virtual IEnumerable<StoredEvent> Load(int batchSize, IEventStoreProviderPosition from, IEventStoreProviderPosition to)

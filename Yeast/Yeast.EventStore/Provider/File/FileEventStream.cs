@@ -196,7 +196,7 @@ namespace Yeast.EventStore
 			_versionTracker = @event.Version;
 		}
 
-		private static string GetName(string directory, Guid id)
+		private string GetName(string directory, Guid id)
 		{
 			return Path.Combine(directory,  id.ToString());
 		}

@@ -27,6 +27,7 @@ namespace Yeast.EventStore.Provider
 		public Common.ILogger Logger { get; set; }
 		private Dictionary<Guid, List<EventToStore>> _eventStore;
 		private Dictionary<Guid, int> _versionTracker;
+		private Dictionary<Guid, IEventStoreProviderPosition> _positions = new Dictionary<Guid, IEventStoreProviderPosition>();
 
 		public IEventStoreProvider EnsureExists()
 		{
@@ -83,14 +84,27 @@ namespace Yeast.EventStore.Provider
 			}
 		}
 
-		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
+		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		{
+			return Load(from as MemoryEventStoreProviderPostion, to as MemoryEventStoreProviderPostion);
+		}
+
+		public IEventStoreProviderPosition CreatePosition()
 		{
 			return new MemoryEventStoreProviderPostion();
 		}
 
-		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		public IEventStoreProviderPosition LoadPosition(Guid subscriberId)
 		{
-			return Load(from as MemoryEventStoreProviderPostion, to as MemoryEventStoreProviderPostion);
+			IEventStoreProviderPosition position = new MemoryEventStoreProviderPostion();
+			_positions.TryGetValue(subscriberId, out position);
+			return position;
+		}
+
+		public IEventStoreProvider SavePosition(Guid subscriberId, IEventStoreProviderPosition position)
+		{
+			_positions[subscriberId] = position;
+			return this;
 		}
 
 		private IEnumerable<EventToStore> Load(MemoryEventStoreProviderPostion from, MemoryEventStoreProviderPostion to)

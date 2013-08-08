@@ -43,7 +43,7 @@ namespace Yeast.EventStore.Provider.Test
 			(fileEventStoreProvier as FileEventStoreProvider).Dispose();
 
 			var idStr = EventToStore.AggregateRootId.ToString();
-			var path = Path.Combine(BaseDirectory, idStr);
+			var path = Path.Combine(Path.Combine(BaseDirectory, "Event"), idStr);
 			Assert.IsTrue(File.Exists(path));
 			using (var reader = new BinaryReader(File.OpenRead(path)))
 			{

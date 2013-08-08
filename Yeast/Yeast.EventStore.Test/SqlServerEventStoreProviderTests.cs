@@ -16,11 +16,15 @@ namespace Yeast.EventStore.Provider.Test
 		[TestInitialize]
 		public void Init()
 		{
-			using (var conn = new SqlConnection(ConnectionString))
+			try
 			{
-				conn.Open();
-				new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
+				using (var conn = new SqlConnection(ConnectionString))
+				{
+					conn.Open();
+					new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
+				}
 			}
+			catch { }
 		}
 
 		[TestCleanup]
