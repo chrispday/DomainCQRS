@@ -213,7 +213,7 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void LoadTest_EventPublisher()
 		{
-			var amount = 10000;
+			var amount = 1;
 
 			var typeModel = RuntimeTypeModel.Create();
 			typeModel.Add(typeof(MockCommand), true);

@@ -28,11 +28,13 @@ namespace Yeast.EventStore.Azure.Provider
 		public Common.ILogger Logger { get; set; }
 		public string ConnectionString { get; set; }
 		private static readonly string EventTable = "Event";
+		private static readonly string AggregateRootIdsTable = "AggregateRootIds";
 		private static readonly string SubscriberTable = "Subscriber";
 
 		private CloudStorageAccount _storageAccount;
 		private CloudTableClient _tableClient;
 		private CloudTable _events;
+		private CloudTable _aggregateRootIds;
 		private CloudTable _subscribers;
 		private static readonly int MaximumPropertySize = 64 * 1024 * 1024;
 		private static readonly string RowKeyFormat = "D12";
@@ -45,6 +47,9 @@ namespace Yeast.EventStore.Azure.Provider
 			_events = _tableClient.GetTableReference(EventTable);
 			_events.CreateIfNotExists();
 
+			_aggregateRootIds = _tableClient.GetTableReference(AggregateRootIdsTable);
+			_aggregateRootIds.CreateIfNotExists();
+
 			_subscribers = _tableClient.GetTableReference(SubscriberTable);
 			_subscribers.CreateIfNotExists();
 
@@ -53,9 +58,23 @@ namespace Yeast.EventStore.Azure.Provider
 
 		public IEventStoreProvider Save(EventToStore eventToStore)
 		{
-			var entity = new DynamicTableEntity(eventToStore.AggregateRootId.ToString(), eventToStore.Version.ToString(RowKeyFormat));
+			var entity = new DynamicTableEntity(eventToStore.AggregateRootId.ToString(), "");
+			_aggregateRootIds.Execute(TableOperation.InsertOrMerge(entity));
+
+			entity = new DynamicTableEntity(eventToStore.AggregateRootId.ToString(), eventToStore.Version.ToString(RowKeyFormat));
 			entity.Properties = SplitData(eventToStore.Data);
-			_events.Execute(TableOperation.Insert(entity));
+			try
+			{
+				_events.Execute(TableOperation.Insert(entity));
+			}
+			catch (StorageException ex)
+			{
+				if (ex.Message.Contains("409"))
+				{
+					throw new ConcurrencyException();
+				}
+				throw;
+			}
 			return this;
 		}
 
@@ -129,11 +148,10 @@ namespace Yeast.EventStore.Azure.Provider
 
 			var query = new TableQuery<DynamicTableEntity>()
 				.Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, subscriberId.ToString()));
-			var result = _subscribers.ExecuteQuery(query).FirstOrDefault();
 
-			if (null != result)
+			foreach (var result in _subscribers.ExecuteQuery(query))
 			{
-				position.Positions = result.Properties.ToDictionary(kvp => new Guid(kvp.Key), kvp => kvp.Value.Int32Value.GetValueOrDefault(0));
+				position.Positions[new Guid(result.RowKey)] = result.Properties["Position"].Int32Value.GetValueOrDefault(0);
 			}
 
 			return position;
@@ -147,9 +165,14 @@ namespace Yeast.EventStore.Azure.Provider
 		public IEventStoreProvider SavePosition(Guid subscriberId, AzureEventStoreProviderPosition position)
 		{
 			var tableEntity = new DynamicTableEntity(subscriberId.ToString(), "");
-			tableEntity.Properties = position.Positions.ToDictionary(kvp => kvp.Key.ToString(), kvp => new EntityProperty(kvp.Value));
 
-			_subscribers.Execute(TableOperation.InsertOrReplace(tableEntity));
+			foreach (var p in position.Positions)
+			{
+				tableEntity.RowKey = p.Key.ToString();
+				tableEntity.Properties["Position"] = new EntityProperty(p.Value);
+				_subscribers.Execute(TableOperation.InsertOrReplace(tableEntity));
+			}
+
 			return this;
 		}
 
@@ -160,19 +183,20 @@ namespace Yeast.EventStore.Azure.Provider
 
 		public IEnumerable<EventToStore> Load(AzureEventStoreProviderPosition from, AzureEventStoreProviderPosition to)
 		{
-			var query = new TableQuery<DynamicTableEntity>()
-				.Where(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, (1).ToString(RowKeyFormat)));
+			Logger.Verbose("from {0} to {1}", from, to);
 
-			foreach (var aggregateRootStart in _events.ExecuteQuery(query))
+			var query = new TableQuery<DynamicTableEntity>();
+
+			foreach (var aggregateRootKey in _aggregateRootIds.ExecuteQuery(query))
 			{
-				var aggregateRootId = new Guid(aggregateRootStart.PartitionKey);
+				var aggregateRootId = new Guid(aggregateRootKey.PartitionKey);
 
 				var position = 0;
 				from.Positions.TryGetValue(aggregateRootId, out position);
 
 				var aggregateRootQuery = new TableQuery<DynamicTableEntity>()
 					.Where(TableQuery.CombineFilters(
-						TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, aggregateRootStart.PartitionKey),
+						TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, aggregateRootKey.PartitionKey),
 						TableOperators.And,
 						TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThan, position.ToString(RowKeyFormat))));
 
@@ -180,8 +204,14 @@ namespace Yeast.EventStore.Azure.Provider
 				{
 					var eventToStore = new EventToStore() { AggregateRootId = new Guid(result.PartitionKey), Version = int.Parse(result.RowKey), Timestamp = result.Timestamp.DateTime };
 					eventToStore.Data = CombineData(result.Properties);
+					to.Positions[aggregateRootId] = eventToStore.Version;
 					yield return eventToStore;
-					to.Positions[eventToStore.AggregateRootId] = eventToStore.Version;
+				}
+
+				if (!to.Positions.ContainsKey(aggregateRootId)
+					&& from.Positions.ContainsKey(aggregateRootId))
+				{
+					to.Positions[aggregateRootId] = from.Positions[aggregateRootId];
 				}
 			}
 		}

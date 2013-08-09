@@ -3,6 +3,7 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.WindowsAzure.Storage;
 using Yeast.EventStore.Test.Mock;
 
 namespace Yeast.EventStore.Test
@@ -11,6 +12,11 @@ namespace Yeast.EventStore.Test
 	public class EventPublisherTests
 	{
 		string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
+		public string aConnectionString = "UseDevelopmentStorage=true";
+		private static readonly string EventTable = "Event";
+		private static readonly string SubscriberTable = "Subscriber";
+		private static readonly string AggregateRootIdsTable = "AggregateRootIds";
+
 
 		[TestInitialize]
 		public void Init()
@@ -22,6 +28,21 @@ namespace Yeast.EventStore.Test
 					conn.Open();
 					new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
 				}
+			}
+			catch { }
+			try
+			{
+				var _storageAccount = CloudStorageAccount.Parse(aConnectionString);
+				var _tableClient = _storageAccount.CreateCloudTableClient();
+
+				var _events = _tableClient.GetTableReference(EventTable);
+				_events.DeleteIfExists();
+
+				var _aggregateRootIds = _tableClient.GetTableReference(AggregateRootIdsTable);
+				_aggregateRootIds.DeleteIfExists();
+
+				var _subscribers = _tableClient.GetTableReference(SubscriberTable);
+				_subscribers.DeleteIfExists();
 			}
 			catch { }
 		}
@@ -36,7 +57,8 @@ namespace Yeast.EventStore.Test
 				.BinaryFormatterSerializer()
 				//.FileEventStoreProvider(directory)
 				//.MemoryEventStoreProvider()
-				.SqlServerEventStoreProvider(@"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True")
+				//.SqlServerEventStoreProvider(ConnectionString)
+				.AzureEventStoreProvider(aConnectionString)
 				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MessageReceiver()
@@ -88,12 +110,13 @@ namespace Yeast.EventStore.Test
 			.BinaryFormatterSerializer()
 			//.FileEventStoreProvider(directory)
 			//.MemoryEventStoreProvider()
-			.SqlServerEventStoreProvider(@"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True")
+			//.SqlServerEventStoreProvider(ConnectionString)
+			.AzureEventStoreProvider(aConnectionString)
 			.LRUAggregateRootCache(100)
 			.EventStore()
 			.MessageReceiver()
 			.Register<MockCommand, MockAggregateRoot>()
-			.MockEventPublisher(2, TimeSpan.FromSeconds(0.1))
+			.MockEventPublisher(2, TimeSpan.FromSeconds(1))
 			.Subscribe<MockSubscriber>(Guid.NewGuid());
 			(config as Configure).EventStore = new MockEventStore2() { EventSerializer = (config as Configure).EventSerializer, EventStoreProvider = (config as Configure).EventStoreProvider, Logger = (config as Configure).Logger };
 
@@ -112,6 +135,8 @@ namespace Yeast.EventStore.Test
 				(config as Configure).MessageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = 2 });
 				(config as Configure).MessageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = 1 });
 				subscriber.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
+
+				System.Threading.Thread.Sleep(1000);
 
 				Assert.AreEqual(5, subscriber.Received.Count);
 				Assert.AreEqual(5, ((subscriber.Received[0] as StoredEvent).Event as MockEvent).Increment);
@@ -147,11 +172,12 @@ namespace Yeast.EventStore.Test
 			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
 			var config = Configure.With();
-				config.DebugLogger()
+				config.DebugLogger(true)
 				.BinaryFormatterSerializer()
 				//.FileEventStoreProvider(directory)
 				//.MemoryEventStoreProvider()
-				.SqlServerEventStoreProvider(@"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True")
+				//.SqlServerEventStoreProvider(ConnectionString)
+				.AzureEventStoreProvider(aConnectionString)
 				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MessageReceiver()
@@ -240,9 +266,10 @@ namespace Yeast.EventStore.Test
 				var config = Configure.With()
 					.DebugLogger(true)
 					.BinaryFormatterSerializer()
-					.FileEventStoreProvider(directory)
+					//.FileEventStoreProvider(directory)
 					//.MemoryEventStoreProvider()
-					//.SqlServerEventStoreProvider(@"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True")
+					//.SqlServerEventStoreProvider(ConnectionString)
+					.AzureEventStoreProvider(aConnectionString)
 					.LRUAggregateRootCache(100)
 					.EventStore()
 					.MessageReceiver()
@@ -271,9 +298,10 @@ namespace Yeast.EventStore.Test
 				config = Configure.With()
 				.DebugLogger(true)
 				.BinaryFormatterSerializer()
-				.FileEventStoreProvider(directory)
+				//.FileEventStoreProvider(directory)
 				//.MemoryEventStoreProvider()
-				//.SqlServerEventStoreProvider(@"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True")
+				//.SqlServerEventStoreProvider(ConnectionString)
+				.AzureEventStoreProvider(aConnectionString)
 				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MessageReceiver()
