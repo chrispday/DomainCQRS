@@ -4,8 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Yeast.EventStore.Common;
+using Yeast.EventStore.Provider;
 
-namespace Yeast.EventStore
+namespace Yeast.EventStore.Provider
 {
 	public class FileEventStream : IDisposable
 	{

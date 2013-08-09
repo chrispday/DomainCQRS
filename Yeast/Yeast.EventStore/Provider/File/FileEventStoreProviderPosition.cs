@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Yeast.EventStore
+namespace Yeast.EventStore.Provider
 {
 	[Serializable]
 	public class FileEventStoreProviderPosition : IEventStoreProviderPosition
