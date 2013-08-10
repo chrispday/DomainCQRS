@@ -29,7 +29,7 @@ namespace Yeast.EventStore.Test.Mock
 		{ 
 			get 
 			{ 
-				return _subscribers.ToDictionary(i => i.Key, i => Tuple.Create(i.Value.Subscriber, i.Value.Position)); 
+				return _subscribers.ToDictionary(i => i.Key, i => Tuple.Create(i.Value.Subscriber as IEventSubscriber, i.Value.Position)); 
 			} 
 		}
 	}

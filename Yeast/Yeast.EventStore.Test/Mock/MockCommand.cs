@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ProtoBuf;
 using Yeast.EventStore.Domain;
+using Yeast.EventStore.Test.Mock;
 
 namespace Yeast.EventStore
 {

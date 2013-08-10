@@ -8,7 +8,6 @@ namespace Yeast.EventStore
 {
 	public interface IEventSubscriber
 	{
-		ILogger Logger { get; set; }
 		IEventSubscriber Receive(object @event);
 	}
 }
