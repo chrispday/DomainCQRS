@@ -73,7 +73,7 @@
     <Compile Include="Provider\SQL\SqlServerEventStoreProviderPosition.cs" />
     <Compile Include="Publisher\EventPublisher.cs" />
     <Compile Include="Publisher\IEventPublisher.cs" />
-    <Compile Include="Publisher\IEventSubscriber.cs" />
+    <Compile Include="Publisher\IEventProjector.cs" />
     <Compile Include="Publisher\ISagaPublisher.cs" />
     <Compile Include="Publisher\SagaPublisher.cs" />
     <Compile Include="Receiver\MessageReceiver.cs" />

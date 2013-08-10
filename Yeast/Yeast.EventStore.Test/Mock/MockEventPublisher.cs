@@ -25,11 +25,11 @@ namespace Yeast.EventStore.Test.Mock
 
 	public class MockEventPublisher : EventPublisher
 	{
-		public Dictionary<Guid, Tuple<IEventSubscriber, IEventStoreProviderPosition>> Subscribers
+		public Dictionary<Guid, Tuple<IEventProjector<object>, IEventStoreProviderPosition>> Subscribers
 		{ 
 			get 
 			{ 
-				return _subscribers.ToDictionary(i => i.Key, i => Tuple.Create(i.Value.Subscriber as IEventSubscriber, i.Value.Position)); 
+				return _subscribers.ToDictionary(i => i.Key, i => Tuple.Create(i.Value.Subscriber as IEventProjector<object>, i.Value.Position)); 
 			} 
 		}
 	}

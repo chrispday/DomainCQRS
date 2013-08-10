@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Yeast.EventStore.Test.Mock
 {
-	public class MockSubscriber : IEventSubscriber
+	public class MockSubscriber : IEventProjector<object>
 	{
 		public MockSubscriber()
 		{

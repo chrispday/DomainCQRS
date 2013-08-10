@@ -6,8 +6,8 @@ using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore
 {
-	public interface IEventSubscriber
+	public interface IEventProjector<Event>
 	{
-		void Receive(object @event);
+		void Receive(Event @event);
 	}
 }

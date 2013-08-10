@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Yeast.EventStore
 {
-	public interface ISagaPublisher : IEventSubscriber
+	public interface ISagaPublisher : IEventProjector<object>
 	{
 		IMessageReceiver MessageReceiver { get; set; }
 		ISagaPublisher Saga<Event>();
