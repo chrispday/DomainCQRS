@@ -88,8 +88,10 @@
     <Compile Include="LoadTests.cs" />
     <Compile Include="EventPublisherTests.cs" />
     <Compile Include="Mock\MockEventPublisher.cs" />
+    <Compile Include="Mock\MockSaga.cs" />
     <Compile Include="Mock\MockSubscriber.cs" />
     <Compile Include="EventStoreTests.cs" />
+    <Compile Include="SagaTests.cs" />
     <Compile Include="XmlObjectSerializerTests.cs" />
     <Compile Include="Mock\MockAggregateRoot.cs" />
     <Compile Include="Mock\MockCommand.cs" />

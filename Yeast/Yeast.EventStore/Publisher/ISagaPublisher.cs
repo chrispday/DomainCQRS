@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore
 {
-	public interface IEventSubscriber
+	public interface ISagaPublisher : IEventSubscriber
 	{
-		void Receive(object @event);
+		IMessageReceiver MessageReceiver { get; set; }
+		ISagaPublisher Saga<Event>();
 	}
 }

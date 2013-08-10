@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cache\NoAggregateRootCache.cs" />
     <Compile Include="Domain\AggregateRoot\AggregateRootBase.cs" />
     <Compile Include="Domain\AggregateRoot\IAggregateRoot.cs" />
     <Compile Include="Domain\AggregateRoot\IHandlesCommand.cs" />
@@ -73,6 +74,8 @@
     <Compile Include="Publisher\EventPublisher.cs" />
     <Compile Include="Publisher\IEventPublisher.cs" />
     <Compile Include="Publisher\IEventSubscriber.cs" />
+    <Compile Include="Publisher\ISagaPublisher.cs" />
+    <Compile Include="Publisher\SagaPublisher.cs" />
     <Compile Include="Receiver\MessageReceiver.cs" />
     <Compile Include="Receiver\IMessageReceiver.cs" />
     <Compile Include="EventStore\IEventResequencer.cs" />

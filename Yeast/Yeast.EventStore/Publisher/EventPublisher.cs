@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -22,19 +23,27 @@ namespace Yeast.EventStore
 			return configure;
 		}
 
-		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId)
-			where Subscriber : IEventSubscriber, new()
+		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId) { return Subscribe<Subscriber, object>(configure, subscriptionId); }
+		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriberReceiveMethodName); }
+		public static IConfigure Subscribe<Subscriber, Event>(this IConfigure configure, Guid subscriptionId) { return Subscribe<Subscriber, Event>(configure, subscriptionId, DefaultSubscriberReceiveMethodName); }
+		public static IConfigure Subscribe<Subscriber, Event>(this IConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, Event>(configure, subscriptionId, Activator.CreateInstance<Subscriber>(), subscriberReceiveMethodName); }
+
+		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriber); }
+		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriber, subscriberReceiveMethodName); }
+		public static IConfigure Subscribe<Subscriber, Event>(this IConfigure configure, Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, Event>(configure, subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
+		public static IConfigure Subscribe<Subscriber, Event>(this IConfigure configure, Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName)
 		{
 			var c = configure as Configure;
-			c.EventPublisher.Subscribe<Subscriber>(subscriptionId);
+			c.EventPublisher.Subscribe<Subscriber, Event>(subscriptionId, subscriber, subscriberReceiveMethodName);
 			return configure;
 		}
 	}
 
-	public class EventPublisher : IEventPublisher, IDisposable
+	public class EventPublisher : IEventPublisher
 	{
 		public Common.ILogger Logger { get; set; }
 		public IEventStore EventStore { get; set; }
+		public IMessageReceiver MessageReceiver { get; set; }
 		public int BatchSize { get; set; }
 		public TimeSpan PublishThreadSleep { get; set; }
 		public string DefaultSubscriberReceiveMethodName { get; set; }
@@ -62,25 +71,29 @@ namespace Yeast.EventStore
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId) { return Subscribe<Subscriber, object>(subscriptionId, DefaultSubscriberReceiveMethodName); }
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(subscriptionId, subscriberReceiveMethodName); }
 		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId) { return Subscribe<Subscriber, Event>(subscriptionId, DefaultSubscriberReceiveMethodName); }
-		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, string subscriberReceiveMethodName)
+		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, Event>(subscriptionId, Activator.CreateInstance<Subscriber>(), DefaultSubscriberReceiveMethodName); }
+		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, object>(subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
+		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
+		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, Event>(subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
+		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName)
 		{
-			SubscriberAndPosition subscriber;
-			if (!_subscribers.TryGetValue(subscriptionId, out subscriber))
+			SubscriberAndPosition subscriberAndPosition;
+			if (!_subscribers.TryGetValue(subscriptionId, out subscriberAndPosition))
 			{
-				_subscribers.Add(subscriptionId, subscriber = new SubscriberAndPosition() { Subscriber = Activator.CreateInstance<Subscriber>(), Position = EventStore.EventStoreProvider.LoadPosition(subscriptionId) });
+				_subscribers.Add(subscriptionId, subscriberAndPosition = new SubscriberAndPosition() { Subscriber = subscriber, Position = EventStore.EventStoreProvider.LoadPosition(subscriptionId) });
 			}
 			if (typeof(object) == typeof(Event))
 			{
-				subscriber.ReceiveObject = CreateSubscriberReceive<Subscriber, object>(subscriberReceiveMethodName);
+				subscriberAndPosition.ReceiveObject = CreateSubscriberReceive<Subscriber, object>(subscriberReceiveMethodName);
 			}
 			else
 			{
 				var eventType = typeof(Event);
-				if (subscriber.Receives.ContainsKey(eventType))
+				if (subscriberAndPosition.Receives.ContainsKey(eventType))
 				{
 					throw new RegistrationException(string.Format("{0}({1}) for {2} already registered.", subscriberReceiveMethodName, eventType.Name, subscriptionId));
 				}
-				subscriber.Receives.Add(eventType, CreateSubscriberReceive<Subscriber, Event>(subscriberReceiveMethodName));
+				subscriberAndPosition.Receives.Add(eventType, CreateSubscriberReceive<Subscriber, Event>(subscriberReceiveMethodName));
 			}
 
 			if (null == _publisherThread)
@@ -97,9 +110,10 @@ namespace Yeast.EventStore
 			var subscriberType = typeof(Subscriber);
 			var eventType = typeof(Event);
 			MethodInfo receiveMethod = subscriberType.GetMethod(subscriberReceiveMethodName, new Type[] { eventType });
-			if (null == receiveMethod)
+			if (null == receiveMethod
+				|| typeof(void) != receiveMethod.ReturnType)
 			{
-				throw new RegistrationException(string.Format("{0} does not contain a method {1}({2}).", subscriberType.Name, subscriberReceiveMethodName, eventType.Name));
+				throw new RegistrationException(string.Format("{0} does not contain a method void {1}({2}).", subscriberType.Name, subscriberReceiveMethodName, eventType.Name));
 			}
 
 			var dynamicMethod = new DynamicMethod(string.Format("Receive_{0}_{1}", subscriberType.Name, eventType.Name), null, new Type[] { typeof(object), typeof(object) });
@@ -110,7 +124,6 @@ namespace Yeast.EventStore
 			ilGenerator.Emit(OpCodes.Ldarg_1);
 			ilGenerator.Emit(OpCodes.Castclass, eventType);
 			ilGenerator.EmitCall(OpCodes.Callvirt, receiveMethod, null);
-			ilGenerator.Emit(OpCodes.Pop);
 			ilGenerator.Emit(OpCodes.Ret);
 
 			return (Receive)dynamicMethod.CreateDelegate(typeof(Receive));
@@ -148,14 +161,14 @@ namespace Yeast.EventStore
 						{
 							Receive receive;
 							if (0 == subscription.Value.Receives.Count
-								|| !subscription.Value.Receives.TryGetValue(@event.GetType(), out receive))
+								|| !subscription.Value.Receives.TryGetValue(@event.Event.GetType(), out receive))
 							{
 								receive = subscription.Value.ReceiveObject;
 							}
 
 							if (null != receive)
 							{
-								receive(subscription.Value.Subscriber, @event);
+								receive(subscription.Value.Subscriber, @event.Event);
 							}
 
 							eventsPublished++;
@@ -176,6 +189,17 @@ namespace Yeast.EventStore
 
 			Logger.Information("Shutting down publishing thread.");
 			_finishedPublishing.Set();
+		}
+
+		public object GetSubscriber(Guid subscriptionId)
+		{
+			return GetSubscriber<object>(subscriptionId);
+		}
+
+		public Subscriber GetSubscriber<Subscriber>(Guid subscriptionId)
+			where Subscriber : class
+		{
+			return _subscribers[subscriptionId].Subscriber as Subscriber;
 		}
 	}
 }

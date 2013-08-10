@@ -77,10 +77,8 @@ namespace Yeast.EventStore.Test
 				subscriber.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
 
 				Assert.AreEqual(1, subscriber.Received.Count);
-				Assert.IsInstanceOfType(subscriber.Received[0], typeof(StoredEvent));
-				var storedEvent = subscriber.Received[0] as StoredEvent;
-				Assert.IsInstanceOfType(storedEvent.Event, typeof(MockEvent));
-				var @event = storedEvent.Event as MockEvent;
+				Assert.IsInstanceOfType(subscriber.Received[0], typeof(MockEvent));
+				var @event = subscriber.Received[0] as MockEvent;
 				Assert.AreEqual(id, @event.AggregateRootId);
 				Assert.AreEqual(5, @event.Increment);
 
@@ -139,17 +137,17 @@ namespace Yeast.EventStore.Test
 				System.Threading.Thread.Sleep(1000);
 
 				Assert.AreEqual(5, subscriber.Received.Count);
-				Assert.AreEqual(5, ((subscriber.Received[0] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(4, ((subscriber.Received[1] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(3, ((subscriber.Received[2] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(2, ((subscriber.Received[3] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(1, ((subscriber.Received[4] as StoredEvent).Event as MockEvent).Increment);
+				Assert.AreEqual(5, (subscriber.Received[0] as MockEvent).Increment);
+				Assert.AreEqual(4, (subscriber.Received[1] as MockEvent).Increment);
+				Assert.AreEqual(3, (subscriber.Received[2] as MockEvent).Increment);
+				Assert.AreEqual(2, (subscriber.Received[3] as MockEvent).Increment);
+				Assert.AreEqual(1, (subscriber.Received[4] as MockEvent).Increment);
 
-				Assert.AreEqual(2, ((subscriber.Received[0] as StoredEvent).Event as MockEvent).BatchNo);
-				Assert.AreEqual(1, ((subscriber.Received[1] as StoredEvent).Event as MockEvent).BatchNo);
-				Assert.AreEqual(2, ((subscriber.Received[2] as StoredEvent).Event as MockEvent).BatchNo);
-				Assert.AreEqual(1, ((subscriber.Received[3] as StoredEvent).Event as MockEvent).BatchNo);
-				Assert.AreEqual(2, ((subscriber.Received[4] as StoredEvent).Event as MockEvent).BatchNo);
+				Assert.AreEqual(2, (subscriber.Received[0] as MockEvent).BatchNo);
+				Assert.AreEqual(1, (subscriber.Received[1] as MockEvent).BatchNo);
+				Assert.AreEqual(2, (subscriber.Received[2] as MockEvent).BatchNo);
+				Assert.AreEqual(1, (subscriber.Received[3] as MockEvent).BatchNo);
+				Assert.AreEqual(2, (subscriber.Received[4] as MockEvent).BatchNo);
 			}
 			finally
 			{
@@ -204,11 +202,11 @@ namespace Yeast.EventStore.Test
 				subscriber.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
 
 				Assert.AreEqual(5, subscriber.Received.Count);
-				Assert.AreEqual(5, ((subscriber.Received[0] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(4, ((subscriber.Received[1] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(3, ((subscriber.Received[2] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(2, ((subscriber.Received[3] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(1, ((subscriber.Received[4] as StoredEvent).Event as MockEvent).Increment);
+				Assert.AreEqual(5, (subscriber.Received[0] as MockEvent).Increment);
+				Assert.AreEqual(4, (subscriber.Received[1] as MockEvent).Increment);
+				Assert.AreEqual(3, (subscriber.Received[2] as MockEvent).Increment);
+				Assert.AreEqual(2, (subscriber.Received[3] as MockEvent).Increment);
+				Assert.AreEqual(1, (subscriber.Received[4] as MockEvent).Increment);
 
 				config.Subscribe<MockSubscriber>(Guid.NewGuid());
 				Assert.AreEqual(2, publisher.Subscribers.Count);
@@ -217,11 +215,11 @@ namespace Yeast.EventStore.Test
 				subscriber2.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
 
 				Assert.AreEqual(5, subscriber2.Received.Count);
-				Assert.AreEqual(5, ((subscriber2.Received[0] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(4, ((subscriber2.Received[1] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(3, ((subscriber2.Received[2] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(2, ((subscriber2.Received[3] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(1, ((subscriber2.Received[4] as StoredEvent).Event as MockEvent).Increment);
+				Assert.AreEqual(5, (subscriber2.Received[0] as MockEvent).Increment);
+				Assert.AreEqual(4, (subscriber2.Received[1] as MockEvent).Increment);
+				Assert.AreEqual(3, (subscriber2.Received[2] as MockEvent).Increment);
+				Assert.AreEqual(2, (subscriber2.Received[3] as MockEvent).Increment);
+				Assert.AreEqual(1, (subscriber2.Received[4] as MockEvent).Increment);
 
 				//System.Threading.Thread.Sleep(5000);
 
@@ -237,8 +235,8 @@ namespace Yeast.EventStore.Test
 
 				Assert.AreEqual(6, subscriber.Received.Count);
 				Assert.AreEqual(6, subscriber2.Received.Count);
-				Assert.AreEqual(10, ((subscriber.Received[5] as StoredEvent).Event as MockEvent).Increment);
-				Assert.AreEqual(10, ((subscriber2.Received[5] as StoredEvent).Event as MockEvent).Increment);
+				Assert.AreEqual(10, (subscriber.Received[5] as MockEvent).Increment);
+				Assert.AreEqual(10, (subscriber2.Received[5] as MockEvent).Increment);
 			}
 			finally
 			{
@@ -286,10 +284,8 @@ namespace Yeast.EventStore.Test
 				subscriber.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
 
 				Assert.AreEqual(1, subscriber.Received.Count);
-				Assert.IsInstanceOfType(subscriber.Received[0], typeof(StoredEvent));
-				var storedEvent = subscriber.Received[0] as StoredEvent;
-				Assert.IsInstanceOfType(storedEvent.Event, typeof(MockEvent));
-				var @event = storedEvent.Event as MockEvent;
+				Assert.IsInstanceOfType(subscriber.Received[0], typeof(MockEvent));
+				var @event = subscriber.Received[0] as MockEvent;
 				Assert.AreEqual(id, @event.AggregateRootId);
 				Assert.AreEqual(5, @event.Increment);
 
@@ -317,10 +313,8 @@ namespace Yeast.EventStore.Test
 				subscriber.ReceivedEvent.WaitOne(TimeSpan.FromMinutes(1));
 
 				Assert.AreEqual(1, subscriber.Received.Count);
-				Assert.IsInstanceOfType(subscriber.Received[0], typeof(StoredEvent));
-				storedEvent = subscriber.Received[0] as StoredEvent;
-				Assert.IsInstanceOfType(storedEvent.Event, typeof(MockEvent));
-				@event = storedEvent.Event as MockEvent;
+				Assert.IsInstanceOfType(subscriber.Received[0], typeof(MockEvent));
+				@event = subscriber.Received[0] as MockEvent;
 				Assert.AreEqual(id, @event.AggregateRootId);
 				Assert.AreEqual(4, @event.Increment);
 
@@ -334,17 +328,13 @@ namespace Yeast.EventStore.Test
 				}
 				Assert.AreEqual(2, subscriber2.Received.Count);
 
-				Assert.IsInstanceOfType(subscriber2.Received[0], typeof(StoredEvent));
-				storedEvent = subscriber2.Received[0] as StoredEvent;
-				Assert.IsInstanceOfType(storedEvent.Event, typeof(MockEvent));
-				@event = storedEvent.Event as MockEvent;
+				Assert.IsInstanceOfType(subscriber2.Received[0], typeof(MockEvent));
+				@event = subscriber2.Received[0] as MockEvent;
 				Assert.AreEqual(id, @event.AggregateRootId);
 				Assert.AreEqual(5, @event.Increment);
 
-				Assert.IsInstanceOfType(subscriber2.Received[1], typeof(StoredEvent));
-				storedEvent = subscriber2.Received[1] as StoredEvent;
-				Assert.IsInstanceOfType(storedEvent.Event, typeof(MockEvent));
-				@event = storedEvent.Event as MockEvent;
+				Assert.IsInstanceOfType(subscriber2.Received[1], typeof(MockEvent));
+				@event = subscriber2.Received[1] as MockEvent;
 				Assert.AreEqual(id, @event.AggregateRootId);
 				Assert.AreEqual(4, @event.Increment);
 			}

@@ -18,14 +18,13 @@ namespace Yeast.EventStore.Test.Mock
 		public AutoResetEvent ReceivedEvent = new AutoResetEvent(false);
 		public volatile int SignalOnCount = 1;
 		public List<object> Received = new List<object>();
-		public IEventSubscriber Receive(object @event)
+		public void Receive(object @event)
 		{
 			Received.Add(@event);
 			if (SignalOnCount <= Received.Count)
 			{
 				ReceivedEvent.Set();
 			}
-			return this;
 		}
 	}
 }

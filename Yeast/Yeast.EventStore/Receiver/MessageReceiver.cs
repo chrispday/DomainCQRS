@@ -9,6 +9,8 @@ namespace Yeast.EventStore
 {
 	public static class MessageReceiverConfigure
 	{
+		public static readonly string DefaultAggregateRootIdProperty = "AggregateRootId";
+		public static readonly string DefaultAggregateRootApplyMethod = "Apply";
 		public static IConfigure MessageReceiver(this IConfigure configure, string defaultAggregateRootIdProperty, string defaultAggregateRootApplyMethod)
 		{
 			var c = configure as Configure;
@@ -30,12 +32,8 @@ namespace Yeast.EventStore
 			return configure;
 		}
 
-		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure)
-		{
-			(configure as Configure).MessageReceiver.Register<Message, AggregateRoot>();
-			return configure;
-		}
-
+		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure) { return Register<Message, AggregateRoot>(configure, DefaultAggregateRootIdProperty, DefaultAggregateRootApplyMethod); }
+		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure, string aggregateRootIdProperty) { return Register<Message, AggregateRoot>(configure, aggregateRootIdProperty, DefaultAggregateRootApplyMethod); }
 		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure, string aggregateRootIdsProperty, string aggregateRootApplyCommandMethod)
 		{
 			(configure as Configure).MessageReceiver.Register<Message, AggregateRoot>(aggregateRootIdsProperty, aggregateRootApplyCommandMethod);
@@ -53,8 +51,8 @@ namespace Yeast.EventStore
 
 		public MessageReceiver()
 		{
-			DefaultAggregateRootIdProperty = "AggregateRootId";
-			DefaultAggregateRootApplyMethod = "Apply";
+			DefaultAggregateRootIdProperty = MessageReceiverConfigure.DefaultAggregateRootIdProperty;
+			DefaultAggregateRootApplyMethod = MessageReceiverConfigure.DefaultAggregateRootApplyMethod;
 		}
 
 		public IMessageReceiver Receive(object message)
@@ -298,16 +296,19 @@ namespace Yeast.EventStore
 			var dynamicMethod = new DynamicMethod(string.Format("ApplyCommand_{0}_{1}", aggregateRootType.Name, commandType.Name), typeof(IEnumerable), new Type[] { typeof(object), typeof(object) });
 			var ilGenerator = dynamicMethod.GetILGenerator();
 
-			ilGenerator.Emit(OpCodes.Nop);
 			ilGenerator.Emit(OpCodes.Ldarg_0);
 			ilGenerator.Emit(OpCodes.Castclass, aggregateRootType);
 			ilGenerator.Emit(OpCodes.Ldarg_1);
 			ilGenerator.Emit(OpCodes.Castclass, commandType);
 			ilGenerator.EmitCall(OpCodes.Callvirt, applyMethod, null);
-			ilGenerator.Emit(OpCodes.Nop);
 			ilGenerator.Emit(OpCodes.Ret);
 
 			return (ApplyCommand)dynamicMethod.CreateDelegate(typeof(ApplyCommand));
+		}
+
+		public bool IsRegistered(Type messageType)
+		{
+			return _messages.ContainsKey(messageType);
 		}
 
 		public IMessageReceiver Register<Message, AggregateRoot>()
