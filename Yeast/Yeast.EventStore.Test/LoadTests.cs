@@ -213,7 +213,7 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void LoadTest_EventPublisher()
 		{
-			var amount = 1;
+			var amount = 100000;
 
 			var typeModel = RuntimeTypeModel.Create();
 			typeModel.Add(typeof(MockCommand), true);
@@ -221,14 +221,15 @@ namespace Yeast.EventStore.Test
 
 			var configure = Configure.With()
 				.DebugLogger(false)
-				.PartitionedFileEventStoreProvider(8, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1500, 8 * 1024)
+				//.PartitionedFileEventStoreProvider(8, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1500, 8 * 1024)
+				.MemoryEventStoreProvider()
 				.XmlObjectSerializer(serializer)
 				.EventStore()
 				.MessageReceiver()
 				.LRUAggregateRootCache()
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply")
-				.MockEventPublisher()
+				.MockEventPublisher(10000, TimeSpan.FromSeconds(0.1))
 				.Subscribe<MockSubscriber>(Guid.NewGuid());
 
 			var publisher = (configure as Configure).EventPublisher as MockEventPublisher;
@@ -245,7 +246,7 @@ namespace Yeast.EventStore.Test
 
 			var stopWatch = Stopwatch.StartNew();
 
-			subscriber.SignalOnCount = amount;
+			subscriber.SignalOnCount = (int)((double)amount * 0.9);
 			Parallel.ForEach(Enumerable.Range(1, amount), new ParallelOptions() { MaxDegreeOfParallelism = 4 }, i =>
 			{
 				id = keys[Ran(random, LoadTestAggregateIds.Count - 1)];
@@ -256,6 +257,7 @@ namespace Yeast.EventStore.Test
 				}
 				catch (ConcurrencyException)
 				{
+					//System.Diagnostics.Debugger.Break();
 					concurrencyExceptions++;
 				}
 			});
@@ -263,15 +265,15 @@ namespace Yeast.EventStore.Test
 
 			stopWatch.Stop();
 
-			var fileInfos = Directory.GetFiles(((configure as Configure).EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
+			configure.Dispose();
+
+			//var fileInfos = Directory.GetFiles(((configure as Configure).EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
 			Debug.WriteLine("Time taken {0}", stopWatch.Elapsed);
 			Debug.WriteLine("Per sec {0:#,##0.0}", amount / stopWatch.Elapsed.TotalSeconds);
-			Debug.WriteLine("Files in Event Store {0}", fileInfos.Count());
-			Debug.WriteLine("Size of Event Store {0:#,##0.0} KB", fileInfos.Sum(f => f.Length / 1024.0));
-			Debug.WriteLine("Avg Size of Event Store {0:#,##0.0} KB", fileInfos.Average(f => f.Length / 1024.0));
-			Debug.WriteLine("Largest Size of Event Store {0:#,##0.0} KB", fileInfos.Max(f => f.Length / 1024.0));
-
-			configure.Dispose();
+			//Debug.WriteLine("Files in Event Store {0}", fileInfos.Count());
+			//Debug.WriteLine("Size of Event Store {0:#,##0.0} KB", fileInfos.Sum(f => f.Length / 1024.0));
+			//Debug.WriteLine("Avg Size of Event Store {0:#,##0.0} KB", fileInfos.Average(f => f.Length / 1024.0));
+			//Debug.WriteLine("Largest Size of Event Store {0:#,##0.0} KB", fileInfos.Max(f => f.Length / 1024.0));
 		}
 
 		private int Ran(Random random, int p)

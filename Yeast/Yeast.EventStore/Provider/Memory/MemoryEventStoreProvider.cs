@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+//using System.Linq;
 using System.Text;
 using Yeast.EventStore.Provider;
 
@@ -66,12 +66,21 @@ namespace Yeast.EventStore.Provider
 		public IEnumerable<EventToStore> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
 			List<EventToStore> events;
-			if (!_eventStore.TryGetValue(aggregateRootId, out events))
+			lock (_eventStore)
 			{
-				yield break;
+				if (!_eventStore.TryGetValue(aggregateRootId, out events))
+				{
+					yield break;
+				}
+			}
+			
+			List<EventToStore> eventsCopy;
+			lock (events)
+			{
+				eventsCopy = new List<EventToStore>(events);
 			}
 
-			foreach (var @event in new List<EventToStore>(events))
+			foreach (var @event in eventsCopy)
 			{
 				if (@event.AggregateRootId == aggregateRootId
 					&& @event.Version >= fromVersion.GetValueOrDefault(-1)
@@ -111,12 +120,22 @@ namespace Yeast.EventStore.Provider
 		{
 			Logger.Verbose("from {0} to {1}", from, to);
 
-			foreach (var item in new Dictionary<Guid, List<EventToStore>>(_eventStore))
+			Dictionary<Guid, List<EventToStore>> eventStoreCopy;
+			lock (_eventStore)
+			{
+				eventStoreCopy = new Dictionary<Guid, List<EventToStore>>(_eventStore);
+			}
+
+			foreach (var item in eventStoreCopy)
 			{
 				int fromPostion = 0;
 				from.Positions.TryGetValue(item.Key, out fromPostion);
 
-				var events = new List<EventToStore>(item.Value);
+				List<EventToStore> events;
+				lock (item.Value)
+				{
+					events = new List<EventToStore>(item.Value);
+				}
 
 				int toPosition = events.Count;
 				//to.Positions.TryGetValue(item.Key, out toPosition);

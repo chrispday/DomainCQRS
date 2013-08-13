@@ -98,7 +98,7 @@ namespace Yeast.EventStore
 
 			if (null == _publisherThread)
 			{
-				_publisherThread = new Thread(Publish);
+				_publisherThread = new Thread(Publish) { Name = "EventPublisher" };
 				_publisherThread.Start();
 			}
 
@@ -131,8 +131,12 @@ namespace Yeast.EventStore
 
 		public void Dispose()
 		{
-			_continuePublishing = false;
-			_finishedPublishing.WaitOne();
+			if (null != _publisherThread)
+			{
+				_publisherThread = null;
+				_continuePublishing = false;
+				_finishedPublishing.WaitOne();
+			}
 		}
 
 		private void Publish()

@@ -88,17 +88,14 @@ namespace Yeast.EventStore
 
 		private AggregateRootAndVersion GetAggregateRootAndVersion(Type aggregateRootType, Guid aggregateRootId)
 		{
-			lock (AggregateRootCache)
+			AggregateRootAndVersion aggregateRootAndVersion;
+			if (!AggregateRootCache.TryGetValue(aggregateRootId, out aggregateRootAndVersion))
 			{
-				AggregateRootAndVersion aggregateRootAndVersion;
-				if (!AggregateRootCache.TryGetValue(aggregateRootId, out aggregateRootAndVersion))
-				{
-					var aggregateRoot = CreateAggregateRoot(aggregateRootType);
-					var version = LoadAggreateRoot(aggregateRootType, aggregateRoot, aggregateRootId);
-					AggregateRootCache[aggregateRootId] = aggregateRootAndVersion = new AggregateRootAndVersion() { AggregateRoot = aggregateRoot, LatestVersion = version };
-				}
-				return aggregateRootAndVersion;
+				var aggregateRoot = CreateAggregateRoot(aggregateRootType);
+				var version = LoadAggreateRoot(aggregateRootType, aggregateRoot, aggregateRootId);
+				AggregateRootCache[aggregateRootId] = aggregateRootAndVersion = new AggregateRootAndVersion() { AggregateRoot = aggregateRoot, LatestVersion = version };
 			}
+			return aggregateRootAndVersion;
 		}
 
 		private delegate IEnumerable<Guid> GetAggregateRootIds(object message);

@@ -47,7 +47,8 @@ namespace Yeast.EventStore.Common
 				while (_linkedList.Count > targetCapacity)
 				{
 					var lastKey = _linkedList.Last.Value;
-					var lastValue = _dictionary[lastKey];
+					TValue lastValue;
+					_dictionary.TryGetValue(lastKey, out lastValue);
 					_dictionary.Remove(lastKey);
 					_linkedList.Remove(lastKey);
 					if (null != Removed)
@@ -60,8 +61,11 @@ namespace Yeast.EventStore.Common
 
 		public void Add(TKey key, TValue value)
 		{
-			_dictionary.Add(key, value);
-			UpdateLRU(key, false);
+			lock (this)
+			{
+				_dictionary.Add(key, value);
+				UpdateLRU(key, false);
+			}
 		}
 
 		public bool ContainsKey(TKey key)
@@ -76,12 +80,21 @@ namespace Yeast.EventStore.Common
 
 		public bool Remove(TKey key)
 		{
-			var b = _dictionary.Remove(key);
-			if (b)
+			lock (this)
 			{
-				_linkedList.Remove(key);
+				TValue value;
+				_dictionary.TryGetValue(key, out value);
+				var b = _dictionary.Remove(key);
+				if (b)
+				{
+					_linkedList.Remove(key);
+					if (null != Removed)
+					{
+						Removed(this, new KeyValueRemovedArgs<TKey, TValue>() { Key = key, Value = value });
+					}
+				}
+				return b;
 			}
-			return b;
 		}
 
 		public bool TryGetValue(TKey key, out TValue value)
@@ -89,7 +102,10 @@ namespace Yeast.EventStore.Common
 			var b = _dictionary.TryGetValue(key, out value);
 			if (b)
 			{
-				UpdateLRU(key, true);
+				lock (this)
+				{
+					UpdateLRU(key, true);
+				}
 			}
 			return b;
 		}
@@ -103,15 +119,21 @@ namespace Yeast.EventStore.Common
 		{
 			get
 			{
-				var t = _dictionary[key];
-				UpdateLRU(key, true);
-				return t;
+				lock (this)
+				{
+					var t = _dictionary[key];
+					UpdateLRU(key, true);
+					return t;
+				}
 			}
 			set
 			{
-				var contains = _dictionary.ContainsKey(key);
-				_dictionary[key] = value;
-				UpdateLRU(key, contains);
+				lock (this)
+				{
+					var contains = _dictionary.ContainsKey(key);
+					_dictionary[key] = value;
+					UpdateLRU(key, contains);
+				}
 			}
 		}
 
@@ -122,8 +144,11 @@ namespace Yeast.EventStore.Common
 
 		public void Clear()
 		{
-			_dictionary.Clear();
-			_linkedList.Clear();
+			lock (this)
+			{
+				_dictionary.Clear();
+				_linkedList.Clear();
+			}
 		}
 
 		public bool Contains(KeyValuePair<TKey, TValue> item)
@@ -148,16 +173,7 @@ namespace Yeast.EventStore.Common
 
 		public bool Remove(KeyValuePair<TKey, TValue> item)
 		{
-			var b = ((IDictionary<TKey, TValue>)_dictionary).Remove(item);
-			if (b)
-			{
-				_linkedList.Remove(item.Key);
-				if (null != Removed)
-				{
-					Removed(this, new KeyValueRemovedArgs<TKey, TValue>() { Key = item.Key, Value = item.Value });
-				}
-			}
-			return b;
+			return Remove(item.Key);
 		}
 
 		public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()

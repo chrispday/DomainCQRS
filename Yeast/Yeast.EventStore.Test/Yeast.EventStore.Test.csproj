@@ -87,6 +87,7 @@
     <Compile Include="AzureEventStoreProviderTests.cs" />
     <Compile Include="LoadTests.cs" />
     <Compile Include="EventPublisherTests.cs" />
+    <Compile Include="LRUDictionaryTests.cs" />
     <Compile Include="Mock\MockEventPublisher.cs" />
     <Compile Include="Mock\MockSaga.cs" />
     <Compile Include="Mock\MockSubscriber.cs" />
