@@ -15,13 +15,13 @@ Global
 		SccProjectUniqueName0 = Yeast.EventStore\\Yeast.EventStore.csproj
 		SccProjectName0 = Yeast.EventStore
 		SccLocalPath0 = Yeast.EventStore
-		SccProjectUniqueName1 = Yeast.EventStore.Test\\Yeast.EventStore.Test.csproj
-		SccProjectName1 = Yeast.EventStore.Test
-		SccLocalPath1 = Yeast.EventStore.Test
-		SccLocalPath2 = .
-		SccProjectUniqueName3 = Yeast.EventStore.Azure\\Yeast.EventStore.Azure.csproj
-		SccProjectName3 = Yeast.EventStore.Azure
-		SccLocalPath3 = Yeast.EventStore.Azure
+		SccProjectUniqueName1 = Yeast.EventStore.Azure\\Yeast.EventStore.Azure.csproj
+		SccProjectName1 = Yeast.EventStore.Azure
+		SccLocalPath1 = Yeast.EventStore.Azure
+		SccProjectUniqueName2 = Yeast.EventStore.Test\\Yeast.EventStore.Test.csproj
+		SccProjectName2 = Yeast.EventStore.Test
+		SccLocalPath2 = Yeast.EventStore.Test
+		SccLocalPath3 = .
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
