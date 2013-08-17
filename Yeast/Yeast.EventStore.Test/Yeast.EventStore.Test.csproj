@@ -108,6 +108,10 @@
       <Project>{9b6cfd63-addc-4c3c-8c23-9bc7dbee2521}</Project>
       <Name>Yeast.EventStore.Azure</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Yeast.EventStore.Extensions\Yeast.EventStore.Extensions.csproj">
+      <Project>{51cc1419-04d3-49f8-b512-630002639a50}</Project>
+      <Name>Yeast.EventStore.Extensions</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Yeast.EventStore\Yeast.EventStore.csproj">
       <Project>{a9c47e7f-eeda-40f8-bf71-638308949636}</Project>
       <Name>Yeast.EventStore</Name>

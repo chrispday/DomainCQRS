@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+
 using System.Text;
 
 namespace Yeast.EventStore
@@ -29,7 +29,7 @@ namespace Yeast.EventStore
 		public bool Contains(KeyValuePair<Guid, AggregateRootAndVersion> item) { return false; }
 		public int Count { get { return 0; } }
 		public bool IsReadOnly { get { return true; } }
-		public IEnumerator<KeyValuePair<Guid, AggregateRootAndVersion>> GetEnumerator() { return Enumerable.Empty<KeyValuePair<Guid, AggregateRootAndVersion>>().GetEnumerator(); }
+		public IEnumerator<KeyValuePair<Guid, AggregateRootAndVersion>> GetEnumerator() { return new List<KeyValuePair<Guid, AggregateRootAndVersion>>().GetEnumerator(); }
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { return this.GetEnumerator(); }
 		
 		public bool TryGetValue(Guid key, out AggregateRootAndVersion value)

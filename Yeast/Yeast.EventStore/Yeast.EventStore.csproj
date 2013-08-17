@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Yeast.EventStore</RootNamespace>
     <AssemblyName>Yeast.EventStore</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <SccProjectName>SAK</SccProjectName>
@@ -37,12 +37,11 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Data.Linq" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Xml" />
+    <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\NoAggregateRootCache.cs" />
+    <Compile Include="Common\ExtensionAttribute.cs" />
     <Compile Include="Domain\AggregateRoot\AggregateRootBase.cs" />
     <Compile Include="Domain\AggregateRoot\IAggregateRoot.cs" />
     <Compile Include="Domain\AggregateRoot\IHandlesCommand.cs" />
@@ -88,7 +87,6 @@
     <Compile Include="Provider\SQL\SqlServerEventStoreProvider.cs" />
     <Compile Include="EventStore\StoredEvent.cs" />
     <Compile Include="Serializers\BinaryFormatterSerializer.cs" />
-    <Compile Include="Serializers\XmlObjectSerializer.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

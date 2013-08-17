@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
-using System.Linq;
+
 using Yeast.EventStore.Common;
 using System.Reflection.Emit;
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq;
+
 using System.Text;
 using Yeast.EventStore.Common;
 using Yeast.EventStore.Provider;
@@ -56,11 +56,11 @@ else
 		private static string SelectPosition = @"
 select [Position] from [Subscriber] where [SubscriberId] = @SubscriberId";
 
-		private static string[] CreateCommands = new string[] {
-@"IF  EXISTS (SELECT * FROM dbo.sysobjects WHERE id = OBJECT_ID(N'[DF_Event_Timestamp]') AND type = 'D')
+		private static string[] CreateEventCommands = new string[] {
+/*@"IF  EXISTS (SELECT * FROM dbo.sysobjects WHERE id = OBJECT_ID(N'[DF_Event_Timestamp]') AND type = 'D')
 	ALTER TABLE [dbo].[Event] DROP CONSTRAINT [DF_Event_Timestamp]",
 @"IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Event]') AND type in (N'U'))
-	DROP TABLE [dbo].[Event]",
+	DROP TABLE [dbo].[Event]",*/
 @"CREATE TABLE [Event] (
 	[AggregateRootId] [uniqueidentifier]  NOT NULL,
 	[Version] [int]  NOT NULL,
@@ -69,9 +69,10 @@ select [Position] from [Subscriber] where [SubscriberId] = @SubscriberId";
 	[Data] [varbinary](max)  NOT NULL);",
 @"ALTER TABLE [Event] ADD CONSTRAINT [PK_Events] PRIMARY KEY CLUSTERED ([AggregateRootId], [Version] ASC);
 CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
-@"ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate()) FOR [Timestamp];",
-@"IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Subscriber]') AND type in (N'U'))
-	DROP TABLE [dbo].[Subscriber]",
+@"ALTER TABLE [dbo].[Event] ADD  CONSTRAINT [DF_Event_Timestamp]  DEFAULT (getdate()) FOR [Timestamp];" };
+		private static string[] CreateSubscriberCommands = new string[] {
+/*@"IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Subscriber]') AND type in (N'U'))
+	DROP TABLE [dbo].[Subscriber]",*/
 @"CREATE TABLE [dbo].[Subscriber](
 	[SubscriberId] [uniqueidentifier] NOT NULL,
 	[Position] [bigint] NOT NULL,
@@ -85,8 +86,24 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 		{
 			try
 			{
-				Load(Guid.Empty, null, null, null, null).FirstOrDefault();
-				Load(new SqlServerEventStoreProviderPosition() { Position = Int32.MaxValue }, new SqlServerEventStoreProviderPosition()).FirstOrDefault();
+				Load(Guid.Empty, null, null, null, null);
+			}
+			catch (SqlException)
+			{
+				using (var conn = new SqlConnection(ConnectionString))
+				{
+					conn.Open();
+					foreach (var sql in CreateEventCommands)
+					{
+						using (var cmd = new SqlCommand(sql, conn))
+						{
+							cmd.ExecuteNonQuery();
+						}
+					}
+				}
+			}
+			try
+			{
 				LoadPosition(Guid.Empty);
 			}
 			catch (SqlException)
@@ -94,7 +111,7 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 				using (var conn = new SqlConnection(ConnectionString))
 				{
 					conn.Open();
-					foreach (var sql in CreateCommands)
+					foreach (var sql in CreateSubscriberCommands)
 					{
 						using (var cmd = new SqlCommand(sql, conn))
 						{
@@ -132,9 +149,12 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 				}
 				catch (SqlException sEx)
 				{
-					if (sEx.Errors.Cast<SqlError>().Any(sqlError => 2627 == sqlError.Number))
+					foreach (SqlError sqlError in sEx.Errors)
 					{
-						throw new ConcurrencyException("Version already exists.", sEx) { EventToStore = eventToStore, AggregateRootId = eventToStore.AggregateRootId, Version = eventToStore.Version };
+						if (2627 == sqlError.Number)
+						{
+							throw new ConcurrencyException("Version already exists.", sEx) { EventToStore = eventToStore, AggregateRootId = eventToStore.AggregateRootId, Version = eventToStore.Version };
+						}
 					}
 
 					throw;

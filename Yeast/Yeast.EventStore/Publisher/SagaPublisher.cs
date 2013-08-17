@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+
 using System.Text;
 
 namespace Yeast.EventStore
@@ -33,17 +33,17 @@ namespace Yeast.EventStore
 	public class SagaPublisher : ISagaPublisher
 	{
 		public IMessageReceiver MessageReceiver { get; set; }
-		private HashSet<Type> _events = new HashSet<Type>();
+		private Dictionary<Type, object> _events = new Dictionary<Type, object>();
 
 		public ISagaPublisher Saga<Event>()
 		{
-			_events.Add(typeof(Event));
+			_events.Add(typeof(Event), null);
 			return this;
 		}
 
 		public void Receive(object @event)
 		{
-			if (_events.Contains(@event.GetType()))
+			if (_events.ContainsKey(@event.GetType()))
 			{
 				MessageReceiver.Receive(@event);
 			}

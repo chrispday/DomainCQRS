@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+
 using System.Text;
 
 namespace Yeast.EventStore.Common
@@ -186,7 +186,7 @@ namespace Yeast.EventStore.Common
 
 		public bool Contains(KeyValuePair<TKey, TValue> item)
 		{
-			return _dictionary.Contains(item);
+			return (_dictionary as IDictionary<TKey, TValue>).Contains(item);
 		}
 
 		public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
