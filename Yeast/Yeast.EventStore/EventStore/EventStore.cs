@@ -5,7 +5,6 @@ using System.Runtime.Serialization;
 using System.Text;
 
 using Yeast.EventStore.Common;
-using System.Reflection.Emit;
 
 namespace Yeast.EventStore
 {
@@ -32,6 +31,8 @@ namespace Yeast.EventStore
 			return configure;
 		}
 	}
+
+	public delegate object EventUpgrader(object @event);
 
 	public class EventStore : IEventStore
 	{
@@ -148,7 +149,6 @@ namespace Yeast.EventStore
 			return stream.ToArray();
 		}
 
-		private delegate object EventUpgrader(object @event);
 		private Dictionary<Type, EventUpgrader> _eventUpgraders = new Dictionary<Type, EventUpgrader>();
 		public IEventStore Upgrade<Event, UpgradedEvent>()
 		{
@@ -162,19 +162,7 @@ namespace Yeast.EventStore
 					throw new ArgumentException(string.Format("An upgrade has already been registered for {0}.", eventType.Name));
 				}
 
-				var upgradedEventConstructor = upgradedEventType.GetConstructor(new Type[] { eventType });
-				if (null == upgradedEventConstructor)
-				{
-					throw new ArgumentOutOfRangeException(string.Format("{0} does not have a constructor \"public {0}({1})\".", upgradedEventType.Name, eventType.Name));
-				}
-
-				var dynamicMethod = new DynamicMethod(upgradedEventType.Name + "_Upgrade", typeof(object), new Type[] { typeof(object) });
-				var ilGenerator = dynamicMethod.GetILGenerator();
-				ilGenerator.Emit(OpCodes.Ldarg_0);
-				ilGenerator.Emit(OpCodes.Castclass, eventType);
-				ilGenerator.Emit(OpCodes.Newobj, upgradedEventConstructor);
-				ilGenerator.Emit(OpCodes.Ret);
-				_eventUpgraders.Add(eventType, (EventUpgrader)dynamicMethod.CreateDelegate(typeof(EventUpgrader)));
+				_eventUpgraders.Add(eventType, ILHelper.CreateEventUpgrader(eventType, upgradedEventType));
 			}
 
 			return this;

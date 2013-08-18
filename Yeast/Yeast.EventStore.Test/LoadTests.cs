@@ -199,7 +199,7 @@ namespace Yeast.EventStore.Test
 						}
 					}
 			});
-
+				
 			stopWatch.Stop();
 
 			var fileInfos = Directory.GetFiles(((configure as Configure).EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();

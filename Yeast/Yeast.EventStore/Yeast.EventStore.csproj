@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="Cache\NoAggregateRootCache.cs" />
     <Compile Include="Common\ExtensionAttribute.cs" />
+    <Compile Include="Common\ILHelper.cs" />
     <Compile Include="Domain\AggregateRoot\AggregateRootBase.cs" />
     <Compile Include="Domain\AggregateRoot\IAggregateRoot.cs" />
     <Compile Include="Domain\AggregateRoot\IHandlesCommand.cs" />

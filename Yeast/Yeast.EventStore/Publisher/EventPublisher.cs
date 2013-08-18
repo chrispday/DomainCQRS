@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Text;
 using System.Threading;
+
+using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore
 {
@@ -39,6 +36,8 @@ namespace Yeast.EventStore
 		}
 	}
 
+	public delegate void Receive(object subscriber, object @event);
+
 	public class EventPublisher : IEventPublisher
 	{
 		public Common.ILogger Logger { get; set; }
@@ -47,7 +46,6 @@ namespace Yeast.EventStore
 		public int BatchSize { get; set; }
 		public TimeSpan PublishThreadSleep { get; set; }
 		public string DefaultSubscriberReceiveMethodName { get; set; }
-		protected delegate void Receive(object subscriber, object @event);
 		protected class SubscriberAndPosition
 		{
 			public object Subscriber;
@@ -84,7 +82,7 @@ namespace Yeast.EventStore
 			}
 			if (typeof(object) == typeof(Event))
 			{
-				subscriberAndPosition.ReceiveObject = CreateSubscriberReceive<Subscriber, object>(subscriberReceiveMethodName);
+				subscriberAndPosition.ReceiveObject = ILHelper.CreateReceive<Subscriber, object>(subscriberReceiveMethodName);
 			}
 			else
 			{
@@ -93,7 +91,7 @@ namespace Yeast.EventStore
 				{
 					throw new RegistrationException(string.Format("{0}({1}) for {2} already registered.", subscriberReceiveMethodName, eventType.Name, subscriptionId));
 				}
-				subscriberAndPosition.Receives.Add(eventType, CreateSubscriberReceive<Subscriber, Event>(subscriberReceiveMethodName));
+				subscriberAndPosition.Receives.Add(eventType, ILHelper.CreateReceive<Subscriber, Event>(subscriberReceiveMethodName));
 			}
 
 			if (null == _publisherThread)
@@ -103,30 +101,6 @@ namespace Yeast.EventStore
 			}
 
 			return this;
-		}
-
-		private Receive CreateSubscriberReceive<Subscriber, Event>(string subscriberReceiveMethodName)
-		{
-			var subscriberType = typeof(Subscriber);
-			var eventType = typeof(Event);
-			MethodInfo receiveMethod = subscriberType.GetMethod(subscriberReceiveMethodName, new Type[] { eventType });
-			if (null == receiveMethod
-				|| typeof(void) != receiveMethod.ReturnType)
-			{
-				throw new RegistrationException(string.Format("{0} does not contain a method void {1}({2}).", subscriberType.Name, subscriberReceiveMethodName, eventType.Name));
-			}
-
-			var dynamicMethod = new DynamicMethod(string.Format("Receive_{0}_{1}", subscriberType.Name, eventType.Name), null, new Type[] { typeof(object), typeof(object) });
-			var ilGenerator = dynamicMethod.GetILGenerator();
-
-			ilGenerator.Emit(OpCodes.Ldarg_0);
-			ilGenerator.Emit(OpCodes.Castclass, subscriberType);
-			ilGenerator.Emit(OpCodes.Ldarg_1);
-			ilGenerator.Emit(OpCodes.Castclass, eventType);
-			ilGenerator.EmitCall(OpCodes.Callvirt, receiveMethod, null);
-			ilGenerator.Emit(OpCodes.Ret);
-
-			return (Receive)dynamicMethod.CreateDelegate(typeof(Receive));
 		}
 
 		public void Dispose()
