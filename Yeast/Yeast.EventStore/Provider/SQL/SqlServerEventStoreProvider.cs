@@ -18,7 +18,7 @@ namespace Yeast.EventStore
 			}
 
 			var c = configure as Configure;
-			c.EventStoreProvider = new SqlServerEventStoreProvider() { ConnectionString = connectionString, Logger = c.Logger };
+			c.EventStoreProvider = new SqlServerEventStoreProvider() { ConnectionString = connectionString, Logger = c.Logger }.EnsureExists();
 			return configure;
 		}
 	}
@@ -86,7 +86,10 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 		{
 			try
 			{
-				Load(Guid.Empty, null, null, null, null);
+				using (var enumerator = Load(Guid.Empty, null, null, null, null).GetEnumerator())
+				{
+					enumerator.MoveNext();
+				}
 			}
 			catch (SqlException)
 			{

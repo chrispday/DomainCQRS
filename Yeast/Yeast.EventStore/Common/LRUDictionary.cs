@@ -10,16 +10,21 @@ namespace Yeast.EventStore.Common
 		public static double DefaultCapacityReduction = 0.9;
 		public event EventHandler<KeyValueRemovedArgs<TKey, TValue>> Removed;
 
-		private int _capacity = int.MaxValue;
+		private int _capacity;
 		public int Capacity { get { return _capacity; } }
-		private Dictionary<TKey, TValue> _dictionary;
-		private LinkedList<TKey> _linkedList;
-
-		public LRUDictionary() : base() 
+		private class LValue<TKey, TValue>
 		{
-			_dictionary = new Dictionary<TKey, TValue>();
-			_linkedList = new LinkedList<TKey>();
+			public TKey Key;
+			public TValue Value;
+			public bool Deleted;
 		}
+		private class DValue<TValue>
+		{
+			public TValue Value;
+			public LinkedListNode<LValue<TKey, TValue>> Node;
+		}
+		private Dictionary<TKey, DValue<TValue>> _dictionary;
+		private LinkedList<LValue<TKey, TValue>> _linkedList;
 
 		public LRUDictionary(int capacity)
 		{
@@ -29,58 +34,141 @@ namespace Yeast.EventStore.Common
 			}
 
 			_capacity = capacity;
-			_dictionary = new Dictionary<TKey, TValue>(capacity);
-			_linkedList = new LinkedList<TKey>();
+			_dictionary = new Dictionary<TKey, DValue<TValue>>(capacity);
+			_linkedList = new LinkedList<LValue<TKey, TValue>>();
 		}
 
-		private void UpdateLRU(TKey key, bool contains)
+		private void _Add(TKey key, TValue value, bool throwIfContains)
 		{
-			lock (_linkedList)
+			DValue<TValue> dValue;
+			lock (_dictionary)
 			{
-				if (contains)
+				if (throwIfContains)
 				{
-					_linkedList.Remove(key);
+					dValue = new DValue<TValue>() { Value = value };
+					_dictionary.Add(key, dValue);
 				}
-				_linkedList.AddFirst(key);
+				else
+				{
+					if (!_dictionary.TryGetValue(key, out dValue))
+					{
+						dValue = new DValue<TValue>() { Value = value };
+					}
+					_dictionary[key] = dValue;
+				}
 			}
 
-			if (_linkedList.Count > _capacity)
+			UpdateLRU(key, dValue);
+		}
+
+		private bool _Remove(TKey key)
+		{
+			bool b = false;
+			DValue<TValue> value;
+			lock (_dictionary)
 			{
-				List<KeyValuePair<TKey, TValue>> removedItems = new List<KeyValuePair<TKey, TValue>>();
-				var targetCapacity = (int)(_capacity * DefaultCapacityReduction);
-				while (_linkedList.Count > targetCapacity)
+				_dictionary.TryGetValue(key, out value);
+				if (b = _dictionary.Remove(key))
 				{
-					TKey lastKey;
+					value.Node.Value.Deleted = b;
+					_OnRemoved(key, value.Value);
+				}
+			}
+			return b;
+		}
+
+		private bool _TryGetValue(TKey key, out TValue value, bool throwIfNotExists)
+		{
+			value = default(TValue);
+
+			DValue<TValue> dValue;
+			if (_dictionary.TryGetValue(key, out dValue))
+			{
+				value = dValue.Value;
+				UpdateLRU(key, dValue);
+				return true;
+			}
+			else if (throwIfNotExists)
+			{
+				throw new KeyNotFoundException();
+			}
+
+			return false;
+		}
+
+		private void _Clear()
+		{
+			List<TKey> keys;
+			lock (_dictionary)
+			{
+				keys = new List<TKey>(_dictionary.Keys);
+			}
+			foreach (var key in keys)
+			{
+				_Remove(key);
+			}
+		}
+
+		private void _OnRemoved(TKey key, TValue value)
+		{
+			if (null != Removed)
+			{
+				Removed(this, new KeyValueRemovedArgs<TKey, TValue>() { Key = key, Value = value });
+			}
+		}
+
+		private void UpdateLRU(TKey key, DValue<TValue> dValue)
+		{
+			lock (dValue)
+			{
+				var oldNode = dValue.Node;
+				if (null != oldNode)
+				{
+					oldNode.Value.Deleted = true;
+				}
+				dValue.Node = new LinkedListNode<LValue<TKey,TValue>>(new LValue<TKey, TValue>() { Key = key, Value = dValue.Value });
+				lock (_linkedList)
+				{
+					_linkedList.AddLast(dValue.Node);
+				}
+			}
+
+			if (_dictionary.Count > _capacity)
+			{
+				var removedItems = new List<LValue<TKey, TValue>>();
+				var targetCapacity = (int)(_capacity * DefaultCapacityReduction);
+				while (_dictionary.Count > targetCapacity)
+				{
+					LValue<TKey, TValue> first;
 					lock (_linkedList)
 					{
-						lastKey = _linkedList.Last.Value;
-						_linkedList.Remove(lastKey);
+						first = _linkedList.First.Value;
+						_linkedList.RemoveFirst();
 					}
+					if (first.Deleted)
+					{
+						continue;
+					}
+
 					lock (_dictionary)
 					{
-						TValue lastValue;
-						_dictionary.TryGetValue(lastKey, out lastValue);
-						_dictionary.Remove(lastKey);
-						removedItems.Add(new KeyValuePair<TKey, TValue>(lastKey, lastValue));
+						if (_dictionary.Remove(first.Key))
+						{
+							removedItems.Add(first);
+						}
 					}
 				}
-				if (null != Removed)
+
+				foreach (var item in removedItems)
 				{
-					foreach (var item in removedItems)
-					{
-						Removed(this, new KeyValueRemovedArgs<TKey, TValue>() { Key = item.Key, Value = item.Value});
-					}
+					_OnRemoved(item.Key, item.Value);
 				}
 			}
 		}
 
 		public void Add(TKey key, TValue value)
 		{
-			lock (_dictionary)
-			{
-				_dictionary.Add(key, value);
-			}
-			UpdateLRU(key, false);
+			_Add(key, value, true);
 		}
 
 		public bool ContainsKey(TKey key)
@@ -95,93 +183,41 @@ namespace Yeast.EventStore.Common
 
 		public bool Remove(TKey key)
 		{
-			bool b = false;
-			TValue value;
-			lock (_dictionary)
-			{
-				_dictionary.TryGetValue(key, out value);
-				b = _dictionary.Remove(key);
-			}
-			if (b)
-			{
-				lock (_linkedList)
-				{
-					_linkedList.Remove(key);
-				}
-				if (null != Removed)
-				{
-					Removed(this, new KeyValueRemovedArgs<TKey, TValue>() { Key = key, Value = value });
-				}
-			}
-			return b;
+			return _Remove(key);
 		}
 
 		public bool TryGetValue(TKey key, out TValue value)
 		{
-			var b = _dictionary.TryGetValue(key, out value);
-			if (b)
-			{
-				UpdateLRU(key, true);
-			}
-			return b;
+			return _TryGetValue(key, out value, false);
 		}
 
 		public ICollection<TValue> Values
 		{
-			get { return _dictionary.Values; }
+			get { throw new NotImplementedException(); }
 		}
 
 		public TValue this[TKey key]
 		{
 			get
 			{
-				TValue t;
-				lock (_dictionary)
-				{
-					t = _dictionary[key];
-				}
-				UpdateLRU(key, true);
-				return t;
+				TValue value;
+				_TryGetValue(key, out value, true);
+				return value;
 			}
 			set
 			{
-				bool contains;
-				lock (_dictionary)
-				{
-					contains = _dictionary.ContainsKey(key);
-					_dictionary[key] = value;
-				}
-				UpdateLRU(key, contains);
+				_Add(key, value, false);
 			}
 		}
 
 		public void Add(KeyValuePair<TKey, TValue> item)
 		{
-			Add(item.Key, item.Value);
+			_Add(item.Key, item.Value, true);
 		}
 
 		public void Clear()
 		{
-			List<KeyValuePair<TKey, TValue>> items = new List<KeyValuePair<TKey, TValue>>();
-			lock (_dictionary)
-			{
-				foreach (var kvp in _dictionary)
-				{
-					items.Add(kvp);
-				}
-				_dictionary.Clear();
-			}
-			lock (_linkedList)
-			{
-				_linkedList.Clear();
-			}
-			if (null != Removed)
-			{
-				foreach (var item in items)
-				{
-					Removed(this, new KeyValueRemovedArgs<TKey, TValue>() { Key = item.Key, Value = item.Value });
-				}
-			}
+			_Clear();
 		}
 
 		public bool Contains(KeyValuePair<TKey, TValue> item)
@@ -206,12 +242,20 @@ namespace Yeast.EventStore.Common
 
 		public bool Remove(KeyValuePair<TKey, TValue> item)
 		{
-			return Remove(item.Key);
+			return _Remove(item.Key);
 		}
 
 		public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
 		{
-			return _dictionary.GetEnumerator();
+			List<KeyValuePair<TKey, TValue>> list = new List<KeyValuePair<TKey, TValue>>();
+			lock (_dictionary)
+			{
+				foreach (var item in _dictionary)
+				{
+					list.Add(new KeyValuePair<TKey,TValue>(item.Key, item.Value.Value));
+				}
+			}
+			return list.GetEnumerator();
 		}
 
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()

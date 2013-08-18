@@ -41,6 +41,7 @@ namespace Yeast.EventStore.Test
 				{
 					conn.Open();
 					new SqlCommand("drop table [Event]", conn).ExecuteNonQuery();
+					new SqlCommand("drop table [Subscriber]", conn).ExecuteNonQuery();
 				}
 			}
 			catch { }
@@ -213,7 +214,7 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void LoadTest_EventPublisher()
 		{
-			var amount = 100000;
+			var amount = 1;
 
 			var typeModel = RuntimeTypeModel.Create();
 			typeModel.Add(typeof(MockCommand), true);
@@ -223,6 +224,7 @@ namespace Yeast.EventStore.Test
 				.DebugLogger(false)
 				//.PartitionedFileEventStoreProvider(8, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1500, 8 * 1024)
 				.MemoryEventStoreProvider()
+				//.SqlServerEventStoreProvider(ConnectionString)
 				.XmlObjectSerializer(serializer)
 				.EventStore()
 				.MessageReceiver()

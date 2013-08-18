@@ -25,6 +25,15 @@ namespace Yeast.EventStore.Provider.Test
 				}
 			}
 			catch { }
+			try
+			{
+				using (var conn = new SqlConnection(ConnectionString))
+				{
+					conn.Open();
+					new SqlCommand("drop table [Subscriber]", conn).ExecuteNonQuery();
+				}
+			}
+			catch { }
 		}
 
 		[TestCleanup]
