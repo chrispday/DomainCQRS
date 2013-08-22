@@ -55,6 +55,7 @@ namespace Yeast.EventStore
 		}
 		protected Dictionary<Guid, SubscriberAndPosition> _subscribers = new Dictionary<Guid, SubscriberAndPosition>();
 		private Thread _publisherThread;
+		private Dictionary<Guid, Thread> _subscriptionThreads = new Dictionary<Guid, Thread>();
 		private volatile bool _continuePublishing = true;
 		private AutoResetEvent _finishedPublishing = new AutoResetEvent(false);
 
@@ -96,8 +97,7 @@ namespace Yeast.EventStore
 
 			if (null == _publisherThread)
 			{
-				_publisherThread = new Thread(Publish) { Name = "EventPublisher" };
-				_publisherThread.Start();
+				_publisherThread = new ThreadStart(Publish).Start("EventPublisher");
 			}
 
 			return this;
@@ -121,52 +121,72 @@ namespace Yeast.EventStore
 			{
 				Logger.Verbose("Next publish run.");
 
-				var eventsPublished = 0;
-
 				foreach (var subscription in new Dictionary<Guid,SubscriberAndPosition>(_subscribers))
 				{
-					try
+					if (_subscriptionThreads.ContainsKey(subscription.Key))
 					{
-						Logger.Verbose("Publishing for {0} {1}.", subscription.Value.Subscriber.GetType().Name, subscription.Key);
-
-						if (null == subscription.Value.Position)
-						{
-							subscription.Value.Position = EventStore.CreateEventStoreProviderPosition();
-						}
-
-						var to = EventStore.CreateEventStoreProviderPosition();
-						foreach (var @event in EventStore.Load(BatchSize, subscription.Value.Position, to))
-						{
-							Receive receive;
-							if (0 == subscription.Value.Receives.Count
-								|| !subscription.Value.Receives.TryGetValue(@event.Event.GetType(), out receive))
-							{
-								receive = subscription.Value.ReceiveObject;
-							}
-
-							if (null != receive)
-							{
-								receive(subscription.Value.Subscriber, @event.Event);
-							}
-
-							eventsPublished++;
-						}
-
-						EventStore.EventStoreProvider.SavePosition(subscription.Key, subscription.Value.Position = to);
+						Logger.Warning("Skipped publishing for {0}, still waiting for previous thread to finish.", subscription.Key);
+						continue;
 					}
-					catch (Exception ex)
-					{
-						Logger.Error("{0}", ex);
-					}
+
+					_subscriptionThreads[subscription.Key] = new Action<KeyValuePair<Guid, SubscriberAndPosition>>(PublishForSubscription).Start("Subscription" + subscription.Key.ToString(), subscription);
 				}
-
-				Logger.Verbose("{0} events published.", eventsPublished);
 
 				Thread.Sleep(PublishThreadSleep);
 			}
 
 			Logger.Information("Shutting down publishing thread.");
 			_finishedPublishing.Set();
+		}
+
+		private void PublishForSubscription(KeyValuePair<Guid, SubscriberAndPosition> subscription)
+		{
+			try
+			{
+				Logger.Verbose("Publishing for {0} {1}.", subscription.Value.Subscriber, subscription.Key);
+
+				int eventsPublished = 0;
+
+				if (null == subscription.Value.Position)
+				{
+					subscription.Value.Position = EventStore.CreateEventStoreProviderPosition();
+				}
+
+				var to = EventStore.CreateEventStoreProviderPosition();
+				foreach (var @event in EventStore.Load(BatchSize, subscription.Value.Position, to))
+				{
+					Receive receive;
+					if (0 == subscription.Value.Receives.Count
+						|| !subscription.Value.Receives.TryGetValue(@event.Event.GetType(), out receive))
+					{
+						receive = subscription.Value.ReceiveObject;
+					}
+
+					if (null != receive)
+					{
+						receive(subscription.Value.Subscriber, @event.Event);
+					}
+
+					eventsPublished++;
+
+					if (!_continuePublishing)
+					{
+						break;
+					}
+				}
+
+				EventStore.EventStoreProvider.SavePosition(subscription.Key, subscription.Value.Position = to);
+
+				Logger.Verbose("{0} events published for {1}.", eventsPublished, subscription.Key);
+			}
+			catch (Exception ex)
+			{
+				Logger.Error("{0}", ex);
+			}
+			finally
+			{
+				_subscriptionThreads.Remove(subscription.Key);
+			}
 		}
 
 		public object GetSubscriber(Guid subscriptionId)

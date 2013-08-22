@@ -192,8 +192,6 @@ namespace Yeast.EventStore.Provider
 			_writer.Write(buffer);
 			_writer.Flush();
 
-			Logger.Verbose("{0} new length {1}", _name, _writer.BaseStream.Length);
-
 			_versionTracker = @event.Version;
 		}
 
