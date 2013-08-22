@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-
+using System.Data.SqlTypes;
 using System.Text;
 using Yeast.EventStore.Common;
 using Yeast.EventStore.Provider;
@@ -141,9 +141,18 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 			using (var conn = new SqlConnection(ConnectionString))
 			using (var cmd = new SqlCommand() { Connection = conn, CommandText = InsertEvent })
 			{
+				var timeStamp = eventToStore.Timestamp;
+				if (timeStamp < SqlDateTime.MinValue.Value)
+				{
+					timeStamp = SqlDateTime.MinValue.Value;
+				}
+				if (timeStamp > SqlDateTime.MaxValue.Value)
+				{
+					timeStamp = SqlDateTime.MaxValue.Value;
+				}
 				cmd.Parameters.Add(new SqlParameter("@AggregateRootId", eventToStore.AggregateRootId));
 				cmd.Parameters.Add(new SqlParameter("@Version", eventToStore.Version));
-				cmd.Parameters.Add(new SqlParameter("@Timestamp", eventToStore.Timestamp));
+				cmd.Parameters.Add(new SqlParameter("@Timestamp", timeStamp));
 				cmd.Parameters.Add(new SqlParameter("@Data", eventToStore.Data));
 				conn.Open();
 				try

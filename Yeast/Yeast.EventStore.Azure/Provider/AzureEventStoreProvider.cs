@@ -63,6 +63,7 @@ namespace Yeast.EventStore.Azure.Provider
 
 			entity = new DynamicTableEntity(eventToStore.AggregateRootId.ToString(), eventToStore.Version.ToString(RowKeyFormat));
 			entity.Properties = SplitData(eventToStore.Data);
+			entity.Properties["_Timestamp"] = new EntityProperty(eventToStore.Timestamp);
 			try
 			{
 				_events.Execute(TableOperation.Insert(entity));
@@ -110,7 +111,7 @@ namespace Yeast.EventStore.Azure.Provider
 			foreach (var result in _events.ExecuteQuery(query))
 			{
 				var version = int.Parse(result.RowKey);
-				var timestamp = result.Timestamp.DateTime;
+				var timestamp = result.Properties["_Timestamp"].DateTimeOffsetValue.Value.DateTime;
 
 				if (version >= fromVersion.GetValueOrDefault(-1)
 					&& version <= toVersion.GetValueOrDefault(int.MaxValue)

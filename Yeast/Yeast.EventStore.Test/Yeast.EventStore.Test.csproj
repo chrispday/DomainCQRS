@@ -84,7 +84,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="AzureEventStoreProviderTests.cs" />
+    <Compile Include="ProviderTests\AzureEventStoreProviderTests.cs" />
     <Compile Include="LoadTests.cs" />
     <Compile Include="EventPublisherTests.cs" />
     <Compile Include="LRUDictionaryTests.cs" />
@@ -92,15 +92,17 @@
     <Compile Include="Mock\MockSaga.cs" />
     <Compile Include="Mock\MockSubscriber.cs" />
     <Compile Include="EventStoreTests.cs" />
+    <Compile Include="ProviderTests\MemoryEventStoreProviderTests.cs" />
+    <Compile Include="ProviderTests\PartitionedFileEventStoreProviderTests.cs" />
+    <Compile Include="ProviderTests\EventStoreProviderTestsBase.cs" />
     <Compile Include="SagaTests.cs" />
     <Compile Include="XmlObjectSerializerTests.cs" />
     <Compile Include="Mock\MockAggregateRoot.cs" />
     <Compile Include="Mock\MockCommand.cs" />
     <Compile Include="Mock\MockEventStore.cs" />
-    <Compile Include="SqlServerEventStoreProviderTests.cs" />
-    <Compile Include="FileEventStoreProviderTests.cs" />
+    <Compile Include="ProviderTests\SqlServerEventStoreProviderTests.cs" />
+    <Compile Include="ProviderTests\FileEventStoreProviderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="AggregateRootBaseTest.cs" />
     <Compile Include="MessageReceiverTests.cs" />
   </ItemGroup>
   <ItemGroup>

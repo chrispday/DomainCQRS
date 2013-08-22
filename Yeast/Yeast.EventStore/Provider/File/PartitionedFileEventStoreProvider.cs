@@ -98,7 +98,12 @@ namespace Yeast.EventStore.Provider
 
 		public IEventStoreProviderPosition LoadPosition(Guid subscriberId)
 		{
-			return _fileEventStoreProviders[GetIndex(subscriberId)].LoadPosition(subscriberId);
+			var position = new PartitionedFileEventStoreProviderPosition(MaximumPartitions);
+			for (int i = 0; i < MaximumPartitions; i++)
+			{
+				position.Positions[i] = _fileEventStoreProviders[i].LoadPosition(subscriberId);
+			}
+			return position;
 		}
 
 		public IEventStoreProvider SavePosition(Guid subscriberId, IEventStoreProviderPosition position)
@@ -108,8 +113,10 @@ namespace Yeast.EventStore.Provider
 
 		public IEventStoreProvider SavePosition(Guid subscriberId, PartitionedFileEventStoreProviderPosition position)
 		{
-			var index = GetIndex(subscriberId);
-			_fileEventStoreProviders[index].SavePosition(subscriberId, position.Positions[index]);
+			for (int i = 0; i < MaximumPartitions; i++)
+			{
+				_fileEventStoreProviders[i].SavePosition(subscriberId, position.Positions[i]);
+			}
 			return this;
 		}
 
