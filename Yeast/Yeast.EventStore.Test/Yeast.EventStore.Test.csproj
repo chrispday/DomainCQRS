@@ -54,10 +54,10 @@
       <HintPath>..\packages\WindowsAzure.Storage.2.0.6.1\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
     </Reference>
     <Reference Include="protobuf-net">
-      <HintPath>..\..\..\..\..\Downloads\protobuf-net r640\Full\net30\protobuf-net.dll</HintPath>
+      <HintPath>..\..\..\..\Users\Chris\Downloads\protobuf-net r640\Full\net30\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="StoryQ">
-      <HintPath>..\..\..\..\..\Downloads\StoryQ-2.0.4\StoryQ.dll</HintPath>
+      <HintPath>..\..\..\..\Users\Chris\Downloads\StoryQ-2.0.4\StoryQ.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
