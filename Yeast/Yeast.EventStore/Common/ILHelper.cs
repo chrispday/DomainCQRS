@@ -108,9 +108,10 @@ namespace Yeast.EventStore.Common
 			return (ApplyEvent)dynamicMethod.CreateDelegate(typeof(ApplyEvent));
 		}
 
-		public static ApplyCommand CreateApplyCommand(Type commandType, Type aggregateRootType, MethodInfo applyMethod)
+		public static Delegate CreateApplyCommand(Type commandType, Type aggregateRootType, MethodInfo applyMethod)
 		{
-			var dynamicMethod = new DynamicMethod(string.Format("ApplyCommand_{0}_{1}", aggregateRootType.Name, commandType.Name), typeof(IEnumerable), new Type[] { typeof(object), typeof(object) });
+			var enumerable = typeof(IEnumerable).IsAssignableFrom(applyMethod.ReturnType);
+			var dynamicMethod = new DynamicMethod(string.Format("ApplyCommand_{0}_{1}", aggregateRootType.Name, commandType.Name), enumerable ? typeof(IEnumerable) : typeof(object), new Type[] { typeof(object), typeof(object) });
 			var ilGenerator = dynamicMethod.GetILGenerator();
 
 			ilGenerator.Emit(OpCodes.Ldarg_0);
@@ -120,7 +121,7 @@ namespace Yeast.EventStore.Common
 			ilGenerator.EmitCall(OpCodes.Callvirt, applyMethod, null);
 			ilGenerator.Emit(OpCodes.Ret);
 
-			return (ApplyCommand)dynamicMethod.CreateDelegate(typeof(ApplyCommand));
+			return dynamicMethod.CreateDelegate(enumerable ? typeof(ApplyEnumerableCommand) : typeof(ApplyObjectCommand));
 		}
 
 		public static GetAggregateRootIds CreateGetAggregateRootIdDelegate(Type messageType, PropertyInfo property)

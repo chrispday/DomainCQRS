@@ -44,7 +44,8 @@ namespace Yeast.EventStore
 	public delegate object CreateAggreateRoot();
 	public delegate void ApplyEvent(object aggregateRoot, object @event);
 	public delegate IEnumerable<Guid> GetAggregateRootIds(object message);
-	public delegate IEnumerable ApplyCommand(object aggregateRoot, object command);
+	public delegate IEnumerable ApplyEnumerableCommand(object aggregateRoot, object command);
+	public delegate object ApplyObjectCommand(object aggregateRoot, object command);
 
 	public class MessageReceiver : IMessageReceiver
 	{
@@ -206,22 +207,22 @@ namespace Yeast.EventStore
 			applyEvent(aggregateRoot, @event);
 		}
 
-		private Dictionary<Type, Dictionary<Type, ApplyCommand>> _perMessagePerAggregateRootApplyCommands = new Dictionary<Type, Dictionary<Type, ApplyCommand>>();
+		private Dictionary<Type, Dictionary<Type, Delegate>> _perMessagePerAggregateRootApplyCommands = new Dictionary<Type, Dictionary<Type, Delegate>>();
 		private IEnumerable ApplyCommandToAggregate(Type messageType, Type aggregateRootType, MethodInfo applyMethod, object command, object aggregateRoot)
 		{
-			Dictionary<Type, ApplyCommand> perAggregateApplyCommands;
+			Dictionary<Type, Delegate> perAggregateApplyCommands;
 			if (!_perMessagePerAggregateRootApplyCommands.TryGetValue(messageType, out perAggregateApplyCommands))
 			{
 				lock (_perMessagePerAggregateRootApplyCommands)
 				{
 					if (!_perMessagePerAggregateRootApplyCommands.TryGetValue(messageType, out perAggregateApplyCommands))
 					{
-						_perMessagePerAggregateRootApplyCommands.Add(messageType, perAggregateApplyCommands = new Dictionary<Type, ApplyCommand>());
+						_perMessagePerAggregateRootApplyCommands.Add(messageType, perAggregateApplyCommands = new Dictionary<Type, Delegate>());
 					}
 				}
 			}
 
-			ApplyCommand applyCommand;
+			Delegate applyCommand;
 			if (!perAggregateApplyCommands.TryGetValue(aggregateRootType, out applyCommand))
 			{
 				lock (perAggregateApplyCommands)
@@ -233,7 +234,15 @@ namespace Yeast.EventStore
 				}
 			}
 
-			return applyCommand(aggregateRoot, command);
+			var enumerableApplyCommand = applyCommand as ApplyEnumerableCommand;
+			if (null != enumerableApplyCommand)
+			{
+				return enumerableApplyCommand(aggregateRoot, command);
+			}
+			else
+			{
+				return new object[] { (applyCommand as ApplyObjectCommand)(aggregateRoot, command) };
+			}
 		}
 
 		public bool IsRegistered(Type messageType)
@@ -285,10 +294,6 @@ namespace Yeast.EventStore
 				throw new RegistrationException();
 			}
 			if (typeof(object) == applyMethod.GetParameters()[0].ParameterType)
-			{
-				throw new RegistrationException();
-			}
-			if (!typeof(IEnumerable).IsAssignableFrom(applyMethod.ReturnType))
 			{
 				throw new RegistrationException();
 			}

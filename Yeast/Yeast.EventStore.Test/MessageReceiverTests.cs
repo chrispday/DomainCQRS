@@ -15,15 +15,12 @@ namespace Yeast.EventStore.Test
 		[ClassInitialize]
 		public static void ClassInit(TestContext ctx)
 		{
-			var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-			EventStore = new EventStore() { EventSerializer = new BinaryFormatterSerializer(), EventStoreProvider = new FileEventStoreProvider() { Directory = directory, Logger = new DebugLogger() }.EnsureExists() };
+			EventStore = new EventStore() { EventSerializer = new BinaryFormatterSerializer(), EventStoreProvider = new MemoryEventStoreProvider() { Logger = new DebugLogger() }.EnsureExists() };
 		}
 
 		[ClassCleanup]
 		public static void ClassCleanup()
 		{
-			(EventStore as FileEventStoreProvider).Dispose();
-			Directory.Delete((EventStore.EventStoreProvider as FileEventStoreProvider).Directory, true);
 		}
 
 		[TestMethod]

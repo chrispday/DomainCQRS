@@ -21,6 +21,18 @@ namespace Yeast.EventStore.Test
 
 		protected override IEventStoreProvider CreateProvider()
 		{
+			var _storageAccount = CloudStorageAccount.Parse(ConnectionString);
+			var _tableClient = _storageAccount.CreateCloudTableClient();
+
+			var _events = _tableClient.GetTableReference(EventTable);
+			_events.DeleteIfExists();
+
+			var _aggregateRootIds = _tableClient.GetTableReference(AggregateRootIdsTable);
+			_aggregateRootIds.DeleteIfExists();
+
+			var _subscribers = _tableClient.GetTableReference(SubscriberTable);
+			_subscribers.DeleteIfExists();
+
 			return new AzureEventStoreProvider() { ConnectionString = ConnectionString, Logger = new DebugLogger() }.EnsureExists();
 		}
 
@@ -37,17 +49,6 @@ namespace Yeast.EventStore.Test
 		[TestCleanup]
 		public void Cleanup()
 		{
-			var _storageAccount = CloudStorageAccount.Parse(ConnectionString);
-			var _tableClient = _storageAccount.CreateCloudTableClient();
-
-			var _events = _tableClient.GetTableReference(EventTable);
-			_events.DeleteIfExists();
-
-			var _aggregateRootIds = _tableClient.GetTableReference(AggregateRootIdsTable);
-			_aggregateRootIds.DeleteIfExists();
-
-			var _subscribers = _tableClient.GetTableReference(SubscriberTable);
-			_subscribers.DeleteIfExists();
 		}
 	}
 }
