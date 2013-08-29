@@ -8,6 +8,7 @@ namespace Yeast.EventStore
 		public Guid AggregateRootId { get; set; }
 		public int Version { get; set; }
 		public DateTime Timestamp { get; set; }
+		public string EventType { get; set; }
 		public byte[] Data { get; set; }
 		public int Size { get; set; }
 	}

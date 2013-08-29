@@ -84,6 +84,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="JsonSerializerTests.cs" />
     <Compile Include="ProviderTests\AzureEventStoreProviderTests.cs" />
     <Compile Include="LoadTests.cs" />
     <Compile Include="EventPublisherTests.cs" />
@@ -113,6 +114,10 @@
     <ProjectReference Include="..\Yeast.EventStore.Extensions\Yeast.EventStore.Extensions.csproj">
       <Project>{51cc1419-04d3-49f8-b512-630002639a50}</Project>
       <Name>Yeast.EventStore.Extensions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Yeast.EventStore.Serialization.Json\Yeast.EventStore.Serialization.Json.csproj">
+      <Project>{2143436a-bbf3-4555-ae98-8681aa8c591a}</Project>
+      <Name>Yeast.EventStore.Serialization.Json</Name>
     </ProjectReference>
     <ProjectReference Include="..\Yeast.EventStore\Yeast.EventStore.csproj">
       <Project>{a9c47e7f-eeda-40f8-bf71-638308949636}</Project>

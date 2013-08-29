@@ -9,24 +9,29 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yeast.EventStore.Azure", "Y
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yeast.EventStore.Extensions", "Yeast.EventStore.Extensions\Yeast.EventStore.Extensions.csproj", "{51CC1419-04D3-49F8-B512-630002639A50}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Yeast.EventStore.Serialization.Json", "Yeast.EventStore.Serialization.Json\Yeast.EventStore.Serialization.Json.csproj", "{2143436A-BBF3-4555-AE98-8681AA8C591A}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 5
+		SccNumberOfProjects = 6
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://chrispday.visualstudio.com/defaultcollection
-		SccProjectUniqueName0 = Yeast.EventStore\\Yeast.EventStore.csproj
-		SccProjectName0 = Yeast.EventStore
-		SccLocalPath0 = Yeast.EventStore
-		SccProjectUniqueName1 = Yeast.EventStore.Azure\\Yeast.EventStore.Azure.csproj
-		SccProjectName1 = Yeast.EventStore.Azure
-		SccLocalPath1 = Yeast.EventStore.Azure
-		SccProjectUniqueName2 = Yeast.EventStore.Test\\Yeast.EventStore.Test.csproj
-		SccProjectName2 = Yeast.EventStore.Test
-		SccLocalPath2 = Yeast.EventStore.Test
-		SccLocalPath3 = .
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = Yeast.EventStore\\Yeast.EventStore.csproj
+		SccProjectName1 = Yeast.EventStore
+		SccLocalPath1 = Yeast.EventStore
+		SccProjectUniqueName2 = Yeast.EventStore.Azure\\Yeast.EventStore.Azure.csproj
+		SccProjectName2 = Yeast.EventStore.Azure
+		SccLocalPath2 = Yeast.EventStore.Azure
+		SccProjectUniqueName3 = Yeast.EventStore.Test\\Yeast.EventStore.Test.csproj
+		SccProjectName3 = Yeast.EventStore.Test
+		SccLocalPath3 = Yeast.EventStore.Test
 		SccProjectUniqueName4 = Yeast.EventStore.Extensions\\Yeast.EventStore.Extensions.csproj
 		SccProjectName4 = Yeast.EventStore.Extensions
 		SccLocalPath4 = Yeast.EventStore.Extensions
+		SccProjectUniqueName5 = Yeast.EventStore.Serialization.Json\\Yeast.EventStore.Serialization.Json.csproj
+		SccProjectName5 = Yeast.EventStore.Serialization.Json
+		SccLocalPath5 = Yeast.EventStore.Serialization.Json
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +54,10 @@ Global
 		{51CC1419-04D3-49F8-B512-630002639A50}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{51CC1419-04D3-49F8-B512-630002639A50}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{51CC1419-04D3-49F8-B512-630002639A50}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2143436A-BBF3-4555-AE98-8681AA8C591A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2143436A-BBF3-4555-AE98-8681AA8C591A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2143436A-BBF3-4555-AE98-8681AA8C591A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2143436A-BBF3-4555-AE98-8681AA8C591A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

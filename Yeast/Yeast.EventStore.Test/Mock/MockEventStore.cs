@@ -21,7 +21,7 @@ namespace Yeast.EventStore.Test
 		}
 
 		public List<Tuple<Guid, int, object>> Saved = new List<Tuple<Guid, int, object>>();
-		public IEventStore Save<T>(Guid aggregateRootId, int version, T data)
+		public IEventStore Save(Guid aggregateRootId, int version, object data)
 		{
 			Saved.Add(Tuple.Create(aggregateRootId, version, (object)data));
 			return this;
@@ -82,7 +82,7 @@ namespace Yeast.EventStore.Test
 		{
 			foreach (var storedEvent in EventStoreProvider.Load(from, to))
 			{
-				var e = new StoredEvent() { AggregateRootId = storedEvent.AggregateRootId, Version = storedEvent.Version, Event = Deserialize(storedEvent.Data) };
+				var e = new StoredEvent() { AggregateRootId = storedEvent.AggregateRootId, Version = storedEvent.Version, Event = Deserialize(storedEvent.EventType, storedEvent.Data) };
 				if (e.Event is MockEvent)
 				{
 					(e.Event as MockEvent).BatchNo = batchSize;

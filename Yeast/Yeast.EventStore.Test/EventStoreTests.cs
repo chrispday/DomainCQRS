@@ -12,35 +12,26 @@ namespace Yeast.EventStore.Test
 		[TestMethod]
 		public void EventUpgrading()
 		{
-			try
-			{
-				new Story("Event Upgrading")
-					 .InOrderTo("support new versions of events")
-					 .AsA("Programmer")
-					 .IWant("event upgrading")
+			new Story("Event Upgrading")
+				 .InOrderTo("support new versions of events")
+				 .AsA("Programmer")
+				 .IWant("event upgrading")
 
-								.WithScenario("Event Upgrading")
-									 .Given(EventUpgraderHasBeenRegistered)
-										  .And(AnEventHasBeenSaved)
-									 .When(TheEventIsLoaded)
-									 .Then(ExpectTheUpgradedEvent)
-					 .Execute();
-			}
-			finally
-			{
-				config.Dispose();
-				Directory.Delete(directory, true);
-			}
+							.WithScenario("Event Upgrading")
+								 .Given(EventUpgraderHasBeenRegistered)
+									  .And(AnEventHasBeenSaved)
+								 .When(TheEventIsLoaded)
+								 .Then(ExpectTheUpgradedEvent)
+				 .Execute();
 		}
 
 		private Configure config;
-		private string directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 		private void EventUpgraderHasBeenRegistered()
 		{
 			config = Configure.With()
 				.BinaryFormatterSerializer()
 				.DebugLogger()
-				.FileEventStoreProvider(directory)
+				.MemoryEventStoreProvider()
 				.EventStore()
 				.Upgrade<MockEvent, MockEvent2>()
 				as Configure;

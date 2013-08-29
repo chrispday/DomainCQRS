@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
-
 using Yeast.EventStore.Common;
 
 namespace Yeast.EventStore
@@ -39,6 +39,8 @@ namespace Yeast.EventStore
 		public ILogger Logger { get; set; }
 		public IEventSerializer EventSerializer { get; set; }
 		public int DefaultSerializationBufferSize { get; set; }
+		private MethodInfo _deserialize = typeof(IEventSerializer).GetMethod("Deserialize");
+		private MethodInfo _serialize = typeof(IEventSerializer).GetMethod("Serialize");
 		private IEventStoreProvider _eventStoreProvider;
 		public IEventStoreProvider EventStoreProvider
 		{
@@ -58,7 +60,7 @@ namespace Yeast.EventStore
 			DefaultSerializationBufferSize = EventStoreConfigure.DefaultSerializationBufferSize;
 		}
 
-		public IEventStore Save<T>(Guid aggregateRootId, int version, T data)
+		public IEventStore Save(Guid aggregateRootId, int version, object data)
 		{
 			if (Guid.Empty == aggregateRootId)
 			{
@@ -73,7 +75,7 @@ namespace Yeast.EventStore
 				throw new ArgumentNullException("data");
 			}
 
-			EventStoreProvider.Save(new EventToStore() { AggregateRootId = aggregateRootId, Version = version, Timestamp = DateTime.Now, Data = Serialize<T>(data) });
+			EventStoreProvider.Save(new EventToStore() { AggregateRootId = aggregateRootId, Version = version, Timestamp = DateTime.Now, EventType = data.GetType().AssemblyQualifiedName, Data = Serialize(data) });
 			return this;
 		}
 
@@ -93,7 +95,7 @@ namespace Yeast.EventStore
 				}
 				version = storedEvent.Version;
 
-				yield return new StoredEvent() { AggregateRootId = aggregateRootId, Version = version, Event = Deserialize(storedEvent.Data) };
+				yield return new StoredEvent() { AggregateRootId = aggregateRootId, Version = version, Event = Deserialize(storedEvent.EventType, storedEvent.Data) };
 			}
 		}
 
@@ -119,7 +121,7 @@ namespace Yeast.EventStore
 
 			foreach (var storedEvent in EventStoreProvider.Load(from, to))
 			{
-				yield return new StoredEvent() { AggregateRootId = storedEvent.AggregateRootId, Version = storedEvent.Version, Event = Deserialize(storedEvent.Data) };
+				yield return new StoredEvent() { AggregateRootId = storedEvent.AggregateRootId, Version = storedEvent.Version, Event = Deserialize(storedEvent.EventType, storedEvent.Data) };
 
 				if (0 >= --batchSize)
 				{
@@ -128,9 +130,10 @@ namespace Yeast.EventStore
 			}
 		}
 
-		protected object Deserialize(byte[] data)
+		protected object Deserialize(string eventType, byte[] data)
 		{
-			var @event = EventSerializer.Deserialize<object>(new MemoryStream(data));
+			var deserialize = _deserialize.MakeGenericMethod(Type.GetType(eventType));
+			object @event = deserialize.Invoke(EventSerializer, new object[] { new MemoryStream(data) });
 			
 			EventUpgrader eventUpgrader;
 			if (_eventUpgraders.TryGetValue(@event.GetType(), out eventUpgrader))
@@ -141,10 +144,13 @@ namespace Yeast.EventStore
 			return @event;
 		}
 
-		protected byte[] Serialize<T>(T data)
+		protected byte[] Serialize(object data)
 		{
 			var stream = new MemoryStream(DefaultSerializationBufferSize);
-			EventSerializer.Serialize(stream, data);
+
+			var serialize = _serialize.MakeGenericMethod(data.GetType());
+			serialize.Invoke(EventSerializer, new object[] { stream, data });
+
 			stream.Flush();
 			return stream.ToArray();
 		}

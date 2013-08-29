@@ -34,15 +34,15 @@ namespace Yeast.EventStore.Provider
 		#region Sql Commands
 
 		private static string InsertEvent = @"
-insert into [Event] ([AggregateRootId], [Version], [Timestamp], [Data]) values (@AggregateRootId, @Version, @Timestamp, @Data)
+insert into [Event] ([AggregateRootId], [Version], [Timestamp], [EventType], [Data]) values (@AggregateRootId, @Version, @Timestamp, @EventType, @Data)
 ";
 		private static string SelectEvents = @"
-select [Version], [Timestamp], [Data] 
+select [Version], [Timestamp], [EventType], [Data] 
 from [Event] with (NOLOCK) 
 where [AggregateRootId] = @AggregateRootId and [Version] >= @FromVersion and [Version] <= @ToVersion and [Timestamp] >= @FromTimestamp and [Timestamp] <= @ToTimestamp order by Version
 ";
 		private static string SelectEventsBySequence = @"
-select [Sequence], [AggregateRootId], [Version], [Timestamp], [Data] 
+select [Sequence], [AggregateRootId], [Version], [Timestamp], [EventType], [Data] 
 from [Event] with (NOLOCK)
 where [Sequence] > @FromSequence
 order by [Sequence]";
@@ -66,6 +66,7 @@ select [Position] from [Subscriber] where [SubscriberId] = @SubscriberId";
 	[Version] [int]  NOT NULL,
 	[Timestamp] [datetime] NOT NULL,
 	[Sequence] [bigint] IDENTITY(1, 1) NOT NULL,
+	[EventType] [varchar](max) NOT NULL,
 	[Data] [varbinary](max)  NOT NULL);",
 @"ALTER TABLE [Event] ADD CONSTRAINT [PK_Events] PRIMARY KEY CLUSTERED ([AggregateRootId], [Version] ASC);
 CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
@@ -153,6 +154,7 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 				cmd.Parameters.Add(new SqlParameter("@AggregateRootId", eventToStore.AggregateRootId));
 				cmd.Parameters.Add(new SqlParameter("@Version", eventToStore.Version));
 				cmd.Parameters.Add(new SqlParameter("@Timestamp", timeStamp));
+				cmd.Parameters.Add(new SqlParameter("@EventType", eventToStore.EventType));
 				cmd.Parameters.Add(new SqlParameter("@Data", eventToStore.Data));
 				conn.Open();
 				try
@@ -196,7 +198,8 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 							AggregateRootId = aggregateRootId,
 							Version = reader.GetInt32(0),
 							Timestamp = reader.GetDateTime(1),
-							Data = reader.GetSqlBinary(2).Value
+							EventType = reader.GetString(2),
+							Data = reader.GetSqlBinary(3).Value
 						};
 					}
 				}
@@ -265,7 +268,8 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 							AggregateRootId = reader.GetGuid(1),
 							Version = reader.GetInt32(2),
 							Timestamp = reader.GetDateTime(3),
-							Data = reader.GetSqlBinary(4).Value
+							EventType = reader.GetString(4),
+							Data = reader.GetSqlBinary(5).Value
 						};
 					}
 				}

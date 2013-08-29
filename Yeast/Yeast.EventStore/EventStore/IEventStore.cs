@@ -13,7 +13,7 @@ namespace Yeast.EventStore
 		IEventSerializer EventSerializer { get; set; }
 
 		// Messages
-		IEventStore Save<T>(Guid aggregateRootId, int version, T data);
+		IEventStore Save(Guid aggregateRootId, int version, object data);
 		IEnumerable<StoredEvent> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp);
 
 		// Publishing

@@ -153,16 +153,19 @@ namespace Yeast.EventStore.Provider
 			}
 
 			var version = BitConverter.ToInt32(versionBuf, 0);
+			var eventTypeSize = reader.ReadInt32();
 			var dataSize = reader.ReadInt32();
 			var timestamp = new DateTime(reader.ReadInt64());
+			var eventType = new byte[] {};
 			byte[] data = null;
 			if (readData)
 			{
+				eventType = reader.ReadBytes(eventTypeSize);
 				data = reader.ReadBytes(dataSize);
 			}
 			else
 			{
-				readerStream.Seek(dataSize, SeekOrigin.Current);
+				readerStream.Seek(eventTypeSize + dataSize, SeekOrigin.Current);
 			}
 
 			return new EventToStore()
@@ -170,6 +173,7 @@ namespace Yeast.EventStore.Provider
 				AggregateRootId = aggregateRootId,
 				Version = version,
 				Timestamp = timestamp,
+				EventType = Encoding.UTF8.GetString(eventType),
 				Data = data,
 				Size = sizeof(int) + sizeof(int) + sizeof(long) + dataSize
 			};
@@ -179,15 +183,19 @@ namespace Yeast.EventStore.Provider
 		{
 			var guidOffset = _storeAggregateId ? 16 : 0;
 
-			byte[] buffer = new byte[guidOffset + sizeof(int) + sizeof(int) + sizeof(long) + @event.Data.Length];
+			byte[] eventType = Encoding.UTF8.GetBytes(@event.EventType);
+
+			byte[] buffer = new byte[guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long) + eventType.Length + @event.Data.Length];
 			if (_storeAggregateId)
 			{
 				Array.Copy(@event.AggregateRootId.ToByteArray(), buffer, 16);
 			}
 			Array.Copy(BitConverter.GetBytes(@event.Version), 0, buffer, guidOffset, sizeof(int));
-			Array.Copy(BitConverter.GetBytes(@event.Data.Length), 0, buffer, guidOffset + sizeof(int), sizeof(int));
-			Array.Copy(BitConverter.GetBytes(@event.Timestamp.Ticks), 0, buffer, guidOffset + sizeof(int) + sizeof(int), sizeof(long));
-			Array.Copy(@event.Data, 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(long), @event.Data.Length);
+			Array.Copy(BitConverter.GetBytes(eventType.Length), 0, buffer, guidOffset + sizeof(int), sizeof(int));
+			Array.Copy(BitConverter.GetBytes(@event.Data.Length), 0, buffer, guidOffset + sizeof(int) + sizeof(int), sizeof(int));
+			Array.Copy(BitConverter.GetBytes(@event.Timestamp.Ticks), 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int), sizeof(long));
+			Array.Copy(eventType, 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long), eventType.Length);
+			Array.Copy(@event.Data, 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long) + eventType.Length, @event.Data.Length);
 
 			_writer.Write(buffer);
 			_writer.Flush();

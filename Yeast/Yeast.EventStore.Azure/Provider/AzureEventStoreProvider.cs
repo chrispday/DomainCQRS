@@ -64,6 +64,7 @@ namespace Yeast.EventStore.Azure.Provider
 			entity = new DynamicTableEntity(eventToStore.AggregateRootId.ToString(), eventToStore.Version.ToString(RowKeyFormat));
 			entity.Properties = SplitData(eventToStore.Data);
 			entity.Properties["_Timestamp"] = new EntityProperty(eventToStore.Timestamp);
+			entity.Properties["EventType"] = new EntityProperty(eventToStore.EventType);
 			try
 			{
 				_events.Execute(TableOperation.Insert(entity));
@@ -118,7 +119,7 @@ namespace Yeast.EventStore.Azure.Provider
 					&& timestamp >= fromTimestamp.GetValueOrDefault(DateTime.MinValue)
 					&& timestamp <= toTimestamp.GetValueOrDefault(DateTime.MaxValue))
 				{
-					var eventToStore = new EventToStore() { AggregateRootId = aggregateRootId, Version = version, Timestamp = timestamp };
+					var eventToStore = new EventToStore() { AggregateRootId = aggregateRootId, Version = version, Timestamp = timestamp, EventType = result.Properties["EventType"].StringValue };
 					eventToStore.Data = CombineData(result.Properties);
 					yield return eventToStore;
 				}
@@ -203,7 +204,7 @@ namespace Yeast.EventStore.Azure.Provider
 
 				foreach (var result in _events.ExecuteQuery(aggregateRootQuery))
 				{
-					var eventToStore = new EventToStore() { AggregateRootId = new Guid(result.PartitionKey), Version = int.Parse(result.RowKey), Timestamp = result.Timestamp.DateTime };
+					var eventToStore = new EventToStore() { AggregateRootId = new Guid(result.PartitionKey), Version = int.Parse(result.RowKey), Timestamp = result.Timestamp.DateTime, EventType = result.Properties["EventType"].StringValue };
 					eventToStore.Data = CombineData(result.Properties);
 					to.Positions[aggregateRootId] = eventToStore.Version;
 					yield return eventToStore;
