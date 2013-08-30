@@ -8,7 +8,7 @@ namespace Yeast.EventStore
 {
 	public static class EventPublisherConfigure
 	{
-		public static int DefaultBatchSize = 100;
+		public static int DefaultBatchSize = 10000;
 		public static TimeSpan DefaultPublishThreadSleep = TimeSpan.FromSeconds(1);
 		public static string DefaultSubscriberReceiveMethodName = "Receive";
 
