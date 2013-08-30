@@ -25,24 +25,24 @@ namespace Yeast.EventStore.Test
 					.Saga<MockSagaEvent>();
 
 			Guid aggregateRootId = Guid.NewGuid();
-			config.MessageReceiver.Receive(new MockSagaCommand() { AggregateRootId = aggregateRootId, Message = "1" });
-			config.MessageReceiver.Receive(new MockSagaCommand() { AggregateRootId = aggregateRootId, Message = "2" });
+			config.GetMessageReceiver.Receive(new MockSagaCommand() { AggregateRootId = aggregateRootId, Message = "1" });
+			config.GetMessageReceiver.Receive(new MockSagaCommand() { AggregateRootId = aggregateRootId, Message = "2" });
 
 			System.Threading.Thread.Sleep(TimeSpan.FromSeconds(1));
 
-			var events = config.MessageReceiver.EventStore.Load(aggregateRootId, null, null, null, null).ToList();
+			var events = config.GetMessageReceiver.EventStore.Load(aggregateRootId, null, null, null, null).ToList();
 			Assert.AreEqual(2, events.Count);
 			Assert.AreEqual("1", (events[0].Event as MockSagaEvent).Message);
 			var sagaId = (events[0].Event as MockSagaEvent).SagaId;
 			Assert.AreEqual("2", (events[1].Event as MockSagaEvent).Message);
 			Assert.AreEqual(sagaId, (events[1].Event as MockSagaEvent).SagaId);
 
-			events = config.MessageReceiver.EventStore.Load(sagaId, null, null, null, null).ToList();
+			events = config.GetMessageReceiver.EventStore.Load(sagaId, null, null, null, null).ToList();
 			Assert.AreEqual(2, events.Count);
 			Assert.AreEqual("Saga 1", (events[0].Event as MockSagaEvent2).Message);
 			Assert.AreEqual("Saga 2", (events[1].Event as MockSagaEvent2).Message);
 
-			config.EventPublisher.Dispose();
+			config.GetEventPublisher.Dispose();
 		}
 	}
 }

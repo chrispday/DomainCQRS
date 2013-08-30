@@ -8,8 +8,8 @@ namespace Yeast.EventStore
 {
 	public interface IConfigure : IDisposable
 	{
-		IMessageReceiver MessageReceiver { get; }
-		IEventPublisher EventPublisher { get; }
+		IMessageReceiver GetMessageReceiver { get; }
+		IEventPublisher GetEventPublisher { get; }
 	}
 
 	public class Configure : IConfigure
@@ -170,6 +170,16 @@ namespace Yeast.EventStore
 			{
 				EventStoreProvider.Dispose();
 			}
+		}
+
+		public IMessageReceiver GetMessageReceiver
+		{
+			get { return MessageReceiver; }
+		}
+
+		public IEventPublisher GetEventPublisher
+		{
+			get { return EventPublisher; }
 		}
 	}
 }
