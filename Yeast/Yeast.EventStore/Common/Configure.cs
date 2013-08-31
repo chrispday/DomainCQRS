@@ -10,6 +10,7 @@ namespace Yeast.EventStore
 	{
 		IMessageReceiver GetMessageReceiver { get; }
 		IEventPublisher GetEventPublisher { get; }
+		IConfigure Synchrounous();
 	}
 
 	public class Configure : IConfigure
@@ -118,6 +119,11 @@ namespace Yeast.EventStore
 				}
 
 				_messageReceiver = value;
+
+				if (Synchronous)
+				{
+					MessageReceiver.Synchronous = true;
+				}
 			}
 		}
 
@@ -152,6 +158,15 @@ namespace Yeast.EventStore
 				}
 
 				_eventPublisher = value;
+
+				if (Synchronous)
+				{
+					EventPublisher.Synchronous = true;
+				}
+				if (null != MessageReceiver)
+				{
+					MessageReceiver.EventPublisher = value;
+				}
 			}
 		}
 
@@ -180,6 +195,24 @@ namespace Yeast.EventStore
 		public IEventPublisher GetEventPublisher
 		{
 			get { return EventPublisher; }
+		}
+
+		public bool Synchronous { get; set; }
+		public IConfigure Synchrounous()
+		{
+			Synchronous = true;
+
+			if (null != MessageReceiver)
+			{
+				MessageReceiver.Synchronous = true;
+				MessageReceiver.EventPublisher = EventPublisher;
+			}
+			if (null != EventPublisher)
+			{
+				EventPublisher.Synchronous = true;
+			}
+
+			return this;
 		}
 	}
 }

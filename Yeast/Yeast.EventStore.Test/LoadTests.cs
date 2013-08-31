@@ -73,7 +73,7 @@ namespace Yeast.EventStore.Test
 				var id = LoadTestAggregateIds.Keys.ToArray()[Ran(new Random(), LoadTestAggregateIds.Count - 1)];
 				var version = LoadTestAggregateIds[id];
 				LoadTestAggregateIds[id] = version + 1;
-				var eventToStore = new EventToStore() { AggregateRootId = id, Version = version, Timestamp = DateTime.Now, Data = new Byte[new Random().Next(99)] };
+				var eventToStore = new EventToStore() { AggregateRootId = id, Version = version, Timestamp = DateTime.Now, EventType = typeof(byte[]).AssemblyQualifiedName, Data = new Byte[new Random().Next(99)] };
 				fileLoadTestProvider.Save(eventToStore);
 			}
 
@@ -91,7 +91,7 @@ namespace Yeast.EventStore.Test
 				var id = LoadTestAggregateIds.Keys.ToArray()[Ran(new Random(), LoadTestAggregateIds.Count - 1)];
 				var version = LoadTestAggregateIds[id];
 				LoadTestAggregateIds[id] = version + 1;
-				var eventToStore = new EventToStore() { AggregateRootId = id, Version = version, Timestamp = DateTime.Now, Data = new Byte[new Random().Next(99)] };
+				var eventToStore = new EventToStore() { AggregateRootId = id, Version = version, Timestamp = DateTime.Now, EventType = typeof(byte[]).AssemblyQualifiedName, Data = new Byte[new Random().Next(99)] };
 				SqlLoadTestProvider.Save(eventToStore);
 			}
 
@@ -231,7 +231,7 @@ namespace Yeast.EventStore.Test
 				.LRUAggregateRootCache()
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply")
-				.MockEventPublisher(10000, TimeSpan.FromSeconds(0.1))
+				.MockEventPublisher(10000, TimeSpan.FromSeconds(1))
 				.Subscribe<MockSubscriber>(Guid.NewGuid());
 
 			var publisher = (configure as Configure).EventPublisher as MockEventPublisher;

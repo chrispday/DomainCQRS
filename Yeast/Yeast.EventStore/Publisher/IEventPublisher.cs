@@ -12,6 +12,9 @@ namespace Yeast.EventStore
 		int BatchSize { get; set; }
 		IEventStore EventStore { get; set; }
 		IMessageReceiver MessageReceiver { get; set; }
+		bool Synchronous { get; set; }
+
+		void Publish(object @event);
 
 		IEventPublisher Subscribe<Subscriber>(Guid subscriptionId);
 		IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, string subscriberReceiveMethodName);

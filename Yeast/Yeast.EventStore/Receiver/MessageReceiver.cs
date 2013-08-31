@@ -11,6 +11,7 @@ namespace Yeast.EventStore
 	{
 		public static readonly string DefaultAggregateRootIdProperty = "AggregateRootId";
 		public static readonly string DefaultAggregateRootApplyMethod = "Apply";
+		public static IConfigure MessageReceiver(this IConfigure configure) { return MessageReceiver(configure, DefaultAggregateRootIdProperty, DefaultAggregateRootApplyMethod); }
 		public static IConfigure MessageReceiver(this IConfigure configure, string defaultAggregateRootIdProperty, string defaultAggregateRootApplyMethod)
 		{
 			var c = configure as Configure;
@@ -20,15 +21,9 @@ namespace Yeast.EventStore
 				EventStore = c.EventStore, 
 				AggregateRootCache = c.AggregateRootCache, 
 				DefaultAggregateRootIdProperty = defaultAggregateRootIdProperty,
-				DefaultAggregateRootApplyMethod = defaultAggregateRootApplyMethod
+				DefaultAggregateRootApplyMethod = defaultAggregateRootApplyMethod,
+				EventPublisher = c.EventPublisher
 			};
-			return configure;
-		}
-
-		public static IConfigure MessageReceiver(this IConfigure configure)
-		{
-			var c = configure as Configure;
-			c.MessageReceiver = new MessageReceiver() { Logger = c.Logger, EventStore = c.EventStore, AggregateRootCache = c.AggregateRootCache };
 			return configure;
 		}
 
@@ -36,7 +31,8 @@ namespace Yeast.EventStore
 		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure, string aggregateRootIdProperty) { return Register<Message, AggregateRoot>(configure, aggregateRootIdProperty, DefaultAggregateRootApplyMethod); }
 		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure, string aggregateRootIdsProperty, string aggregateRootApplyCommandMethod)
 		{
-			(configure as Configure).MessageReceiver.Register<Message, AggregateRoot>(aggregateRootIdsProperty, aggregateRootApplyCommandMethod);
+			var c = configure as Configure;
+			c.MessageReceiver.Register<Message, AggregateRoot>(aggregateRootIdsProperty, aggregateRootApplyCommandMethod);
 			return configure;
 		}
 	}
@@ -54,6 +50,8 @@ namespace Yeast.EventStore
 		public IAggregateRootCache AggregateRootCache { get; set; }
 		public string DefaultAggregateRootIdProperty { get; set; }
 		public string DefaultAggregateRootApplyMethod { get; set; }
+		public bool Synchronous { get; set; }
+		public IEventPublisher EventPublisher { get; set; }
 
 		public MessageReceiver()
 		{
@@ -84,6 +82,10 @@ namespace Yeast.EventStore
 						foreach (var @event in eventsToStore)
 						{
 							EventStore.Save(aggregateRootId, ++aggregateRootAndVersion.LatestVersion, @event);
+							if (Synchronous)
+							{
+								EventPublisher.Publish(@event);
+							}
 						}
 					}
 				}

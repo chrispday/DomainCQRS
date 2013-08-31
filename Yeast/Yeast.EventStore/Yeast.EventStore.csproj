@@ -56,7 +56,7 @@
     <Compile Include="Common\ILogger.cs" />
     <Compile Include="Common\LRUDictionary.cs" />
     <Compile Include="Domain\Events\IEvent.cs" />
-    <Compile Include="EventStore\Configure.cs" />
+    <Compile Include="Common\Configure.cs" />
     <Compile Include="EventStore\EventStore.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Exceptions\RegistrationException.cs" />

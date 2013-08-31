@@ -46,6 +46,22 @@ namespace Yeast.EventStore
 		public int BatchSize { get; set; }
 		public TimeSpan PublishThreadSleep { get; set; }
 		public string DefaultSubscriberReceiveMethodName { get; set; }
+		private bool _synchronous;
+		public bool Synchronous
+		{
+			get { return _synchronous; }
+			set
+			{
+				_synchronous = value;
+				if (value)
+				{
+					StopPublishingThread();
+				}
+				else
+				{
+				}
+			}
+		}
 		protected class SubscriberAndPosition
 		{
 			public object Subscriber;
@@ -95,9 +111,10 @@ namespace Yeast.EventStore
 				subscriberAndPosition.Receives.Add(eventType, ILHelper.CreateReceive<Subscriber, Event>(subscriberReceiveMethodName));
 			}
 
-			if (null == _publisherThread)
+			if (!Synchronous
+				&& null == _publisherThread)
 			{
-				_publisherThread = new ThreadStart(Publish).Start("EventPublisher");
+				StartPublishingThread();
 			}
 
 			return this;
@@ -105,11 +122,32 @@ namespace Yeast.EventStore
 
 		public void Dispose()
 		{
-			if (null != _publisherThread)
+			StopPublishingThread();
+		}
+
+		private void StartPublishingThread()
+		{
+			lock (this)
 			{
-				_publisherThread = null;
-				_continuePublishing = false;
-				_finishedPublishing.WaitOne();
+				if (null == _publisherThread)
+				{
+					_continuePublishing = true;
+					_finishedPublishing.Reset();
+					_publisherThread = new ThreadStart(Publish).Start("EventPublisher");
+				}
+			}
+		}
+
+		private void StopPublishingThread()
+		{
+			lock (this)
+			{
+				if (null != _publisherThread)
+				{
+					_publisherThread = null;
+					_continuePublishing = false;
+					_finishedPublishing.WaitOne();
+				}
 			}
 		}
 
@@ -121,15 +159,18 @@ namespace Yeast.EventStore
 			{
 				Logger.Verbose("Next publish run.");
 
-				foreach (var subscription in new Dictionary<Guid,SubscriberAndPosition>(_subscribers))
+				foreach (var subscription in new Dictionary<Guid, SubscriberAndPosition>(_subscribers))
 				{
-					if (_subscriptionThreads.ContainsKey(subscription.Key))
+					lock (_subscriptionThreads)
 					{
-						Logger.Warning("Skipped publishing for {0}, still waiting for previous thread to finish.", subscription.Key);
-						continue;
-					}
+						if (_subscriptionThreads.ContainsKey(subscription.Key))
+						{
+							Logger.Warning("Skipped publishing for {0}, still waiting for previous thread to finish.", subscription.Key);
+							continue;
+						}
 
-					_subscriptionThreads[subscription.Key] = new Action<KeyValuePair<Guid, SubscriberAndPosition>>(PublishForSubscription).Start("Subscription" + subscription.Key.ToString(), subscription);
+						_subscriptionThreads.Add(subscription.Key, new Action<KeyValuePair<Guid, SubscriberAndPosition>>(PublishForSubscription).Start("Subscription" + subscription.Key.ToString(), subscription));
+					}
 				}
 
 				Thread.Sleep(PublishThreadSleep);
@@ -137,6 +178,29 @@ namespace Yeast.EventStore
 
 			Logger.Information("Shutting down publishing thread.");
 			_finishedPublishing.Set();
+		}
+
+		public void Publish(object @event)
+		{
+			if (!Synchronous)
+			{
+				throw new InvalidOperationException("Not publishing synchronously.");
+			}
+
+			var subscribers = new List<SubscriberAndPosition>(_subscribers.Values);
+			foreach (var subscriber in subscribers)
+			{
+				Receive receive = subscriber.ReceiveObject;
+				if (null == receive)
+				{
+					subscriber.Receives.TryGetValue(@event.GetType(), out receive);
+				}
+
+				if (null != receive)
+				{
+					receive(subscriber.Subscriber, @event);
+				}
+			}
 		}
 
 		private void PublishForSubscription(KeyValuePair<Guid, SubscriberAndPosition> subscription)
@@ -185,7 +249,10 @@ namespace Yeast.EventStore
 			}
 			finally
 			{
-				_subscriptionThreads.Remove(subscription.Key);
+				lock (_subscriptionThreads)
+				{
+					_subscriptionThreads.Remove(subscription.Key);
+				}
 			}
 		}
 

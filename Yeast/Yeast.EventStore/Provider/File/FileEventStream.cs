@@ -175,7 +175,7 @@ namespace Yeast.EventStore.Provider
 				Timestamp = timestamp,
 				EventType = Encoding.UTF8.GetString(eventType),
 				Data = data,
-				Size = sizeof(int) + sizeof(int) + sizeof(long) + dataSize
+				Size = sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long) + eventTypeSize + dataSize
 			};
 		}
 

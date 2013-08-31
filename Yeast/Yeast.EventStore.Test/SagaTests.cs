@@ -20,7 +20,7 @@ namespace Yeast.EventStore.Test
 				.MessageReceiver()
 					.Register<MockSagaCommand, MockSagaAggregateRoot>()
 					.Register<MockSagaEvent, MockSaga>("SagaId")
-				.MockEventPublisher(100, TimeSpan.FromSeconds(0.25))
+				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
 				.SagaPublisher()
 					.Saga<MockSagaEvent>();
 
