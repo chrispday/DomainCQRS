@@ -80,30 +80,6 @@ namespace Yeast.EventStore.Azure.Provider
 			return this;
 		}
 
-		protected IDictionary<string, EntityProperty> SplitData(byte[] eventData)
-		{
-			var properties = new Dictionary<string, EntityProperty>();
-
-			var data = new byte[MaximumPropertySize];
-			var dataCount = 0;
-			var iTotal = 0;
-			var i = 0;
-			while (iTotal < eventData.Length)
-			{
-				if (i >= MaximumPropertySize)
-				{
-					properties["Data" + dataCount++] = new EntityProperty(data);
-					i = 0;
-				}
-
-				data[i++] = eventData[iTotal++];
-			}
-
-			properties["Data" + dataCount] = new EntityProperty(data.Take(i).ToArray());
-
-			return properties;
-		}
-
 		public IEnumerable<EventToStore> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
 			var query = new TableQuery<DynamicTableEntity>()
@@ -119,24 +95,9 @@ namespace Yeast.EventStore.Azure.Provider
 					&& timestamp >= fromTimestamp.GetValueOrDefault(DateTime.MinValue)
 					&& timestamp <= toTimestamp.GetValueOrDefault(DateTime.MaxValue))
 				{
-					var eventToStore = new EventToStore() { AggregateRootId = aggregateRootId, Version = version, Timestamp = timestamp, EventType = result.Properties["EventType"].StringValue };
-					eventToStore.Data = CombineData(result.Properties);
-					yield return eventToStore;
+					yield return CreateEventToStore(result);
 				}
 			}
-		}
-
-		private byte[] CombineData(IDictionary<string, EntityProperty> dictionary)
-		{
-			var data = new List<byte[]>();
-			var i = 0;
-			EntityProperty entityProperty;
-			while (dictionary.TryGetValue("Data" + i++, out entityProperty))
-			{
-				data.Add(entityProperty.BinaryValue);
-			}
-
-			return (1 == data.Count) ? data[0] : data.SelectMany(d => d).ToArray();
 		}
 
 		public IEventStoreProviderPosition CreatePosition()
@@ -204,8 +165,7 @@ namespace Yeast.EventStore.Azure.Provider
 
 				foreach (var result in _events.ExecuteQuery(aggregateRootQuery))
 				{
-					var eventToStore = new EventToStore() { AggregateRootId = new Guid(result.PartitionKey), Version = int.Parse(result.RowKey), Timestamp = result.Timestamp.DateTime, EventType = result.Properties["EventType"].StringValue };
-					eventToStore.Data = CombineData(result.Properties);
+					var eventToStore = CreateEventToStore(result);
 					to.Positions[aggregateRootId] = eventToStore.Version;
 					yield return eventToStore;
 				}
@@ -216,6 +176,50 @@ namespace Yeast.EventStore.Azure.Provider
 					to.Positions[aggregateRootId] = from.Positions[aggregateRootId];
 				}
 			}
+		}
+
+		protected IDictionary<string, EntityProperty> SplitData(byte[] eventData)
+		{
+			var properties = new Dictionary<string, EntityProperty>();
+
+			var data = new byte[MaximumPropertySize];
+			var dataCount = 0;
+			var iTotal = 0;
+			var i = 0;
+			while (iTotal < eventData.Length)
+			{
+				if (i >= MaximumPropertySize)
+				{
+					properties["Data" + dataCount++] = new EntityProperty(data);
+					i = 0;
+				}
+
+				data[i++] = eventData[iTotal++];
+			}
+
+			properties["Data" + dataCount] = new EntityProperty(data.Take(i).ToArray());
+
+			return properties;
+		}
+
+		private EventToStore CreateEventToStore(DynamicTableEntity result)
+		{
+			var eventToStore = new EventToStore() { AggregateRootId = new Guid(result.PartitionKey), Version = int.Parse(result.RowKey), Timestamp = result.Timestamp.DateTime, EventType = result.Properties["EventType"].StringValue };
+			eventToStore.Data = CombineData(result.Properties);
+			return eventToStore;
+		}
+
+		private byte[] CombineData(IDictionary<string, EntityProperty> dictionary)
+		{
+			var data = new List<byte[]>();
+			var i = 0;
+			EntityProperty entityProperty;
+			while (dictionary.TryGetValue("Data" + i++, out entityProperty))
+			{
+				data.Add(entityProperty.BinaryValue);
+			}
+
+			return (1 == data.Count) ? data[0] : data.SelectMany(d => d).ToArray();
 		}
 
 		public void Dispose()

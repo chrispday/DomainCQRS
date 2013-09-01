@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Yeast.EventStore.Test.Mock;
 
 namespace Yeast.EventStore.Test
 {
@@ -301,6 +302,37 @@ namespace Yeast.EventStore.Test
 			Assert.AreEqual(2, results.Count);
 			Assert.AreEqual(4, results[0].Version);
 			Assert.AreEqual(5, results[1].Version);
+		}
+
+		[TestMethod]
+		public void EventPublisher_Subscribe()
+		{
+			var provider = CreateProvider().EnsureExists();
+			var config = Configure.With();
+			(config as Configure).EventStoreProvider = provider;
+				config.DebugLogger(true)
+				//.BinaryFormatterSerializer()
+				.JsonSerializer()
+				.LRUAggregateRootCache(100)
+				.EventStore()
+				.MessageReceiver()
+				.Register<MockCommand, MockAggregateRoot>()
+				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
+				.Subscribe<MockSubscriber>(Guid.NewGuid());
+
+			var publisher = (config as Configure).EventPublisher as MockEventPublisher;
+			Assert.AreEqual(1, publisher.Subscribers.Count);
+			var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
+
+			var id = Guid.NewGuid();
+			(config as Configure).MessageReceiver.Receive(new MockCommand() { AggregateRootId = id, Increment = 5 });
+			subscriber.ReceivedEvent.WaitOne(TimeSpan.FromSeconds(10));
+
+			Assert.AreEqual(1, subscriber.Received.Count);
+			Assert.IsInstanceOfType(subscriber.Received[0], typeof(MockEvent));
+			var @event = subscriber.Received[0] as MockEvent;
+			Assert.AreEqual(id, @event.AggregateRootId);
+			Assert.AreEqual(5, @event.Increment);
 		}
 	}
 }
