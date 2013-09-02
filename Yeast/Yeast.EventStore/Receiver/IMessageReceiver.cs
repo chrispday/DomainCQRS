@@ -13,6 +13,8 @@ namespace Yeast.EventStore
 		IAggregateRootCache AggregateRootCache { get; set; }
 		bool Synchronous { get; set; }
 		IEventPublisher EventPublisher { get; set; }
+		string DefaultAggregateRootIdProperty { get; set; }
+		string DefaultAggregateRootApplyMethod { get; set; }
 
 		IMessageReceiver Receive(object message);
 		IMessageReceiver Register<Message, AggregateRoot>();

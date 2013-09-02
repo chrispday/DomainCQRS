@@ -12,6 +12,7 @@ namespace Yeast.EventStore
 		public static readonly string DefaultAggregateRootIdProperty = "AggregateRootId";
 		public static readonly string DefaultAggregateRootApplyMethod = "Apply";
 		public static IConfigure MessageReceiver(this IConfigure configure) { return MessageReceiver(configure, DefaultAggregateRootIdProperty, DefaultAggregateRootApplyMethod); }
+		public static IConfigure MessageReceiver(this IConfigure configure, string defaultAggregateRootIdProperty) { return MessageReceiver(configure, defaultAggregateRootIdProperty, DefaultAggregateRootApplyMethod); }
 		public static IConfigure MessageReceiver(this IConfigure configure, string defaultAggregateRootIdProperty, string defaultAggregateRootApplyMethod)
 		{
 			var c = configure as Configure;
@@ -27,12 +28,12 @@ namespace Yeast.EventStore
 			return configure;
 		}
 
-		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure) { return Register<Message, AggregateRoot>(configure, DefaultAggregateRootIdProperty, DefaultAggregateRootApplyMethod); }
-		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure, string aggregateRootIdProperty) { return Register<Message, AggregateRoot>(configure, aggregateRootIdProperty, DefaultAggregateRootApplyMethod); }
+		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure) { return Register<Message, AggregateRoot>(configure, null, null); }
+		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure, string aggregateRootIdProperty) { return Register<Message, AggregateRoot>(configure, aggregateRootIdProperty, null); }
 		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure, string aggregateRootIdsProperty, string aggregateRootApplyCommandMethod)
 		{
 			var c = configure as Configure;
-			c.MessageReceiver.Register<Message, AggregateRoot>(aggregateRootIdsProperty, aggregateRootApplyCommandMethod);
+			c.MessageReceiver.Register<Message, AggregateRoot>(aggregateRootIdsProperty ?? c.MessageReceiver.DefaultAggregateRootIdProperty, aggregateRootApplyCommandMethod ?? c.MessageReceiver.DefaultAggregateRootApplyMethod);
 			return configure;
 		}
 	}
