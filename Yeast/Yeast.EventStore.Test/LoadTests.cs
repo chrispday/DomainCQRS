@@ -15,7 +15,7 @@ using Yeast.EventStore.Test.Mock;
 
 namespace Yeast.EventStore.Test
 {
-	[TestClass]
+	//[TestClass]
 	public class LoadTests
 	{
 		string BaseDirectory;
