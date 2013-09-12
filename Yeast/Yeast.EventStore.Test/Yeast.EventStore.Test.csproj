@@ -57,8 +57,15 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\protobuf-net.2.0.0.666\lib\net40\protobuf-net.dll</HintPath>
     </Reference>
-    <Reference Include="StoryQ">
-      <HintPath>..\..\..\..\Users\Chris\Downloads\StoryQ-2.0.4\StoryQ.dll</HintPath>
+    <Reference Include="StoryQ, Version=2.0.5.0, Culture=neutral, PublicKeyToken=90a7d07ba39412de, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\StoryQ.2.0.5\lib\StoryQ.dll</HintPath>
+    </Reference>
+    <Reference Include="StoryQ.pt-BR">
+      <HintPath>..\packages\StoryQ.2.0.5\lib\StoryQ.pt-BR.dll</HintPath>
+    </Reference>
+    <Reference Include="StoryQ.sr-SP">
+      <HintPath>..\packages\StoryQ.2.0.5\lib\StoryQ.sr-SP.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
