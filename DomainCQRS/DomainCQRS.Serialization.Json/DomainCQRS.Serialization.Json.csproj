@@ -50,10 +50,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DomainCQRS.Extensions\DomainCQRS.Extensions.csproj">
-      <Project>{51cc1419-04d3-49f8-b512-630002639a50}</Project>
-      <Name>DomainCQRS.Extensions</Name>
-    </ProjectReference>
     <ProjectReference Include="..\DomainCQRS\DomainCQRS.csproj">
       <Project>{a9c47e7f-eeda-40f8-bf71-638308949636}</Project>
       <Name>DomainCQRS</Name>
