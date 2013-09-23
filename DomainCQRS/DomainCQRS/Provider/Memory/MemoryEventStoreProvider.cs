@@ -10,10 +10,10 @@ namespace DomainCQRS
 	{
 		public static IConfigure MemoryEventStoreProvider(this IConfigure configure)
 		{
-			var c = configure as Configure;
-			c.EventStoreProvider = new MemoryEventStoreProvider(
-				c.Logger
-				).EnsureExists();
+			configure.Registry
+				.BuildInstancesOf<IEventStoreProvider>()
+				.TheDefaultIsConcreteType<MemoryEventStoreProvider>()
+				.AsSingletons();
 			return configure;
 		}
 	}

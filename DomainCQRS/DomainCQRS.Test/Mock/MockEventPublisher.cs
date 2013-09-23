@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using DomainCQRS.Common;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS.Test.Mock
 {
@@ -11,22 +12,34 @@ namespace DomainCQRS.Test.Mock
 	{
 		public static IConfigure MockEventPublisher(this IConfigure configure)
 		{
-			var c = configure as Configure;
-			c.EventPublisher = new MockEventPublisher(c.Logger, c.EventStore, 100, TimeSpan.FromSeconds(1), "Receive");
+			configure.Registry
+				.BuildInstancesOf<IEventPublisher>()
+				.TheDefaultIs(Registry.Instance<IEventPublisher>()
+					.UsingConcreteType<MockEventPublisher>()
+					.WithProperty("batchSize").EqualTo(100)
+					.WithProperty("publishThreadSleep").EqualTo(TimeSpan.FromSeconds(1).Ticks)
+					.WithProperty("defaultSubscriberReceiveMethodName").EqualTo("Receive"))
+				.AsSingletons();
 			return configure;
 		}
 
 		public static IConfigure MockEventPublisher(this IConfigure configure, int batchSize, TimeSpan publishThreadSleep)
 		{
-			var c = configure as Configure;
-			c.EventPublisher = new MockEventPublisher(c.Logger, c.EventStore, batchSize, publishThreadSleep, "Receive");
+			configure.Registry
+				.BuildInstancesOf<IEventPublisher>()
+				.TheDefaultIs(Registry.Instance<IEventPublisher>()
+					.UsingConcreteType<MockEventPublisher>()
+					.WithProperty("batchSize").EqualTo(batchSize)
+					.WithProperty("publishThreadSleep").EqualTo(publishThreadSleep.Ticks)
+					.WithProperty("defaultSubscriberReceiveMethodName").EqualTo("Receive"))
+				.AsSingletons();
 			return configure;
 		}
 	}
 
 	public class MockEventPublisher : EventPublisher
 	{
-		public MockEventPublisher(ILogger logger, IEventStore eventStore, int batchSize, TimeSpan publishThreadSleep, string defaultSubscriberReceiveMethodName)
+		public MockEventPublisher(ILogger logger, IEventStore eventStore, int batchSize, long publishThreadSleep, string defaultSubscriberReceiveMethodName)
 			: base(logger, eventStore, batchSize, publishThreadSleep, defaultSubscriberReceiveMethodName)
 		{
 		}

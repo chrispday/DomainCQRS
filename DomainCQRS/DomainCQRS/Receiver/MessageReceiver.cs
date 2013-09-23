@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using DomainCQRS.Common;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
@@ -15,23 +16,24 @@ namespace DomainCQRS
 		public static IConfigure MessageReceiver(this IConfigure configure, string defaultAggregateRootIdProperty) { return MessageReceiver(configure, defaultAggregateRootIdProperty, DefaultAggregateRootApplyMethod); }
 		public static IConfigure MessageReceiver(this IConfigure configure, string defaultAggregateRootIdProperty, string defaultAggregateRootApplyMethod)
 		{
-			var c = configure as Configure;
-			c.MessageReceiver = new MessageReceiver(
-				c.Logger,
-				c.EventStore,
-				c.AggregateRootCache,
-				defaultAggregateRootIdProperty,
-				defaultAggregateRootApplyMethod
-				);
+			configure.Registry
+				.BuildInstancesOf<IMessageReceiver>()
+				.TheDefaultIs(Registry.Instance<IMessageReceiver>()
+					.UsingConcreteType<MessageReceiver>()
+					.WithProperty("defaultAggregateRootIdProperty").EqualTo(defaultAggregateRootIdProperty)
+					.WithProperty("defaultAggregateRootApplyMethod").EqualTo(defaultAggregateRootApplyMethod))
+				.AsSingletons();
 			return configure;
 		}
 
-		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure) { return Register<Message, AggregateRoot>(configure, null, null); }
-		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure, string aggregateRootIdProperty) { return Register<Message, AggregateRoot>(configure, aggregateRootIdProperty, null); }
-		public static IConfigure Register<Message, AggregateRoot>(this IConfigure configure, string aggregateRootIdsProperty, string aggregateRootApplyCommandMethod)
+		public static IBuiltConfigure Register<Message, AggregateRoot>(this IBuiltConfigure configure) { return Register<Message, AggregateRoot>(configure, null, null); }
+		public static IBuiltConfigure Register<Message, AggregateRoot>(this IBuiltConfigure configure, string aggregateRootIdProperty) { return Register<Message, AggregateRoot>(configure, aggregateRootIdProperty, null); }
+		public static IBuiltConfigure Register<Message, AggregateRoot>(this IBuiltConfigure configure, string aggregateRootIdsProperty, string aggregateRootApplyCommandMethod)
 		{
-			var c = configure as Configure;
-			c.MessageReceiver.Register<Message, AggregateRoot>(aggregateRootIdsProperty ?? c.MessageReceiver.DefaultAggregateRootIdProperty, aggregateRootApplyCommandMethod ?? c.MessageReceiver.DefaultAggregateRootApplyMethod);
+			configure.MessageReceiver
+				.Register<Message, AggregateRoot>(
+					aggregateRootIdsProperty ?? configure.MessageReceiver.DefaultAggregateRootIdProperty,
+					aggregateRootApplyCommandMethod ?? configure.MessageReceiver.DefaultAggregateRootApplyMethod);
 			return configure;
 		}
 	}

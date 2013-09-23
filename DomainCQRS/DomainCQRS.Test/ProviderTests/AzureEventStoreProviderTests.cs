@@ -21,6 +21,12 @@ namespace DomainCQRS.Test
 
 		protected override IEventStoreProvider CreateProvider()
 		{
+			return new AzureEventStoreProvider(new DebugLogger(), ConnectionString).EnsureExists();
+		}
+
+		[TestInitialize]
+		public void Cleanup()
+		{
 			var _storageAccount = CloudStorageAccount.Parse(ConnectionString);
 			var _tableClient = _storageAccount.CreateCloudTableClient();
 
@@ -32,8 +38,6 @@ namespace DomainCQRS.Test
 
 			var _subscribers = _tableClient.GetTableReference(SubscriberTable);
 			_subscribers.DeleteIfExists();
-
-			return new AzureEventStoreProvider(new DebugLogger(), ConnectionString).EnsureExists();
 		}
 
 		protected override bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder
@@ -41,14 +45,9 @@ namespace DomainCQRS.Test
 			get { return false; }
 		}
 
-		[TestInitialize]
-		public void Init()
+		protected override IConfigure RegisterProvider(IConfigure configure)
 		{
-		}
-
-		[TestCleanup]
-		public void Cleanup()
-		{
+			return configure.AzureEventStoreProvider(ConnectionString);
 		}
 	}
 }

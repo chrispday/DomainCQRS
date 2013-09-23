@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Runtime.InteropServices;
 using DomainCQRS.Common;
 using DomainCQRS.Provider;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
@@ -15,13 +16,14 @@ namespace DomainCQRS
 		public static IConfigure FileEventStoreProvider(this IConfigure configure, string directory) { return configure.FileEventStoreProvider(directory, DefaultEventStreamCacheCapacity, DefaultEventStreamBufferSize); }
 		public static IConfigure FileEventStoreProvider(this IConfigure configure, string directory, int eventStreamCacheCapacity, int eventStreamBufferSize)
 		{
-			var c = configure as Configure;
-			c.EventStoreProvider = new FileEventStoreProvider(
-				c.Logger, 
-				directory, 
-				eventStreamCacheCapacity, 
-				eventStreamBufferSize
-				).EnsureExists();
+			configure.Registry
+				.BuildInstancesOf<IEventStoreProvider>()
+				.TheDefaultIs(Registry.Instance<IEventStoreProvider>()
+					.UsingConcreteType<FileEventStoreProvider>()
+					.WithProperty("directory").EqualTo(directory)
+					.WithProperty("eventStreamCacheCapacity").EqualTo(eventStreamCacheCapacity)
+					.WithProperty("eventStreamBufferSize").EqualTo(eventStreamBufferSize))
+				.AsSingletons();
 			return configure;
 		}
 	}

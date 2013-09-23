@@ -11,23 +11,19 @@ namespace DomainCQRS
 
 		public static IConfigure SagaPublisher(this IConfigure configure)
 		{
-			var c = configure as Configure;
-
-			if (null == c.MessageReceiver)
-			{
-				throw new ArgumentNullException("MessageReceiver");
-			}
-			c.Subscribe<SagaPublisher>(SagaPublisherGuid, new SagaPublisher(
-				c.MessageReceiver
-				));
-
+			configure.Registry
+				.BuildInstancesOf<ISagaPublisher>()
+				.TheDefaultIsConcreteType<SagaPublisher>()
+				.AsSingletons();
 			return configure;
 		}
 
-		public static IConfigure Saga<Event>(this IConfigure configure)
+		public static IBuiltConfigure Saga<Event>(this IBuiltConfigure configure)
 		{
-			var c = configure as Configure;
-			c.EventPublisher.GetSubscriber<SagaPublisher>(SagaPublisherGuid).Saga<Event>();
+			configure.Subscribe<ISagaPublisher>(
+				SagaPublisherGuid,
+				configure.Container.CreateInstance<ISagaPublisher>()
+					.Saga<Event>());
 			return configure;
 		}
 	}

@@ -5,6 +5,7 @@ using System.Data.SqlTypes;
 using System.Text;
 using DomainCQRS.Common;
 using DomainCQRS.Provider;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
@@ -17,11 +18,12 @@ namespace DomainCQRS
 				throw new ArgumentNullException("connectionString");
 			}
 
-			var c = configure as Configure;
-			c.EventStoreProvider = new SqlServerEventStoreProvider(
-				c.Logger,
-				connectionString
-				).EnsureExists();
+			configure.Registry
+				.BuildInstancesOf<IEventStoreProvider>()
+				.TheDefaultIs(Registry.Instance<IEventStoreProvider>()
+					.UsingConcreteType<SqlServerEventStoreProvider>()
+					.WithProperty("connectionString").EqualTo(connectionString))
+				.AsSingletons();
 			return configure;
 		}
 	}

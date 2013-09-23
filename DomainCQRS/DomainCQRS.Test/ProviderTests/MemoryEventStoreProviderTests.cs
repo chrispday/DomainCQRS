@@ -33,5 +33,10 @@ namespace DomainCQRS.Test
 		public void Cleanup()
 		{
 		}
+
+		protected override IConfigure RegisterProvider(IConfigure configure)
+		{
+			return configure.MemoryEventStoreProvider();
+		}
 	}
 }

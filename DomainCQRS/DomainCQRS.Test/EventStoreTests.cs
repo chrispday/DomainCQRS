@@ -33,7 +33,8 @@ namespace DomainCQRS.Test
 				.DebugLogger()
 				.MemoryEventStoreProvider()
 				.EventStore()
-				.Upgrade<MockEvent, MockEvent2>()
+				.Build()
+					.Upgrade<MockEvent, MockEvent2>()
 				as Configure;
 		}
 

@@ -66,5 +66,10 @@ namespace DomainCQRS.Test
 				}
 			}
 		}
+
+		protected override IConfigure RegisterProvider(IConfigure configure)
+		{
+			return configure.SqlServerEventStoreProvider(ConnectionString);
+		}
 	}
 }

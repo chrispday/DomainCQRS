@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using System.Text;
 using DomainCQRS.Common;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
@@ -12,8 +13,11 @@ namespace DomainCQRS
 		public static IConfigure LRUAggregateRootCache(this IConfigure configure) { return configure.LRUAggregateRootCache(DefaultCacheSize); }
 		public static IConfigure LRUAggregateRootCache(this IConfigure configure, int capacity)
 		{
-			var c = configure as Configure;
-			c.AggregateRootCache = new LRUAggregateRootCache(capacity);
+			configure.Registry
+				.BuildInstancesOf<IAggregateRootCache>()
+				.TheDefaultIs(Registry.Instance<IAggregateRootCache>()
+					.UsingConcreteType<LRUAggregateRootCache>()
+					.WithProperty("capacity").EqualTo(capacity));
 			return configure;
 		}
 	}

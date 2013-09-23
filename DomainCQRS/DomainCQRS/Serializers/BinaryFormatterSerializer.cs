@@ -10,7 +10,9 @@ namespace DomainCQRS
 	{
 		public static IConfigure BinaryFormatterSerializer(this IConfigure configure)
 		{
-			(configure as Configure).EventSerializer = new BinaryFormatterSerializer();
+			configure.Registry
+				.BuildInstancesOf<IEventSerializer>()
+				.TheDefaultIsConcreteType<BinaryFormatterSerializer>();
 			return configure;
 		}
 	}

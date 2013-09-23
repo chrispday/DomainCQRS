@@ -8,6 +8,7 @@ using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Table;
 using DomainCQRS.Azure.Provider;
 using DomainCQRS.Common;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
@@ -15,11 +16,12 @@ namespace DomainCQRS
 	{
 		public static IConfigure AzureEventStoreProvider(this IConfigure configure, string connectionString)
 		{
-			var c = configure as Configure;
-			c.EventStoreProvider = new AzureEventStoreProvider(
-				c.Logger,
-				connectionString
-				).EnsureExists();
+			configure.Registry
+				.BuildInstancesOf<IEventStoreProvider>()
+				.TheDefaultIs(Registry.Instance<IEventStoreProvider>()
+					.UsingConcreteType<AzureEventStoreProvider>()
+					.WithProperty("connectionString").EqualTo(connectionString))
+				.AsSingletons();
 			return configure;
 		}
 	}

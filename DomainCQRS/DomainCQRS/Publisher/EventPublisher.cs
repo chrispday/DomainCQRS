@@ -3,41 +3,40 @@ using System.Collections.Generic;
 using System.Threading;
 
 using DomainCQRS.Common;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
-public static class EventPublisherConfigure
-{
-	public static int DefaultBatchSize = 10000;
-	public static TimeSpan DefaultPublishThreadSleep = TimeSpan.FromSeconds(1);
-	public static string DefaultSubscriberReceiveMethodName = "Receive";
-
-	public static IConfigure EventPublisher(this IConfigure configure) { return configure.EventPublisher(DefaultBatchSize); }
-	public static IConfigure EventPublisher(this IConfigure configure, int batchSize)
+	public static class EventPublisherConfigure
 	{
-		var c = configure as Configure;
-		c.EventPublisher = new EventPublisher(
-			c.Logger,
-			c.EventStore,
-			batchSize,
-			DefaultPublishThreadSleep,
-			DefaultSubscriberReceiveMethodName
-			);
-		return configure;
-	}
+		public static int DefaultBatchSize = 10000;
+		public static TimeSpan DefaultPublishThreadSleep = TimeSpan.FromSeconds(1);
+		public static string DefaultSubscriberReceiveMethodName = "Receive";
 
-		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId) { return Subscribe<Subscriber, object>(configure, subscriptionId); }
-		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriberReceiveMethodName); }
-		public static IConfigure Subscribe<Subscriber, Event>(this IConfigure configure, Guid subscriptionId) { return Subscribe<Subscriber, Event>(configure, subscriptionId, DefaultSubscriberReceiveMethodName); }
-		public static IConfigure Subscribe<Subscriber, Event>(this IConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, Event>(configure, subscriptionId, Activator.CreateInstance<Subscriber>(), subscriberReceiveMethodName); }
-
-		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriber); }
-		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriber, subscriberReceiveMethodName); }
-		public static IConfigure Subscribe<Subscriber, Event>(this IConfigure configure, Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, Event>(configure, subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
-		public static IConfigure Subscribe<Subscriber, Event>(this IConfigure configure, Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName)
+		public static IConfigure EventPublisher(this IConfigure configure) { return configure.EventPublisher(DefaultBatchSize); }
+		public static IConfigure EventPublisher(this IConfigure configure, int batchSize)
 		{
-			var c = configure as Configure;
-			c.EventPublisher.Subscribe<Subscriber, Event>(subscriptionId, subscriber, subscriberReceiveMethodName);
+			configure.Registry
+				.BuildInstancesOf<IEventPublisher>()
+				.TheDefaultIs(Registry.Instance<IEventPublisher>()
+					.UsingConcreteType<EventPublisher>()
+					.WithProperty("batchSize").EqualTo(batchSize)
+					.WithProperty("defaultPublishThreadSleep").EqualTo(DefaultPublishThreadSleep.Ticks)
+					.WithProperty("defaultSubscriberReceiveMethodName").EqualTo(DefaultSubscriberReceiveMethodName))
+				.AsSingletons();
+			return configure;
+		}
+
+		public static IBuiltConfigure Subscribe<Subscriber>(this IBuiltConfigure configure, Guid subscriptionId) { return Subscribe<Subscriber, object>(configure, subscriptionId); }
+		public static IBuiltConfigure Subscribe<Subscriber>(this IBuiltConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriberReceiveMethodName); }
+		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId) { return Subscribe<Subscriber, Event>(configure, subscriptionId, DefaultSubscriberReceiveMethodName); }
+		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, Event>(configure, subscriptionId, Activator.CreateInstance<Subscriber>(), subscriberReceiveMethodName); }
+		public static IBuiltConfigure Subscribe<Subscriber>(this IBuiltConfigure configure, Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriber); }
+		public static IBuiltConfigure Subscribe<Subscriber>(this IBuiltConfigure configure, Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriber, subscriberReceiveMethodName); }
+		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, Event>(configure, subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
+		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName)
+		{
+			configure.EventPublisher.Subscribe<Subscriber, Event>(subscriptionId, subscriber, subscriberReceiveMethodName);
 			return configure;
 		}
 	}
@@ -78,7 +77,7 @@ public static class EventPublisherConfigure
 		protected class SubscriberAndPosition
 		{
 			public object Subscriber;
-			public Dictionary<Type, Receive> Receives = new Dictionary<Type,Receive>();
+			public Dictionary<Type, Receive> Receives = new Dictionary<Type, Receive>();
 			public Receive ReceiveObject;
 			public IEventStoreProviderPosition Position;
 		}
@@ -88,7 +87,7 @@ public static class EventPublisherConfigure
 		private volatile bool _continuePublishing = true;
 		private AutoResetEvent _finishedPublishing = new AutoResetEvent(false);
 
-		public EventPublisher(ILogger logger, IEventStore eventStore, int batchSize, TimeSpan publishThreadSleep, string defaultSubscriberReceiveMethodName)
+		public EventPublisher(ILogger logger, IEventStore eventStore, int batchSize, long publishThreadSleep, string defaultSubscriberReceiveMethodName)
 		{
 			if (null == logger)
 			{
@@ -102,7 +101,7 @@ public static class EventPublisherConfigure
 			{
 				throw new ArgumentOutOfRangeException("batchSize");
 			}
-			if (0 >= publishThreadSleep.Ticks)
+			if (0 >= publishThreadSleep)
 			{
 				throw new ArgumentOutOfRangeException("publishThreadSleep");
 			}
@@ -114,7 +113,7 @@ public static class EventPublisherConfigure
 			_logger = logger;
 			_eventStore = eventStore;
 			_batchSize = batchSize;
-			_publishThreadSleep = publishThreadSleep;
+			_publishThreadSleep = TimeSpan.FromTicks(publishThreadSleep);
 			_defaultSubscriberReceiveMethodName = defaultSubscriberReceiveMethodName;
 		}
 

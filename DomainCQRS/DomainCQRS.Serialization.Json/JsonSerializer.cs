@@ -10,7 +10,9 @@ namespace DomainCQRS
 	{
 		public static IConfigure JsonSerializer(this IConfigure configure)
 		{
-			(configure as Configure).EventSerializer = new Serialization.JsonSerializer();
+			configure.Registry
+				.BuildInstancesOf<IEventSerializer>()
+				.TheDefaultIsConcreteType<Serialization.JsonSerializer>();
 			return configure;
 		}
 	}

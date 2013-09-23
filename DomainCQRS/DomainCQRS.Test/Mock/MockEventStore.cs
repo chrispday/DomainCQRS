@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using DomainCQRS.Common;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS.Test
 {
@@ -81,12 +82,12 @@ namespace DomainCQRS.Test
 	{
 		public static IConfigure MockEventStore2(this IConfigure config)
 		{
-			(config as Configure).EventStore = new MockEventStore2(
-				(config as Configure).Logger,
-				(config as Configure).EventStoreProvider,
-				(config as Configure).EventSerializer,
-				1024
-				);
+			config.Registry
+				.BuildInstancesOf<IEventStore>()
+				.TheDefaultIs(Registry.Instance<IEventStore>()
+					.UsingConcreteType<MockEventStore2>()
+					.WithProperty("defaultSerializationBufferSize").EqualTo(1024))
+				.AsSingletons();
 			return config;
 		}
 	}

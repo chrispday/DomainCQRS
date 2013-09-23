@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using DomainCQRS.Common;
 using DomainCQRS.Provider;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
@@ -15,14 +16,15 @@ namespace DomainCQRS
 		public static IConfigure PartitionedFileEventStoreProvider(this IConfigure configure, int maximumPartitions, string directory) { return configure.PartitionedFileEventStoreProvider(maximumPartitions, directory, DefaultEventStreamCacheCapacityPerPartition, DefaultEventStreamBufferSize); }
 		public static IConfigure PartitionedFileEventStoreProvider(this IConfigure configure, int maximumPartitions, string directory, int eventStreamCacheCapacityPerPartition, int eventStreamBufferSize)
 		{
-			var c = configure as Configure;
-			c.EventStoreProvider = new PartitionedFileEventStoreProvider(
-				c.Logger,
-				directory,
-				maximumPartitions,
-				eventStreamCacheCapacityPerPartition,
-				eventStreamBufferSize
-				).EnsureExists();
+			configure.Registry
+				.BuildInstancesOf<IEventStoreProvider>()
+				.TheDefaultIs(Registry.Instance<IEventStoreProvider>()
+					.UsingConcreteType<PartitionedFileEventStoreProvider>()
+					.WithProperty("directory").EqualTo(directory)
+					.WithProperty("maximumPartitions").EqualTo(maximumPartitions)
+					.WithProperty("eventStreamCacheCapacityPerPartition").EqualTo(eventStreamCacheCapacityPerPartition)
+					.WithProperty("eventStreamBufferSize").EqualTo(eventStreamBufferSize))
+				.AsSingletons();
 			return configure;
 		}
 	}

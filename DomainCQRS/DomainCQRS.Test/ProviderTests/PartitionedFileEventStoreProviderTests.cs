@@ -42,5 +42,10 @@ namespace DomainCQRS.Test
 				catch { }
 			}
 		}
+
+		protected override IConfigure RegisterProvider(IConfigure configure)
+		{
+			return configure.PartitionedFileEventStoreProvider(8, BaseDirectory);
+		}
 	}
 }

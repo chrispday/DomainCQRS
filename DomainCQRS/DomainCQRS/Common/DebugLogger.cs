@@ -4,6 +4,7 @@ using System.Diagnostics;
 
 using System.Text;
 using DomainCQRS.Common;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
@@ -12,8 +13,12 @@ namespace DomainCQRS
 		public static IConfigure DebugLogger(this IConfigure configure) { return configure.DebugLogger(false); }
 		public static IConfigure DebugLogger(this IConfigure configure, bool logVerbose)
 		{
-			var c = configure as Configure;
-			c.Logger = new DebugLogger() { LogVerbose = logVerbose };
+			configure.Registry
+				.BuildInstancesOf<ILogger>()
+				.TheDefaultIs(Registry.Instance<ILogger>()
+					.UsingConcreteType<DebugLogger>()
+					.WithProperty("LogVerbose").EqualTo(logVerbose))
+				.AsSingletons();
 			return configure;
 		}
 	}

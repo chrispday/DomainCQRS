@@ -26,8 +26,9 @@ namespace DomainCQRS.Test
 					.LRUAggregateRootCache(100)
 					.EventStore()
 					.MockEventPublisher(100, TimeSpan.FromSeconds(1))
-						.Subscribe<MockSubscriber>(subId)
 					.MessageReceiver()
+					.Build()
+						.Subscribe<MockSubscriber>(subId)
 						.Register<MockCommand, MockAggregateRoot>();
 
 				var publisher = (config as Configure).EventPublisher as MockEventPublisher;
@@ -53,9 +54,10 @@ namespace DomainCQRS.Test
 					.LRUAggregateRootCache(100)
 					.EventStore()
 					.MessageReceiver()
-					.Register<MockCommand, MockAggregateRoot>()
 					.MockEventPublisher(100, TimeSpan.FromSeconds(1))
-					.Subscribe<MockSubscriber>(subId);
+					.Build()
+						.Register<MockCommand, MockAggregateRoot>()
+						.Subscribe<MockSubscriber>(subId);
 
 				publisher = (config as Configure).EventPublisher as MockEventPublisher;
 				Assert.AreEqual(1, publisher.Subscribers.Count);

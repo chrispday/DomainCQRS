@@ -113,8 +113,9 @@ namespace DomainCQRS.Test
 				.EventStore()
 				.MessageReceiver()
 				.LRUAggregateRootCache()
-				.Register<MockCommand, MockAggregateRoot>()
-				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
+				.Build()
+					.Register<MockCommand, MockAggregateRoot>()
+					.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
 			//var serializer = new DataContractSerializer(typeof(object), new Type[] { typeof(MockCommand), typeof(MockEvent), typeof(MockCommand2) });
 			var random = new Random();
@@ -135,7 +136,7 @@ namespace DomainCQRS.Test
 
 			stopWatch.Stop();
 
-			var fileInfos = Directory.GetFiles(((configure as Configure).EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
+			var fileInfos = Directory.GetFiles(((configure as Configure).EventStore.EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
 			Debug.WriteLine("Time taken {0}", stopWatch.Elapsed);
 			Debug.WriteLine("Per sec {0:#,##0.0}", amount / stopWatch.Elapsed.TotalSeconds);
 			Debug.WriteLine("Files in Event Store {0}", fileInfos.Count());
@@ -158,8 +159,9 @@ namespace DomainCQRS.Test
 				.EventStore()
 				.MessageReceiver()
 				.LRUAggregateRootCache()
-				.Register<MockCommand, MockAggregateRoot>()
-				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
+				.Build()
+					.Register<MockCommand, MockAggregateRoot>()
+					.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
 			var random = new Random();
 
@@ -202,7 +204,7 @@ namespace DomainCQRS.Test
 				
 			stopWatch.Stop();
 
-			var fileInfos = Directory.GetFiles(((configure as Configure).EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
+			var fileInfos = Directory.GetFiles(((configure as Configure).EventStore.EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
 			Debug.WriteLine("Time taken {0}", stopWatch.Elapsed);
 			Debug.WriteLine("Per sec {0:#,##0.0}", amount / stopWatch.Elapsed.TotalSeconds);
 			Debug.WriteLine("Files in Event Store {0}", fileInfos.Count());
@@ -229,10 +231,11 @@ namespace DomainCQRS.Test
 				.EventStore()
 				.MessageReceiver()
 				.LRUAggregateRootCache()
-				.Register<MockCommand, MockAggregateRoot>()
-				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply")
 				.MockEventPublisher(10000, TimeSpan.FromSeconds(1))
-				.Subscribe<MockSubscriber>(Guid.NewGuid());
+				.Build()
+					.Register<MockCommand, MockAggregateRoot>()
+					.Register<MockCommand2, MockAggregateRoot>("Id", "Apply")
+					.Subscribe<MockSubscriber>(Guid.NewGuid());
 
 			var publisher = (configure as Configure).EventPublisher as MockEventPublisher;
 			Assert.AreEqual(1, publisher.Subscribers.Count);

@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
 using DomainCQRS.Common;
+using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
@@ -14,20 +15,18 @@ namespace DomainCQRS
 		public static IConfigure EventStore(this IConfigure configure) { return configure.EventStore(DefaultSerializationBufferSize); }
 		public static IConfigure EventStore(this IConfigure configure, int defaultSerializationBufferSize)
 		{
-			var c = configure as Configure;
-			c.EventStore = new EventStore(
-				c.Logger,
-				c.EventStoreProvider,
-				c.EventSerializer,
-				defaultSerializationBufferSize
-				);
+			configure.Registry
+				.BuildInstancesOf<IEventStore>()
+				.TheDefaultIs(Registry.Instance<IEventStore>()
+					.UsingConcreteType<EventStore>()
+					.WithProperty("defaultSerializationBufferSize").EqualTo(defaultSerializationBufferSize))
+				.AsSingletons();
 			return configure;
 		}
 
-		public static IConfigure Upgrade<Event, UpgradedEvent>(this IConfigure configure)
+		public static IBuiltConfigure Upgrade<Event, UpgradedEvent>(this IBuiltConfigure configure)
 		{
-			var c = configure as Configure;
-			c.EventStore.Upgrade<Event, UpgradedEvent>();
+			configure.EventStore.Upgrade<Event, UpgradedEvent>();
 			return configure;
 		}
 	}

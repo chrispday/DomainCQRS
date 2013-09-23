@@ -25,16 +25,17 @@ namespace DomainCQRS.Test
 				.LRUAggregateRootCache()
 				.EventStore()
 				.MessageReceiver()
+				.Build()
 					.Register<MockCommand, MockAggregateRoot>()
 					.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
 				var id = Guid.NewGuid();
 
-				config.GetMessageReceiver
+				config.MessageReceiver
 					.Receive(new MockCommand() { AggregateRootId = id, Increment = 1 })
 					.Receive(new MockCommand2() { Id = id, Increment = 2 });
 
-				var storedEvents = config.GetMessageReceiver.EventStore.Load(id, null, null, null, null).ToList();
+				var storedEvents = config.MessageReceiver.EventStore.Load(id, null, null, null, null).ToList();
 				Assert.AreEqual(2, storedEvents.Count);
 				Assert.IsInstanceOfType(storedEvents[0].Event, typeof(MockEvent));
 				Assert.AreEqual(1, ((MockEvent)storedEvents[0].Event).Increment);

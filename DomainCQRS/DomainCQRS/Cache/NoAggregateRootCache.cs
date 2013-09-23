@@ -9,8 +9,9 @@ namespace DomainCQRS
 	{
 		public static IConfigure NoAggregateRootCache(this IConfigure configure)
 		{
-			var c = configure as Configure;
-			c.AggregateRootCache = new NoAggregateRootCache();
+			configure.Registry
+				.BuildInstancesOf<IAggregateRootCache>()
+				.TheDefaultIsConcreteType<NoAggregateRootCache>();
 			return configure;
 		}
 	}

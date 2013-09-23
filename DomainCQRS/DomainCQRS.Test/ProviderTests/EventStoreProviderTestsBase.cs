@@ -11,6 +11,7 @@ namespace DomainCQRS.Test
 {
 	public abstract class EventStoreProviderTestsBase
 	{
+		protected abstract IConfigure RegisterProvider(IConfigure configure);
 		protected abstract IEventStoreProvider CreateProvider();
 		protected abstract bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder { get; }
 
@@ -109,8 +110,9 @@ namespace DomainCQRS.Test
 		{
 			try
 			{
-				var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Timestamp = DateTime.Now, EventType = typeof(byte[]).FullName, Data = new byte[] { 1, 2, 3 } };
 				var provider = CreateProvider().EnsureExists();
+
+				var EventToStore = new EventToStore() { AggregateRootId = Guid.NewGuid(), Version = 1, Timestamp = DateTime.Now, EventType = typeof(byte[]).FullName, Data = new byte[] { 1, 2, 3 } };
 				var EventToStore3 = new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 3, Timestamp = DateTime.Now, EventType = typeof(byte[]).FullName, Data = new byte[] { 1, 3, 5 } };
 				provider.Save(EventToStore3);
 				var EventToStore2 = new EventToStore() { AggregateRootId = EventToStore.AggregateRootId, Version = 2, Timestamp = DateTime.Now, EventType = typeof(byte[]).FullName, Data = new byte[] { 4, 5, 6, 7 } };
@@ -308,17 +310,16 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void EventPublisher_Subscribe()
 		{
-			var provider = CreateProvider().EnsureExists();
-			var config = Configure.With();
-			(config as Configure).EventStoreProvider = provider;
-			config.DebugLogger(true)
-			.BinaryFormatterSerializer()
-			.LRUAggregateRootCache(100)
-			.EventStore()
-			.MockEventPublisher(100, TimeSpan.FromSeconds(1))
-				.Subscribe<MockSubscriber>(Guid.NewGuid())
-			.MessageReceiver()
-				.Register<MockCommand, MockAggregateRoot>();
+			var config = RegisterProvider(Configure.With())
+				.DebugLogger(true)
+				.BinaryFormatterSerializer()
+				.LRUAggregateRootCache(100)
+				.EventStore()
+				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
+				.MessageReceiver()
+				.Build()
+					.Subscribe<MockSubscriber>(Guid.NewGuid())
+					.Register<MockCommand, MockAggregateRoot>();
 
 			var publisher = (config as Configure).EventPublisher as MockEventPublisher;
 			Assert.AreEqual(1, publisher.Subscribers.Count);
@@ -338,18 +339,17 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void EventPublisher_Subscribe_Synchro()
 		{
-			var provider = CreateProvider().EnsureExists();
-			var config = Configure.With();
-			(config as Configure).EventStoreProvider = provider;
-			config.DebugLogger(true)
-			.BinaryFormatterSerializer()
-			.LRUAggregateRootCache(100)
+			var config = RegisterProvider(Configure.With())
+				.DebugLogger(true)
+				.BinaryFormatterSerializer()
+				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
-					.Subscribe<MockSubscriber>(Guid.NewGuid())
 				.MessageReceiver()
-					.Register<MockCommand, MockAggregateRoot>()
-				.Synchrounous();
+				.Synchrounous()
+				.Build()
+					.Subscribe<MockSubscriber>(Guid.NewGuid())
+					.Register<MockCommand, MockAggregateRoot>();
 
 			var publisher = (config as Configure).EventPublisher as MockEventPublisher;
 			Assert.AreEqual(1, publisher.Subscribers.Count);
@@ -368,17 +368,16 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void EventPublisher_Subscribe_MultipleBatches()
 		{
-			var provider = CreateProvider().EnsureExists();
-			var config = Configure.With();
-			(config as Configure).EventStoreProvider = provider;
-			config.DebugLogger(true)
-			.BinaryFormatterSerializer()
-		.LRUAggregateRootCache(100)
-			.MockEventStore2()
-			.MockEventPublisher(2, TimeSpan.FromSeconds(1))
-				.Subscribe<MockSubscriber>(Guid.NewGuid())
-			.MessageReceiver()
-				.Register<MockCommand, MockAggregateRoot>();
+			var config = RegisterProvider(Configure.With())
+				.DebugLogger(true)
+				.BinaryFormatterSerializer()
+				.LRUAggregateRootCache(100)
+				.MockEventStore2()
+				.MockEventPublisher(2, TimeSpan.FromSeconds(1))
+				.MessageReceiver()
+				.Build()
+					.Subscribe<MockSubscriber>(Guid.NewGuid())
+					.Register<MockCommand, MockAggregateRoot>();
 
 
 			var publisher = (config as Configure).EventPublisher as MockEventPublisher;
@@ -413,20 +412,19 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void EventPublisher_Subscribe_MultipleSubscribers()
 		{
-			var provider = CreateProvider().EnsureExists();
-			var config = Configure.With();
-			(config as Configure).EventStoreProvider = provider;
-			config.DebugLogger(true)
+			var config = RegisterProvider(Configure.With())
+				.DebugLogger(true)
 				.BinaryFormatterSerializer()
 				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MessageReceiver()
-					.Register<MockCommand, MockAggregateRoot>()
 				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
+				.Build()
+					.Register<MockCommand, MockAggregateRoot>()
 					.Subscribe<MockSubscriber>(Guid.NewGuid());
 
 			var publisher = (config as Configure).EventPublisher as MockEventPublisher;
-			var logger = (config as Configure).Logger;
+			var logger = publisher.Logger;
 			Assert.AreEqual(1, publisher.Subscribers.Count);
 			var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
 			subscriber.SignalOnCount = 5;
@@ -481,22 +479,21 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void EventPublisher_Subscribe_MultipleSubscribers_Synchro()
 		{
-			var provider = CreateProvider().EnsureExists();
-			var config = Configure.With();
-			(config as Configure).EventStoreProvider = provider;
-			config.DebugLogger(true)
-			.BinaryFormatterSerializer()
-		.LRUAggregateRootCache(100)
-			.EventStore()
-			.MockEventPublisher(100, TimeSpan.FromSeconds(1))
-				.Subscribe<MockSubscriber>(Guid.NewGuid())
-				.Subscribe<MockSubscriber>(Guid.NewGuid())
-			.MessageReceiver()
-				.Register<MockCommand, MockAggregateRoot>()
-			.Synchrounous();
+			var config = RegisterProvider(Configure.With())
+				.DebugLogger(true)
+				.BinaryFormatterSerializer()
+				.LRUAggregateRootCache(100)
+				.EventStore()
+				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
+				.MessageReceiver()
+				.Synchrounous()
+				.Build()
+					.Subscribe<MockSubscriber>(Guid.NewGuid())
+					.Subscribe<MockSubscriber>(Guid.NewGuid())
+					.Register<MockCommand, MockAggregateRoot>();
 
-			var publisher = (config as Configure).EventPublisher as MockEventPublisher;
-			var logger = (config as Configure).Logger;
+			var publisher = config.EventPublisher as MockEventPublisher;
+			var logger = publisher.Logger;
 			Assert.AreEqual(2, publisher.Subscribers.Count);
 			var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
 
@@ -539,18 +536,17 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void SagaTest_Saga()
 		{
-			var provider = CreateProvider().EnsureExists();
-			var config = Configure.With();
-			(config as Configure).EventStoreProvider = provider;
-			config.DebugLogger(true)
+			var config = RegisterProvider(Configure.With())
+				.DebugLogger(true)
 				.BinaryFormatterSerializer()
 				.EventStore()
 				.NoAggregateRootCache()
 				.MessageReceiver()
-					.Register<MockSagaCommand, MockSagaAggregateRoot>()
-					.Register<MockSagaEvent, MockSaga>()
 				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
 				.SagaPublisher()
+				.Build()
+					.Register<MockSagaCommand, MockSagaAggregateRoot>()
+					.Register<MockSagaEvent, MockSaga>()
 					.Saga<MockSagaEvent>();
 			try
 			{
@@ -560,20 +556,20 @@ namespace DomainCQRS.Test
 				MockSaga.SignalOnEventsHandled = 2;
 
 				Guid aggregateRootId = Guid.NewGuid();
-				config.GetMessageReceiver.Receive(new MockSagaCommand() { AggregateRootId = aggregateRootId, Message = "1" });
-				config.GetMessageReceiver.Receive(new MockSagaCommand() { AggregateRootId = aggregateRootId, Message = "2" });
+				config.MessageReceiver.Receive(new MockSagaCommand() { AggregateRootId = aggregateRootId, Message = "1" });
+				config.MessageReceiver.Receive(new MockSagaCommand() { AggregateRootId = aggregateRootId, Message = "2" });
 
 				MockSaga.Signal.WaitOne(60000);
 				Thread.Sleep(1000);
 
-				var events = config.GetMessageReceiver.EventStore.Load(aggregateRootId, null, null, null, null).ToList();
+				var events = config.MessageReceiver.EventStore.Load(aggregateRootId, null, null, null, null).ToList();
 				Assert.AreEqual(2, events.Count);
 				Assert.AreEqual("1", (events[0].Event as MockSagaEvent).Message);
 				var sagaId = (events[0].Event as MockSagaEvent).AggregateRootId;
 				Assert.AreEqual("2", (events[1].Event as MockSagaEvent).Message);
 				Assert.AreEqual(sagaId, (events[1].Event as MockSagaEvent).AggregateRootId);
 
-				events = config.GetMessageReceiver.EventStore.Load(sagaId, null, null, null, null).ToList();
+				events = config.MessageReceiver.EventStore.Load(sagaId, null, null, null, null).ToList();
 				Assert.AreEqual(2, events.Count);
 				Assert.AreEqual("Saga 1", (events[0].Event as MockSagaEvent2).Message);
 				Assert.AreEqual("Saga 2", (events[1].Event as MockSagaEvent2).Message);
