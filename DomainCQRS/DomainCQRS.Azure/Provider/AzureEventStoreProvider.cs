@@ -7,6 +7,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Table;
 using DomainCQRS.Azure.Provider;
+using DomainCQRS.Common;
 
 namespace DomainCQRS
 {
@@ -15,7 +16,10 @@ namespace DomainCQRS
 		public static IConfigure AzureEventStoreProvider(this IConfigure configure, string connectionString)
 		{
 			var c = configure as Configure;
-			c.EventStoreProvider = new AzureEventStoreProvider() { ConnectionString = connectionString, Logger = c.Logger }.EnsureExists();
+			c.EventStoreProvider = new AzureEventStoreProvider(
+				c.Logger,
+				connectionString
+				).EnsureExists();
 			return configure;
 		}
 	}
@@ -25,8 +29,11 @@ namespace DomainCQRS.Azure.Provider
 {
 	public class AzureEventStoreProvider : IEventStoreProvider
 	{
-		public Common.ILogger Logger { get; set; }
-		public string ConnectionString { get; set; }
+		private readonly ILogger _logger;
+		public ILogger Logger { get { return _logger; } }
+		private readonly string _connectionString;
+		public string ConnectionString { get { return _connectionString; } }
+
 		private static readonly string EventTable = "Event";
 		private static readonly string AggregateRootIdsTable = "AggregateRootIds";
 		private static readonly string SubscriberTable = "Subscriber";
@@ -38,6 +45,21 @@ namespace DomainCQRS.Azure.Provider
 		private CloudTable _subscribers;
 		private static readonly int MaximumPropertySize = 64 * 1024 * 1024;
 		private static readonly string RowKeyFormat = "D12";
+
+		public AzureEventStoreProvider(ILogger logger, string connectionString)
+		{
+			if (null == logger)
+			{
+				throw new ArgumentNullException("logger");
+			}
+			if (null == connectionString)
+			{
+				throw new ArgumentNullException("connectionString");
+			}
+
+			_logger = logger;
+			_connectionString = connectionString;
+		}
 
 		public IEventStoreProvider EnsureExists()
 		{

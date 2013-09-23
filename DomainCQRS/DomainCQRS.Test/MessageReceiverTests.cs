@@ -15,7 +15,8 @@ namespace DomainCQRS.Test
 		[ClassInitialize]
 		public static void ClassInit(TestContext ctx)
 		{
-			EventStore = new EventStore() { EventSerializer = new BinaryFormatterSerializer(), EventStoreProvider = new MemoryEventStoreProvider() { Logger = new DebugLogger() }.EnsureExists() };
+			var logger = new DebugLogger();
+			EventStore = new EventStore(logger, new MemoryEventStoreProvider(logger).EnsureExists(), new BinaryFormatterSerializer(), 8096);
 		}
 
 		[ClassCleanup]
@@ -27,7 +28,7 @@ namespace DomainCQRS.Test
 		public void MessageReceiver_Receive()
 		{
 			var eventStore = new MockEventStore();
-			var MessageReceiver = new MessageReceiver() { EventStore = eventStore, AggregateRootCache = new LRUAggregateRootCache(1000), Logger = new DebugLogger() }.Register<MockCommand, MockAggregateRoot>();
+			var MessageReceiver = new MessageReceiver(new DebugLogger(), eventStore, new LRUAggregateRootCache(100), "AggregateRootId", "Apply").Register<MockCommand, MockAggregateRoot>();
 			var command = new MockCommand() { AggregateRootId = Guid.NewGuid(), Increment = 1 };
 			MessageReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
@@ -40,7 +41,7 @@ namespace DomainCQRS.Test
 		public void MessageReceiver_Receive_CustomNames_NotICommand()
 		{
 			var eventStore = new MockEventStore();
-			var MessageReceiver = new MessageReceiver() { EventStore = eventStore, DefaultAggregateRootIdProperty = "Id", AggregateRootCache = new LRUAggregateRootCache(1000), Logger = new DebugLogger() }.Register<MockCommand2, MockAggregateRoot>();
+			var MessageReceiver = new MessageReceiver(new DebugLogger(), eventStore, new LRUAggregateRootCache(100), "Id", "Apply").Register<MockCommand2, MockAggregateRoot>();
 			var command = new MockCommand2() { Id = Guid.NewGuid(), Increment = 0 };
 			MessageReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
@@ -52,7 +53,7 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void MessageReceiver_Receive2Commands()
 		{
-			var MessageReceiver = new MessageReceiver() { EventStore = EventStore, AggregateRootCache = new LRUAggregateRootCache(1000), Logger = new DebugLogger() }
+			var MessageReceiver = new MessageReceiver(new DebugLogger(), EventStore, new LRUAggregateRootCache(100), "AggregateRootId", "Apply")
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
@@ -73,7 +74,7 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void MessageReceiver_Receive3Aggregates3Commands()
 		{
-			var MessageReceiver = new MessageReceiver() { EventStore = EventStore, AggregateRootCache = new LRUAggregateRootCache(1000), Logger = new DebugLogger() }
+			var MessageReceiver = new MessageReceiver(new DebugLogger(), EventStore, new LRUAggregateRootCache(100), "AggregateRootId", "Apply")
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 

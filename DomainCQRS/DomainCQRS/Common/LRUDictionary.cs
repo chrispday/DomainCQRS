@@ -12,18 +12,18 @@ namespace DomainCQRS.Common
 
 		private int _capacity;
 		public int Capacity { get { return _capacity; } }
-		private class LValue<TKey, TValue>
+		private class LValue<TTKey, TTValue>
 		{
-			public TKey Key;
-			public TValue Value;
+			public TTKey Key;
+			public TTValue Value;
 			public bool Deleted;
 		}
-		private class DValue<TValue>
+		private class DValue<TTKey, TTValue>
 		{
-			public TValue Value;
-			public LinkedListNode<LValue<TKey, TValue>> Node;
+			public TTValue Value;
+			public LinkedListNode<LValue<TTKey, TTValue>> Node;
 		}
-		private Dictionary<TKey, DValue<TValue>> _dictionary;
+		private Dictionary<TKey, DValue<TKey, TValue>> _dictionary;
 		private LinkedList<LValue<TKey, TValue>> _linkedList;
 
 		public LRUDictionary(int capacity)
@@ -34,25 +34,25 @@ namespace DomainCQRS.Common
 			}
 
 			_capacity = capacity;
-			_dictionary = new Dictionary<TKey, DValue<TValue>>(capacity);
+			_dictionary = new Dictionary<TKey, DValue<TKey, TValue>>(capacity);
 			_linkedList = new LinkedList<LValue<TKey, TValue>>();
 		}
 
 		private void _Add(TKey key, TValue value, bool throwIfContains)
 		{
-			DValue<TValue> dValue;
+			DValue<TKey, TValue> dValue;
 			lock (_dictionary)
 			{
 				if (throwIfContains)
 				{
-					dValue = new DValue<TValue>() { Value = value };
+					dValue = new DValue<TKey, TValue>() { Value = value };
 					_dictionary.Add(key, dValue);
 				}
 				else
 				{
 					if (!_dictionary.TryGetValue(key, out dValue))
 					{
-						dValue = new DValue<TValue>() { Value = value };
+						dValue = new DValue<TKey, TValue>() { Value = value };
 					}
 					_dictionary[key] = dValue;
 				}
@@ -64,7 +64,7 @@ namespace DomainCQRS.Common
 		private bool _Remove(TKey key)
 		{
 			bool b = false;
-			DValue<TValue> value;
+			DValue<TKey, TValue> value;
 			lock (_dictionary)
 			{
 				_dictionary.TryGetValue(key, out value);
@@ -81,7 +81,7 @@ namespace DomainCQRS.Common
 		{
 			value = default(TValue);
 
-			DValue<TValue> dValue;
+			DValue<TKey, TValue> dValue;
 			if (_dictionary.TryGetValue(key, out dValue))
 			{
 				value = dValue.Value;
@@ -117,7 +117,7 @@ namespace DomainCQRS.Common
 			}
 		}
 
-		private void UpdateLRU(TKey key, DValue<TValue> dValue)
+		private void UpdateLRU(TKey key, DValue<TKey, TValue> dValue)
 		{
 			lock (dValue)
 			{

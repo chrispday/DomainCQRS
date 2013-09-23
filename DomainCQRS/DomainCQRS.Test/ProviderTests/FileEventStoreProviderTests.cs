@@ -16,7 +16,7 @@ namespace DomainCQRS.Test
 
 		protected override IEventStoreProvider CreateProvider()
 		{
-			return new FileEventStoreProvider() { Directory = BaseDirectory, Logger = new DebugLogger() };
+			return new FileEventStoreProvider(new DebugLogger(), BaseDirectory, 1000, 8096);
 		}
 
 		protected override bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder

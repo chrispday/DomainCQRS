@@ -7,7 +7,7 @@ namespace DomainCQRS
 {
 	public interface ISagaPublisher : IEventProjector<object>
 	{
-		IMessageReceiver MessageReceiver { get; set; }
+		IMessageReceiver MessageReceiver { get; }
 		ISagaPublisher Saga<Event>();
 	}
 }

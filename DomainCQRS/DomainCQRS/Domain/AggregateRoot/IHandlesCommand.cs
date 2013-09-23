@@ -7,7 +7,15 @@ using System.Text;
 namespace DomainCQRS.Domain
 {
 	public interface IHandlesCommand<C>
+		where C : ICommand
 	{
-		IEnumerable Apply(C command);
+		IEnumerable<IEvent> Apply(C command);
+	}
+
+	public interface IHandlesCommand<C, E>
+		where C : ICommand
+		where E : IEvent
+	{
+		E Apply(C command);
 	}
 }

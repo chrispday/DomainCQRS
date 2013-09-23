@@ -8,13 +8,13 @@ namespace DomainCQRS
 {
 	public interface IMessageReceiver
 	{
-		ILogger Logger { get; set; }
-		IEventStore EventStore { get; set; }
-		IAggregateRootCache AggregateRootCache { get; set; }
+		ILogger Logger { get; }
+		IEventStore EventStore { get; }
+		IAggregateRootCache AggregateRootCache { get; }
+		string DefaultAggregateRootIdProperty { get; }
+		string DefaultAggregateRootApplyMethod { get; }
 		bool Synchronous { get; set; }
 		IEventPublisher EventPublisher { get; set; }
-		string DefaultAggregateRootIdProperty { get; set; }
-		string DefaultAggregateRootApplyMethod { get; set; }
 
 		IMessageReceiver Receive(object message);
 		IMessageReceiver Register<Message, AggregateRoot>();

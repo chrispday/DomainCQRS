@@ -17,12 +17,12 @@ namespace DomainCQRS
 
 	public class BinaryFormatterSerializer : IEventSerializer
 	{
+		private readonly BinaryFormatter _formatter;
+		private BinaryFormatter Formatter { get { return _formatter; } }
 		public BinaryFormatterSerializer()
 		{
-			Formatter = new BinaryFormatter();
+			_formatter = new BinaryFormatter();
 		}
-
-		public BinaryFormatter Formatter { get; set; }
 
 		public T Deserialize<T>(System.IO.Stream serializationStream)
 		{

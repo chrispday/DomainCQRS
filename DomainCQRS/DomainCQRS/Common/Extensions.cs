@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 
@@ -25,6 +26,26 @@ namespace DomainCQRS
 		{
 			object[] pars = (object[]) par;
 			((Action<T>)pars[0])((T)pars[1]);
+		}
+
+		public static MethodInfo GetMethod(this Type type, string methodName, Type[] types, bool checkForExplicit)
+		{
+			var method = type.GetMethod(methodName, types);
+
+			if (checkForExplicit
+				&& null == method)
+			{
+				foreach (var iface in type.GetInterfaces())
+				{
+					method = iface.GetMethod(methodName, types);
+					if (null != method)
+					{
+						break;
+					}
+				}
+			}
+
+			return method;
 		}
 	}
 }

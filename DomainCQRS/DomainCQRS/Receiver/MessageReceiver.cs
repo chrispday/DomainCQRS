@@ -16,15 +16,13 @@ namespace DomainCQRS
 		public static IConfigure MessageReceiver(this IConfigure configure, string defaultAggregateRootIdProperty, string defaultAggregateRootApplyMethod)
 		{
 			var c = configure as Configure;
-			c.MessageReceiver = new MessageReceiver()
-			{
-				Logger = c.Logger, 
-				EventStore = c.EventStore, 
-				AggregateRootCache = c.AggregateRootCache, 
-				DefaultAggregateRootIdProperty = defaultAggregateRootIdProperty,
-				DefaultAggregateRootApplyMethod = defaultAggregateRootApplyMethod,
-				EventPublisher = c.EventPublisher
-			};
+			c.MessageReceiver = new MessageReceiver(
+				c.Logger,
+				c.EventStore,
+				c.AggregateRootCache,
+				defaultAggregateRootIdProperty,
+				defaultAggregateRootApplyMethod
+				);
 			return configure;
 		}
 
@@ -46,18 +44,47 @@ namespace DomainCQRS
 
 	public class MessageReceiver : IMessageReceiver
 	{
-		public ILogger Logger { get; set; }
-		public IEventStore EventStore { get; set; }
-		public IAggregateRootCache AggregateRootCache { get; set; }
-		public string DefaultAggregateRootIdProperty { get; set; }
-		public string DefaultAggregateRootApplyMethod { get; set; }
+		private readonly ILogger _logger;
+		public ILogger Logger { get { return _logger; } }
+		private readonly IEventStore _eventStore;
+		public IEventStore EventStore { get { return _eventStore; } }
+		private readonly IAggregateRootCache _aggregateRootCache;
+		public IAggregateRootCache AggregateRootCache { get { return _aggregateRootCache; } }
+		private readonly string _defaultAggregateRootIdProperty;
+		public string DefaultAggregateRootIdProperty { get { return _defaultAggregateRootIdProperty; } }
+		private readonly string _defaultAggregateRootApplyMethod;
+		public string DefaultAggregateRootApplyMethod { get { return _defaultAggregateRootApplyMethod; } }
 		public bool Synchronous { get; set; }
 		public IEventPublisher EventPublisher { get; set; }
 
-		public MessageReceiver()
+		public MessageReceiver(ILogger logger, IEventStore eventStore, IAggregateRootCache aggregateRootCache, string defaultAggregateRootIdProperty, string defaultAggregateRootApplyMethod)
 		{
-			DefaultAggregateRootIdProperty = MessageReceiverConfigure.DefaultAggregateRootIdProperty;
-			DefaultAggregateRootApplyMethod = MessageReceiverConfigure.DefaultAggregateRootApplyMethod;
+			if (null == logger)
+			{
+				throw new ArgumentNullException("logger");
+			}
+			if (null == eventStore)
+			{
+				throw new ArgumentNullException("eventStore");
+			}
+			if (null == aggregateRootCache)
+			{
+				throw new ArgumentNullException("aggregateRootCache");
+			}
+			if (null == defaultAggregateRootIdProperty)
+			{
+				throw new ArgumentNullException("defaultAggregateRootIdProperty");
+			}
+			if (null == defaultAggregateRootApplyMethod)
+			{
+				throw new ArgumentNullException("defaultAggregateRootApplyMethod");
+			}
+
+			_logger = logger;
+			_eventStore = eventStore;
+			_aggregateRootCache = aggregateRootCache;
+			_defaultAggregateRootIdProperty = defaultAggregateRootIdProperty;
+			_defaultAggregateRootApplyMethod = defaultAggregateRootApplyMethod;
 		}
 
 		public IMessageReceiver Receive(object message)
@@ -291,7 +318,7 @@ namespace DomainCQRS
 				throw new RegistrationException(string.Format("{0} does not have an empty constructor.", aggregateRootType.Name));
 			}
 
-			var applyMethod = aggregateRootType.GetMethod(aggregateRootApplyMethod, new Type[] { messageType });
+			var applyMethod = aggregateRootType.GetMethod(aggregateRootApplyMethod, new Type[] { messageType }, true);
 			if (null == applyMethod)
 			{
 				throw new RegistrationException();

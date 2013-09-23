@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-
 using System.Text;
+using DomainCQRS.Common;
 using DomainCQRS.Provider;
 
 namespace DomainCQRS
@@ -16,14 +16,13 @@ namespace DomainCQRS
 		public static IConfigure PartitionedFileEventStoreProvider(this IConfigure configure, int maximumPartitions, string directory, int eventStreamCacheCapacityPerPartition, int eventStreamBufferSize)
 		{
 			var c = configure as Configure;
-			c.EventStoreProvider = new PartitionedFileEventStoreProvider()
-			{
-				MaximumPartitions = maximumPartitions, 
-				Directory = directory,
-				Logger = c.Logger,
-				EventStreamCacheCapacityPerPartition = eventStreamCacheCapacityPerPartition,
-				EventStreamBufferSize = eventStreamBufferSize
-			}.EnsureExists();
+			c.EventStoreProvider = new PartitionedFileEventStoreProvider(
+				c.Logger,
+				directory,
+				maximumPartitions,
+				eventStreamCacheCapacityPerPartition,
+				eventStreamBufferSize
+				).EnsureExists();
 			return configure;
 		}
 	}
@@ -33,17 +32,47 @@ namespace DomainCQRS.Provider
 {
 	public class PartitionedFileEventStoreProvider : IPartitionedEventStoreProvider
 	{
-		public int MaximumPartitions { get; set; }
-		public Common.ILogger Logger { get; set; }
-		public string Directory { get; set; }
-		public int EventStreamCacheCapacityPerPartition { get; set; }
-		public int EventStreamBufferSize { get; set; }
+		private readonly string _directory;
+		public string Directory { get { return _directory; } }
+		private readonly int _eventStreamCacheCapacityPerPartition;
+		public int EventStreamCacheCapacityPerPartition { get { return _eventStreamCacheCapacityPerPartition; } }
+		private readonly int _eventStreamBufferSize;
+		public int EventStreamBufferSize { get { return _eventStreamBufferSize; } }
+		private readonly ILogger _logger;
+		public ILogger Logger { get { return _logger; } }
+		private readonly int _maximumPartitions;
+		public int MaximumPartitions { get { return _maximumPartitions; } }
+
 		private FileEventStoreProvider[] _fileEventStoreProviders;
 
-		public PartitionedFileEventStoreProvider()
+		public PartitionedFileEventStoreProvider(ILogger logger, string directory, int maximumPartitions, int eventStreamCacheCapacityPerPartition, int eventStreamBufferSize)
 		{
-			EventStreamCacheCapacityPerPartition = PartitionedFileEventStoreProviderConfigure.DefaultEventStreamCacheCapacityPerPartition;
-			EventStreamBufferSize = PartitionedFileEventStoreProviderConfigure.DefaultEventStreamBufferSize;
+			if (null == logger)
+			{
+				throw new ArgumentNullException("logger");
+			}
+			if (null == directory)
+			{
+				throw new ArgumentNullException("directory");
+			}
+			if (0 >= maximumPartitions)
+			{
+				throw new ArgumentOutOfRangeException("maximumPartitions");
+			}
+			if (0 >= eventStreamCacheCapacityPerPartition)
+			{
+				throw new ArgumentOutOfRangeException("eventStreamCacheCapacityPerPartition");
+			}
+			if (0 >= eventStreamBufferSize)
+			{
+				throw new ArgumentOutOfRangeException("eventStreamBufferSize");
+			}
+
+			_logger = logger;
+			_directory = directory;
+			_maximumPartitions = maximumPartitions;
+			_eventStreamCacheCapacityPerPartition = eventStreamCacheCapacityPerPartition;
+			_eventStreamBufferSize = eventStreamBufferSize;
 		}
 
 		public IEventStoreProvider EnsureExists()
@@ -61,13 +90,12 @@ namespace DomainCQRS.Provider
 			_fileEventStoreProviders = new FileEventStoreProvider[MaximumPartitions];
 			for (int i = 0; i < MaximumPartitions; i++)
 			{
-				_fileEventStoreProviders[i] = new FileEventStoreProvider()
-				{
-					Logger = Logger,
-					Directory = Path.Combine(Directory, i.ToString()),
-					EventStreamBufferSize = EventStreamBufferSize,
-					EventStreamCacheCapacity = EventStreamCacheCapacityPerPartition
-				}.EnsureExists() as FileEventStoreProvider;
+				_fileEventStoreProviders[i] = new FileEventStoreProvider(
+					Logger,
+					Path.Combine(Directory, i.ToString()),
+					EventStreamCacheCapacityPerPartition,
+					EventStreamBufferSize
+					).EnsureExists() as FileEventStoreProvider;
 			}
 
 			return this;

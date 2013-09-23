@@ -8,9 +8,9 @@ namespace DomainCQRS
 {
 	public interface IEventStore
 	{
-		ILogger Logger { get; set; }
-		IEventStoreProvider EventStoreProvider { get; set; }
-		IEventSerializer EventSerializer { get; set; }
+		ILogger Logger { get; }
+		IEventStoreProvider EventStoreProvider { get; }
+		IEventSerializer EventSerializer { get; }
 
 		// Messages
 		IEventStore Save(Guid aggregateRootId, int version, object data);

@@ -14,13 +14,13 @@ namespace DomainCQRS
 		public static IConfigure EventStore(this IConfigure configure) { return configure.EventStore(DefaultSerializationBufferSize); }
 		public static IConfigure EventStore(this IConfigure configure, int defaultSerializationBufferSize)
 		{
-			if (1 > defaultSerializationBufferSize)
-			{
-				throw new ArgumentOutOfRangeException("defaultSerializationBufferSize", defaultSerializationBufferSize, "defaultSerializationBufferSize cannot be less than 1.");
-			}
-
 			var c = configure as Configure;
-			c.EventStore = new EventStore() { EventSerializer = c.EventSerializer, EventStoreProvider = c.EventStoreProvider, Logger = c.Logger, DefaultSerializationBufferSize = defaultSerializationBufferSize };
+			c.EventStore = new EventStore(
+				c.Logger,
+				c.EventStoreProvider,
+				c.EventSerializer,
+				defaultSerializationBufferSize
+				);
 			return configure;
 		}
 
@@ -36,28 +36,41 @@ namespace DomainCQRS
 
 	public class EventStore : IEventStore
 	{
-		public ILogger Logger { get; set; }
-		public IEventSerializer EventSerializer { get; set; }
-		public int DefaultSerializationBufferSize { get; set; }
+		private readonly ILogger _logger;
+		public ILogger Logger { get { return _logger; } }
+		private readonly IEventStoreProvider _eventStoreProvider;
+		public IEventStoreProvider EventStoreProvider { get { return _eventStoreProvider; } }
+		private readonly IEventSerializer _eventSerializer;
+		public IEventSerializer EventSerializer { get { return _eventSerializer; } }
+		private readonly int _defaultSerializationBufferSize;
+		public int DefaultSerializationBufferSize { get { return _defaultSerializationBufferSize; } }
+
 		private MethodInfo _deserialize = typeof(IEventSerializer).GetMethod("Deserialize");
 		private MethodInfo _serialize = typeof(IEventSerializer).GetMethod("Serialize");
-		private IEventStoreProvider _eventStoreProvider;
-		public IEventStoreProvider EventStoreProvider
-		{
-			get { return _eventStoreProvider; }
-			set
-			{
-				if (_eventStoreProvider != value)
-				{
-					_eventStoreProvider = value;
-					_eventStoreProvider.EnsureExists();
-				}
-			}
-		}
 
-		public EventStore()
+		public EventStore(ILogger logger, IEventStoreProvider eventStoreProvider, IEventSerializer eventSerializer, int defaultSerializationBufferSize)
 		{
-			DefaultSerializationBufferSize = EventStoreConfigure.DefaultSerializationBufferSize;
+			if (null == logger)
+			{
+				throw new ArgumentNullException("logger");
+			}
+			if (null == eventStoreProvider)
+			{
+				throw new ArgumentNullException("eventStoreProvider");
+			}
+			if (null == eventSerializer)
+			{
+				throw new ArgumentNullException("eventSerializer");
+			}
+			if (0 >= defaultSerializationBufferSize)
+			{
+				throw new ArgumentOutOfRangeException("defaultSerializationBufferSize");
+			}
+
+			_logger = logger;
+			_eventStoreProvider = eventStoreProvider;
+			_eventSerializer = eventSerializer;
+			_defaultSerializationBufferSize = defaultSerializationBufferSize;
 		}
 
 		public IEventStore Save(Guid aggregateRootId, int version, object data)
@@ -132,9 +145,14 @@ namespace DomainCQRS
 
 		protected object Deserialize(string eventType, byte[] data)
 		{
+			if (null == eventType)
+			{
+				throw new ArgumentNullException("eventType");
+			}
+
 			var deserialize = _deserialize.MakeGenericMethod(Type.GetType(eventType));
 			object @event = deserialize.Invoke(EventSerializer, new object[] { new MemoryStream(data) });
-			
+
 			EventUpgrader eventUpgrader;
 			if (_eventUpgraders.TryGetValue(@event.GetType(), out eventUpgrader))
 			{

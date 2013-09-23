@@ -7,6 +7,6 @@ namespace DomainCQRS
 {
 	public interface IPartitionedEventStoreProvider : IEventStoreProvider
 	{
-		int MaximumPartitions { get; set; }
+		int MaximumPartitions { get; }
 	}
 }

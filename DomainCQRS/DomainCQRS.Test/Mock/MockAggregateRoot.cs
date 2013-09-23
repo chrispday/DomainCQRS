@@ -22,10 +22,10 @@ namespace DomainCQRS.Test
 			Amount = 0;
 		}
 
-		public IEnumerable Apply(MockCommand command)
+		public IEnumerable<IEvent> Apply(MockCommand command)
 		{
 			Amount += command.Increment;
-			return new object[] { new MockEvent() { AggregateRootId = command.AggregateRootId, Increment = command.Increment } };
+			return new IEvent[] { new MockEvent() { AggregateRootId = command.AggregateRootId, Increment = command.Increment } };
 		}
 
 		public void Apply(MockEvent @event)

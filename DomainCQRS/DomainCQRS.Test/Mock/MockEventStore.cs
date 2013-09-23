@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DomainCQRS.Common;
 
 namespace DomainCQRS.Test
 {
@@ -76,8 +77,26 @@ namespace DomainCQRS.Test
 		}
 	}
 
+	public static class MockEventStore2Configure
+	{
+		public static IConfigure MockEventStore2(this IConfigure config)
+		{
+			(config as Configure).EventStore = new MockEventStore2(
+				(config as Configure).Logger,
+				(config as Configure).EventStoreProvider,
+				(config as Configure).EventSerializer,
+				1024
+				);
+			return config;
+		}
+	}
+
 	public class MockEventStore2 : EventStore
 	{
+		public MockEventStore2(ILogger logger, IEventStoreProvider eventStoreProvider, IEventSerializer eventSerializer, int defaultSerializationBufferSize)
+			:base(logger, eventStoreProvider, eventSerializer, defaultSerializationBufferSize)
+		{}
+
 		public override IEnumerable<StoredEvent> Load(int batchSize, IEventStoreProviderPosition from, IEventStoreProviderPosition to)
 		{
 			foreach (var storedEvent in EventStoreProvider.Load(from, to))

@@ -8,9 +8,9 @@ namespace DomainCQRS
 {
 	public interface IEventPublisher : IDisposable
 	{
-		ILogger Logger { get; set; }
-		int BatchSize { get; set; }
-		IEventStore EventStore { get; set; }
+		ILogger Logger { get; }
+		int BatchSize { get; }
+		IEventStore EventStore { get; }
 		IMessageReceiver MessageReceiver { get; set; }
 		bool Synchronous { get; set; }
 

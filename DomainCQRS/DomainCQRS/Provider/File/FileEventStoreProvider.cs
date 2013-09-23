@@ -15,23 +15,13 @@ namespace DomainCQRS
 		public static IConfigure FileEventStoreProvider(this IConfigure configure, string directory) { return configure.FileEventStoreProvider(directory, DefaultEventStreamCacheCapacity, DefaultEventStreamBufferSize); }
 		public static IConfigure FileEventStoreProvider(this IConfigure configure, string directory, int eventStreamCacheCapacity, int eventStreamBufferSize)
 		{
-			if (1 > eventStreamCacheCapacity)
-			{
-				throw new ArgumentOutOfRangeException("eventStreamCacheCapacity", eventStreamCacheCapacity, "eventStreamCacheCapacity cannot be less than 1.");
-			}
-			if (1 > eventStreamBufferSize)
-			{
-				throw new ArgumentOutOfRangeException("eventStreamBufferSize", eventStreamBufferSize, "eventStreamBufferSize cannot be less than 1.");
-			}
-
 			var c = configure as Configure;
-			c.EventStoreProvider = new FileEventStoreProvider()
-			{ 
-				Directory = directory, 
-				Logger = c.Logger, 
-				EventStreamCacheCapacity = eventStreamCacheCapacity,
-				EventStreamBufferSize = eventStreamBufferSize
-			}.EnsureExists();
+			c.EventStoreProvider = new FileEventStoreProvider(
+				c.Logger, 
+				directory, 
+				eventStreamCacheCapacity, 
+				eventStreamBufferSize
+				).EnsureExists();
 			return configure;
 		}
 	}
@@ -41,19 +31,43 @@ namespace DomainCQRS.Provider
 {
 	public class FileEventStoreProvider : IEventStoreProvider
 	{
-		public string Directory { get; set; }
-		public int EventStreamCacheCapacity { get; set; }
-		public int EventStreamBufferSize { get; set; }
-		public ILogger Logger { get; set; }
+		private readonly string _directory;
+		public string Directory { get { return _directory; } }
+		private readonly int _eventStreamCacheCapacity;
+		public int EventStreamCacheCapacity { get { return _eventStreamCacheCapacity; } }
+		private readonly int _eventStreamBufferSize;
+		public int EventStreamBufferSize { get { return _eventStreamBufferSize; } }
+		private readonly ILogger _logger;
+		public ILogger Logger { get { return _logger; } }
+
 		private LRUDictionary<Guid, FileEventStream> _fileEventStreams;
 		private bool _storeAggregateId = false;
 		private string _eventDirectory;
 		private string _subscriberDirectory;
 
-		public FileEventStoreProvider()
+		public FileEventStoreProvider(ILogger logger, string directory, int eventStreamCacheCapacity, int eventStreamBufferSize)
 		{
-			EventStreamCacheCapacity = FileEventStoreProviderConfigure.DefaultEventStreamCacheCapacity;
-			EventStreamBufferSize = FileEventStoreProviderConfigure.DefaultEventStreamBufferSize;
+			if (null == logger)
+			{
+				throw new ArgumentNullException("logger");
+			}
+			if (null == directory)
+			{
+				throw new ArgumentNullException("directory");
+			}
+			if (0 >= eventStreamCacheCapacity)
+			{
+				throw new ArgumentOutOfRangeException("eventStreamCacheCapacity");
+			}
+			if (0 >= eventStreamBufferSize)
+			{
+				throw new ArgumentOutOfRangeException("eventStreamBufferSize");
+			}
+
+			_logger = logger;
+			_directory = directory;
+			_eventStreamCacheCapacity = eventStreamCacheCapacity;
+			_eventStreamBufferSize = eventStreamBufferSize;
 		}
 
 		public IEventStoreProvider EnsureExists()

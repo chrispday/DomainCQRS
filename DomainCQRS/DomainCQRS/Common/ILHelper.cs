@@ -29,7 +29,7 @@ namespace DomainCQRS.Common
 		{
 			var subscriberType = typeof(Subscriber);
 			var eventType = typeof(Event);
-			MethodInfo receiveMethod = subscriberType.GetMethod(subscriberReceiveMethodName, new Type[] { eventType });
+			MethodInfo receiveMethod = subscriberType.GetMethod(subscriberReceiveMethodName, new Type[] { eventType }, true);
 			if (null == receiveMethod
 				|| typeof(void) != receiveMethod.ReturnType)
 			{

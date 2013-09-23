@@ -6,19 +6,25 @@ using DomainCQRS.Common;
 
 namespace DomainCQRS
 {
-	public static class EventPublisherConfigure
-	{
-		public static int DefaultBatchSize = 10000;
-		public static TimeSpan DefaultPublishThreadSleep = TimeSpan.FromSeconds(1);
-		public static string DefaultSubscriberReceiveMethodName = "Receive";
+public static class EventPublisherConfigure
+{
+	public static int DefaultBatchSize = 10000;
+	public static TimeSpan DefaultPublishThreadSleep = TimeSpan.FromSeconds(1);
+	public static string DefaultSubscriberReceiveMethodName = "Receive";
 
-		public static IConfigure EventPublisher(this IConfigure configure) { return configure.EventPublisher(DefaultBatchSize); }
-		public static IConfigure EventPublisher(this IConfigure configure, int batchSize)
-		{
-			var c = configure as Configure;
-			c.EventPublisher = new EventPublisher() { Logger = c.Logger, EventStore = c.EventStore, BatchSize = batchSize, PublishThreadSleep = DefaultPublishThreadSleep };
-			return configure;
-		}
+	public static IConfigure EventPublisher(this IConfigure configure) { return configure.EventPublisher(DefaultBatchSize); }
+	public static IConfigure EventPublisher(this IConfigure configure, int batchSize)
+	{
+		var c = configure as Configure;
+		c.EventPublisher = new EventPublisher(
+			c.Logger,
+			c.EventStore,
+			batchSize,
+			DefaultPublishThreadSleep,
+			DefaultSubscriberReceiveMethodName
+			);
+		return configure;
+	}
 
 		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId) { return Subscribe<Subscriber, object>(configure, subscriptionId); }
 		public static IConfigure Subscribe<Subscriber>(this IConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriberReceiveMethodName); }
@@ -40,13 +46,18 @@ namespace DomainCQRS
 
 	public class EventPublisher : IEventPublisher
 	{
-		public Common.ILogger Logger { get; set; }
-		public IEventStore EventStore { get; set; }
+		private readonly ILogger _logger;
+		public ILogger Logger { get { return _logger; } }
+		private readonly IEventStore _eventStore;
+		public IEventStore EventStore { get { return _eventStore; } }
+		private readonly int _batchSize;
+		public int BatchSize { get { return _batchSize; } }
+		private readonly TimeSpan _publishThreadSleep;
+		public TimeSpan PublishThreadSleep { get { return _publishThreadSleep; } }
+		private readonly string _defaultSubscriberReceiveMethodName;
+		public string DefaultSubscriberReceiveMethodName { get { return _defaultSubscriberReceiveMethodName; } }
 		public IMessageReceiver MessageReceiver { get; set; }
-		public int BatchSize { get; set; }
-		public TimeSpan PublishThreadSleep { get; set; }
-		public string DefaultSubscriberReceiveMethodName { get; set; }
-		private bool _synchronous;
+		private bool _synchronous = false;
 		public bool Synchronous
 		{
 			get { return _synchronous; }
@@ -59,9 +70,11 @@ namespace DomainCQRS
 				}
 				else
 				{
+					StartPublishingThread();
 				}
 			}
 		}
+
 		protected class SubscriberAndPosition
 		{
 			public object Subscriber;
@@ -75,12 +88,34 @@ namespace DomainCQRS
 		private volatile bool _continuePublishing = true;
 		private AutoResetEvent _finishedPublishing = new AutoResetEvent(false);
 
-		public EventPublisher()
+		public EventPublisher(ILogger logger, IEventStore eventStore, int batchSize, TimeSpan publishThreadSleep, string defaultSubscriberReceiveMethodName)
 		{
-			BatchSize = EventPublisherConfigure.DefaultBatchSize;
-			PublishThreadSleep = EventPublisherConfigure.DefaultPublishThreadSleep;
-			DefaultSubscriberReceiveMethodName = EventPublisherConfigure.DefaultSubscriberReceiveMethodName;
+			if (null == logger)
+			{
+				throw new ArgumentNullException("logger");
+			}
+			if (null == eventStore)
+			{
+				throw new ArgumentNullException("eventStore");
+			}
+			if (0 >= batchSize)
+			{
+				throw new ArgumentOutOfRangeException("batchSize");
+			}
+			if (0 >= publishThreadSleep.Ticks)
+			{
+				throw new ArgumentOutOfRangeException("publishThreadSleep");
+			}
+			if (null == defaultSubscriberReceiveMethodName)
+			{
+				throw new ArgumentNullException("defaultSubscriberReceiveMethodName");
+			}
 
+			_logger = logger;
+			_eventStore = eventStore;
+			_batchSize = batchSize;
+			_publishThreadSleep = publishThreadSleep;
+			_defaultSubscriberReceiveMethodName = defaultSubscriberReceiveMethodName;
 		}
 
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId) { return Subscribe<Subscriber, object>(subscriptionId, DefaultSubscriberReceiveMethodName); }

@@ -18,7 +18,10 @@ namespace DomainCQRS
 			}
 
 			var c = configure as Configure;
-			c.EventStoreProvider = new SqlServerEventStoreProvider() { ConnectionString = connectionString, Logger = c.Logger }.EnsureExists();
+			c.EventStoreProvider = new SqlServerEventStoreProvider(
+				c.Logger,
+				connectionString
+				).EnsureExists();
 			return configure;
 		}
 	}
@@ -28,8 +31,25 @@ namespace DomainCQRS.Provider
 {
 	public class SqlServerEventStoreProvider : IEventStoreProvider
 	{
-		public ILogger Logger { get; set; }
-		public string ConnectionString { get; set; }
+		private readonly ILogger _logger;
+		public ILogger Logger { get { return _logger; } }
+		private readonly string _connectionString;
+		public string ConnectionString { get { return _connectionString; } }
+
+		public SqlServerEventStoreProvider(ILogger logger, string connectionString)
+		{
+			if (null == logger)
+			{
+				throw new ArgumentNullException("logger");
+			}
+			if (null == connectionString)
+			{
+				throw new ArgumentNullException("connectionString");
+			}
+
+			_logger = logger;
+			_connectionString = connectionString;
+		}
 
 		#region Sql Commands
 

@@ -27,10 +27,6 @@ namespace DomainCQRS
 				}
 
 				_eventStoreProvider = value;
-				if (null != EventStore)
-				{
-					EventStore.EventStoreProvider = value;
-				}
 			}
 		}
 
@@ -46,22 +42,6 @@ namespace DomainCQRS
 				}
 
 				_logger = value;
-				if (null != EventStoreProvider)
-				{
-					EventStoreProvider.Logger = value;
-				}
-				if (null != EventStore)
-				{
-					EventStore.Logger = value;
-				}
-				if (null != MessageReceiver)
-				{
-					MessageReceiver.Logger = value;
-				}
-				if (null != EventPublisher)
-				{
-					EventPublisher.Logger = value;
-				}
 			}
 		}
 
@@ -77,14 +57,6 @@ namespace DomainCQRS
 				}
 
 				_eventStore = value;
-				if (null != MessageReceiver)
-				{
-					MessageReceiver.EventStore = value;
-				}
-				if (null != EventPublisher)
-				{
-					EventPublisher.EventStore = value;
-				}
 			}
 		}
 
@@ -100,10 +72,6 @@ namespace DomainCQRS
 				}
 
 				_eventSerializer = value;
-				if (null != EventStore)
-				{
-					EventStore.EventSerializer = value;
-				}
 			}
 		}
 
@@ -139,10 +107,6 @@ namespace DomainCQRS
 				}
 
 				_aggregateRootCache = value;
-				if (null != MessageReceiver)
-				{
-					MessageReceiver.AggregateRootCache = value;
-				}
 			}
 		}
 
@@ -162,10 +126,6 @@ namespace DomainCQRS
 				if (Synchronous)
 				{
 					EventPublisher.Synchronous = true;
-				}
-				if (null != MessageReceiver)
-				{
-					MessageReceiver.EventPublisher = value;
 				}
 			}
 		}
@@ -204,11 +164,12 @@ namespace DomainCQRS
 
 			if (null != MessageReceiver)
 			{
-				MessageReceiver.Synchronous = true;
 				MessageReceiver.EventPublisher = EventPublisher;
+				MessageReceiver.Synchronous = true;
 			}
 			if (null != EventPublisher)
 			{
+				EventPublisher.MessageReceiver = MessageReceiver;
 				EventPublisher.Synchronous = true;
 			}
 

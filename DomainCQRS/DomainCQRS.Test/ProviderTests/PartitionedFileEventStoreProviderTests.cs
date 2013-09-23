@@ -16,7 +16,7 @@ namespace DomainCQRS.Test
 
 		protected override IEventStoreProvider CreateProvider()
 		{
-			return new PartitionedFileEventStoreProvider() { Directory = BaseDirectory, Logger = new DebugLogger(), MaximumPartitions = 8 };
+			return new PartitionedFileEventStoreProvider(new DebugLogger(), BaseDirectory, 8, 1000, 8096);
 		}
 
 		protected override bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder

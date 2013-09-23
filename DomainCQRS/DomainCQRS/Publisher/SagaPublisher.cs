@@ -17,7 +17,9 @@ namespace DomainCQRS
 			{
 				throw new ArgumentNullException("MessageReceiver");
 			}
-			c.Subscribe<SagaPublisher>(SagaPublisherGuid, new SagaPublisher() { MessageReceiver = c.MessageReceiver });
+			c.Subscribe<SagaPublisher>(SagaPublisherGuid, new SagaPublisher(
+				c.MessageReceiver
+				));
 
 			return configure;
 		}
@@ -32,8 +34,19 @@ namespace DomainCQRS
 
 	public class SagaPublisher : ISagaPublisher
 	{
-		public IMessageReceiver MessageReceiver { get; set; }
+		private IMessageReceiver _messageReceiver;
+		public IMessageReceiver MessageReceiver { get { return _messageReceiver; } }
 		private Dictionary<Type, object> _events = new Dictionary<Type, object>();
+
+		public SagaPublisher(IMessageReceiver messageReceiver)
+		{
+			if (null == messageReceiver)
+			{
+				throw new ArgumentNullException("messageReceiver");
+			}
+
+			_messageReceiver = messageReceiver;
+		}
 
 		public ISagaPublisher Saga<Event>()
 		{

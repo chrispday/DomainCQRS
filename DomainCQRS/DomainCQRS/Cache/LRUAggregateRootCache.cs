@@ -12,11 +12,6 @@ namespace DomainCQRS
 		public static IConfigure LRUAggregateRootCache(this IConfigure configure) { return configure.LRUAggregateRootCache(DefaultCacheSize); }
 		public static IConfigure LRUAggregateRootCache(this IConfigure configure, int capacity)
 		{
-			if (1 > capacity)
-			{
-				throw new ArgumentOutOfRangeException("capacity", capacity, "Capacity cannot be less than 1.");
-			}
-
 			var c = configure as Configure;
 			c.AggregateRootCache = new LRUAggregateRootCache(capacity);
 			return configure;

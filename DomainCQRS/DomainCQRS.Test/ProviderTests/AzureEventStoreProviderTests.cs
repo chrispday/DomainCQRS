@@ -33,7 +33,7 @@ namespace DomainCQRS.Test
 			var _subscribers = _tableClient.GetTableReference(SubscriberTable);
 			_subscribers.DeleteIfExists();
 
-			return new AzureEventStoreProvider() { ConnectionString = ConnectionString, Logger = new DebugLogger() }.EnsureExists();
+			return new AzureEventStoreProvider(new DebugLogger(), ConnectionString).EnsureExists();
 		}
 
 		protected override bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder

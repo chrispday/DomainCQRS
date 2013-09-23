@@ -22,12 +22,26 @@ namespace DomainCQRS.Provider
 		private int _bufferSize;
 		private bool _storeAggregateId;
 
-		public ILogger Logger { get; set; }
+		private readonly ILogger _logger;
+		public ILogger Logger { get { return _logger; } }
 		public string Name { get { return _name; } }
 
 		public FileEventStream(ILogger logger, Guid id, string directory, int bufferSize, bool publishingOnly, bool storeAggregateId)
 		{
-			Logger = logger;
+			if (null == logger)
+			{
+				throw new ArgumentNullException("logger");
+			}
+			if (null == directory)
+			{
+				throw new ArgumentNullException(directory);
+			}
+			if (0 >= bufferSize)
+			{
+				throw new ArgumentOutOfRangeException("bufferSize");
+			}
+
+			_logger = logger;
 			_id = id;
 			_bufferSize = bufferSize;
 			_name = GetName(directory, id);
@@ -41,11 +55,15 @@ namespace DomainCQRS.Provider
 				_versionTracker = GetLastVersion();
 			}
 
-			logger.Verbose("Creating for id {0} stream {1} with last version {2}", id, "", _versionTracker);
+			Logger.Verbose("Creating for id {0} stream {1} with last version {2}", id, "", _versionTracker);
 		}
 
 		public void Save(EventToStore eventToStore)
 		{
+			if (null == eventToStore)
+			{
+				throw new ArgumentNullException("eventToStore");
+			}
 			if (0 > eventToStore.Version)
 			{
 				throw new EventToStoreException("Version must be 0 or greater.") { EventToStore = eventToStore };
@@ -83,6 +101,11 @@ namespace DomainCQRS.Provider
 
 		public IEnumerable<EventToStore> Load(Guid aggregateRootId, FileEventStoreProviderPosition from, FileEventStoreProviderPosition to)
 		{
+			if (null == to)
+			{
+				throw new ArgumentNullException("to");
+			}
+
 			if (null == _publisherStream)
 			{
 				_publisherReader = new BinaryReader(_publisherStream = new BufferedStream(File.Open(_name, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), _bufferSize));

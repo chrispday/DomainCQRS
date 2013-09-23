@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-//
 using System.Text;
+using DomainCQRS.Common;
 using DomainCQRS.Provider;
 
 namespace DomainCQRS
@@ -11,10 +11,9 @@ namespace DomainCQRS
 		public static IConfigure MemoryEventStoreProvider(this IConfigure configure)
 		{
 			var c = configure as Configure;
-			c.EventStoreProvider = new MemoryEventStoreProvider()
-			{
-				Logger = c.Logger
-			}.EnsureExists();
+			c.EventStoreProvider = new MemoryEventStoreProvider(
+				c.Logger
+				).EnsureExists();
 			return configure;
 		}
 	}
@@ -24,10 +23,22 @@ namespace DomainCQRS.Provider
 {
 	public class MemoryEventStoreProvider : IEventStoreProvider
 	{
-		public Common.ILogger Logger { get; set; }
+		private readonly ILogger _logger;
+		public ILogger Logger { get { return _logger; } }
+
 		private Dictionary<Guid, List<EventToStore>> _eventStore;
 		private Dictionary<Guid, int> _versionTracker;
 		private Dictionary<Guid, IEventStoreProviderPosition> _positions = new Dictionary<Guid, IEventStoreProviderPosition>();
+
+		public MemoryEventStoreProvider(ILogger logger)
+		{
+			if (null == logger)
+			{
+				throw new ArgumentNullException("logger");
+			}
+
+			_logger = logger;
+		}
 
 		public IEventStoreProvider EnsureExists()
 		{

@@ -39,6 +39,5 @@ namespace DomainCQRS.Provider
 				Positions[i] = new FileEventStoreProviderPosition();
 			}
 		}
-
 	}
 }

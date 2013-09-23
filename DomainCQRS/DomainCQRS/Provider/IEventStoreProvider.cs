@@ -6,7 +6,7 @@ namespace DomainCQRS
 {
 	public interface IEventStoreProvider : IDisposable
 	{
-		ILogger Logger { get; set; }
+		ILogger Logger { get; }
 		IEventStoreProvider EnsureExists();
 
 		// Events
