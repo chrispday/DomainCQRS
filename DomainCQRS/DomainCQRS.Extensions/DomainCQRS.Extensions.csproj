@@ -35,8 +35,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="StructureMap">
-      <HintPath>..\DomainCQRS\Dependencies\StructureMap.dll</HintPath>
+    <Reference Include="StructureMap2.0">
+      <HintPath>..\DomainCQRS\Dependencies\StructureMap2.0.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Runtime.Serialization" />

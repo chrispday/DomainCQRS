@@ -35,9 +35,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="StructureMap, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="StructureMap2.0, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>Dependencies\StructureMap.dll</HintPath>
+      <HintPath>Dependencies\StructureMap2.0.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -95,7 +95,7 @@
     <Compile Include="Serializers\BinaryFormatterSerializer.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Dependencies\StructureMap.dll" />
+    <Content Include="Dependencies\StructureMap2.0.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
