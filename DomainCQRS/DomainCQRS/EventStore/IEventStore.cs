@@ -13,7 +13,7 @@ namespace DomainCQRS
 		IEventSerializer EventSerializer { get; }
 
 		// Messages
-		IEventStore Save(Guid aggregateRootId, int version, object data);
+		IEventStore Save(Guid aggregateRootId, int version, Type aggregateRootType, object data);
 		IEnumerable<StoredEvent> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp);
 
 		// Publishing

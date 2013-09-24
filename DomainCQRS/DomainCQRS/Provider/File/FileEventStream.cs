@@ -106,10 +106,16 @@ namespace DomainCQRS.Provider
 				throw new ArgumentNullException("to");
 			}
 
-			if (null == _publisherStream)
+			if (null == _publisherReader)
 			{
-				_publisherReader = new BinaryReader(_publisherStream = new BufferedStream(File.Open(_name, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), _bufferSize));
-				_publisherPosition = 0;
+				lock (this)
+				{
+					if (null == _publisherReader)
+					{
+						_publisherReader = new BinaryReader(_publisherStream = new BufferedStream(File.Open(_name, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), _bufferSize));
+						_publisherPosition = 0;
+					}
+				}
 			}
 
 			long fromPosition = 0;
@@ -117,28 +123,31 @@ namespace DomainCQRS.Provider
 			{
 				from.Positions.TryGetValue(aggregateRootId, out fromPosition);
 			}
-			if (_publisherPosition != fromPosition)
+
+			lock (_publisherStream)
 			{
-				_publisherPosition = _publisherStream.Seek(fromPosition, SeekOrigin.Begin);
+				if (_publisherPosition != fromPosition)
+				{
+					_publisherPosition = _publisherStream.Seek(fromPosition, SeekOrigin.Begin);
+				}
+				long toPosition;
+				if (!to.Positions.TryGetValue(aggregateRootId, out toPosition))
+				{
+					toPosition = _publisherStream.Length;
+				}
+
+				Logger.Verbose("Publishing from {1} to {2} for {0}", aggregateRootId, fromPosition, toPosition);
+
+				EventToStore eventToStore;
+				while ((_publisherPosition < toPosition)
+					&& (null != (eventToStore = Read(_publisherStream, _publisherReader, aggregateRootId, true))))
+				{
+					to.Positions[aggregateRootId] = _publisherPosition += eventToStore.Size;
+					yield return eventToStore;
+				}
+
+				to.Positions[aggregateRootId] = _publisherPosition;
 			}
-
-			long toPosition;
-			if (!to.Positions.TryGetValue(aggregateRootId, out toPosition))
-			{
-				toPosition = _publisherStream.Length;
-			}
-
-			Logger.Verbose("Publishing from {1} to {2} for {0}", aggregateRootId, fromPosition, toPosition);
-
-			EventToStore eventToStore;
-			while ((_publisherPosition < toPosition)
-				&& (null != (eventToStore = Read(_publisherStream, _publisherReader, aggregateRootId, true))))
-			{
-				to.Positions[aggregateRootId] = _publisherPosition += eventToStore.Size;
-				yield return eventToStore;
-			}
-
-			to.Positions[aggregateRootId] = _publisherPosition;
 		}
 
 		private int GetLastVersion()
@@ -176,29 +185,33 @@ namespace DomainCQRS.Provider
 			}
 
 			var version = BitConverter.ToInt32(versionBuf, 0);
+			var aggregateRootTypeSize = reader.ReadInt32();
 			var eventTypeSize = reader.ReadInt32();
 			var dataSize = reader.ReadInt32();
 			var timestamp = new DateTime(reader.ReadInt64());
-			var eventType = new byte[] {};
+			var aggregateRootType = new byte[] { };
+			var eventType = new byte[] { };
 			byte[] data = null;
 			if (readData)
 			{
+				aggregateRootType = reader.ReadBytes(aggregateRootTypeSize);
 				eventType = reader.ReadBytes(eventTypeSize);
 				data = reader.ReadBytes(dataSize);
 			}
 			else
 			{
-				readerStream.Seek(eventTypeSize + dataSize, SeekOrigin.Current);
+				readerStream.Seek(aggregateRootTypeSize + eventTypeSize + dataSize, SeekOrigin.Current);
 			}
 
 			return new EventToStore()
 			{
 				AggregateRootId = aggregateRootId,
+				AggregateRootType = Encoding.UTF8.GetString(aggregateRootType),
 				Version = version,
 				Timestamp = timestamp,
 				EventType = Encoding.UTF8.GetString(eventType),
 				Data = data,
-				Size = sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long) + eventTypeSize + dataSize
+				Size = sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long) + aggregateRootTypeSize + eventTypeSize + dataSize + (_storeAggregateId ? 16 : 0)
 			};
 		}
 
@@ -206,19 +219,22 @@ namespace DomainCQRS.Provider
 		{
 			var guidOffset = _storeAggregateId ? 16 : 0;
 
+			byte[] aggregateRootType = Encoding.UTF8.GetBytes(@event.AggregateRootType);
 			byte[] eventType = Encoding.UTF8.GetBytes(@event.EventType);
 
-			byte[] buffer = new byte[guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long) + eventType.Length + @event.Data.Length];
+			byte[] buffer = new byte[guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long) + aggregateRootType.Length + eventType.Length + @event.Data.Length];
 			if (_storeAggregateId)
 			{
 				Array.Copy(@event.AggregateRootId.ToByteArray(), buffer, 16);
 			}
 			Array.Copy(BitConverter.GetBytes(@event.Version), 0, buffer, guidOffset, sizeof(int));
-			Array.Copy(BitConverter.GetBytes(eventType.Length), 0, buffer, guidOffset + sizeof(int), sizeof(int));
-			Array.Copy(BitConverter.GetBytes(@event.Data.Length), 0, buffer, guidOffset + sizeof(int) + sizeof(int), sizeof(int));
-			Array.Copy(BitConverter.GetBytes(@event.Timestamp.Ticks), 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int), sizeof(long));
-			Array.Copy(eventType, 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long), eventType.Length);
-			Array.Copy(@event.Data, 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long) + eventType.Length, @event.Data.Length);
+			Array.Copy(BitConverter.GetBytes(aggregateRootType.Length), 0, buffer, guidOffset + sizeof(int), sizeof(int));
+			Array.Copy(BitConverter.GetBytes(eventType.Length), 0, buffer, guidOffset + sizeof(int) + sizeof(int), sizeof(int));
+			Array.Copy(BitConverter.GetBytes(@event.Data.Length), 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int), sizeof(int));
+			Array.Copy(BitConverter.GetBytes(@event.Timestamp.Ticks), 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int), sizeof(long));
+			Array.Copy(aggregateRootType, 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long), aggregateRootType.Length);
+			Array.Copy(eventType, 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long) + aggregateRootType.Length, eventType.Length);
+			Array.Copy(@event.Data, 0, buffer, guidOffset + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(int) + sizeof(long) + aggregateRootType.Length + eventType.Length, @event.Data.Length);
 
 			_writer.Write(buffer);
 			_writer.Flush();

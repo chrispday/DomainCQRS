@@ -56,15 +56,15 @@ namespace DomainCQRS.Provider
 		#region Sql Commands
 
 		private static string InsertEvent = @"
-insert into [Event] ([AggregateRootId], [Version], [Timestamp], [EventType], [Data]) values (@AggregateRootId, @Version, @Timestamp, @EventType, @Data)
+insert into [Event] ([AggregateRootId], [Version], [Timestamp], [AggregateRootType], [EventType], [Data]) values (@AggregateRootId, @Version, @Timestamp, @AggregateRootType, @EventType, @Data)
 ";
 		private static string SelectEvents = @"
-select [Version], [Timestamp], [EventType], [Data] 
+select [Version], [Timestamp], [AggregateRootType], [EventType], [Data] 
 from [Event] with (NOLOCK) 
 where [AggregateRootId] = @AggregateRootId and [Version] >= @FromVersion and [Version] <= @ToVersion and [Timestamp] >= @FromTimestamp and [Timestamp] <= @ToTimestamp order by Version
 ";
 		private static string SelectEventsBySequence = @"
-select [Sequence], [AggregateRootId], [Version], [Timestamp], [EventType], [Data] 
+select [Version], [Timestamp], [AggregateRootType], [EventType], [Data], [AggregateRootId], [Sequence]
 from [Event] with (NOLOCK)
 where [Sequence] > @FromSequence
 order by [Sequence]";
@@ -88,6 +88,7 @@ select [Position] from [Subscriber] where [SubscriberId] = @SubscriberId";
 	[Version] [int]  NOT NULL,
 	[Timestamp] [datetime] NOT NULL,
 	[Sequence] [bigint] IDENTITY(1, 1) NOT NULL,
+	[AggregateRootType] [varchar](max) NOT NULL,
 	[EventType] [varchar](max) NOT NULL,
 	[Data] [varbinary](max)  NOT NULL);",
 @"ALTER TABLE [Event] ADD CONSTRAINT [PK_Events] PRIMARY KEY CLUSTERED ([AggregateRootId], [Version] ASC);
@@ -176,6 +177,7 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 				cmd.Parameters.Add(new SqlParameter("@AggregateRootId", eventToStore.AggregateRootId));
 				cmd.Parameters.Add(new SqlParameter("@Version", eventToStore.Version));
 				cmd.Parameters.Add(new SqlParameter("@Timestamp", timeStamp));
+				cmd.Parameters.Add(new SqlParameter("@AggregateRootType", eventToStore.AggregateRootType));
 				cmd.Parameters.Add(new SqlParameter("@EventType", eventToStore.EventType));
 				cmd.Parameters.Add(new SqlParameter("@Data", eventToStore.Data));
 				conn.Open();
@@ -203,7 +205,7 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 		public IEnumerable<EventToStore> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp)
 		{
 			using (var conn = new SqlConnection(ConnectionString))
-			using (var cmd = new SqlCommand() { Connection = conn, CommandText =  SelectEvents })
+			using (var cmd = new SqlCommand() { Connection = conn, CommandText = SelectEvents })
 			{
 				cmd.Parameters.Add(new SqlParameter("@AggregateRootId", aggregateRootId));
 				cmd.Parameters.Add(new SqlParameter("@FromVersion", fromVersion.GetValueOrDefault(-1)));
@@ -215,14 +217,7 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 				{
 					while (reader.Read())
 					{
-						yield return new EventToStore()
-						{
-							AggregateRootId = aggregateRootId,
-							Version = reader.GetInt32(0),
-							Timestamp = reader.GetDateTime(1),
-							EventType = reader.GetString(2),
-							Data = reader.GetSqlBinary(3).Value
-						};
+						yield return CreateEventToStore(reader, aggregateRootId);
 					}
 				}
 			}
@@ -284,18 +279,24 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 				{
 					while (reader.Read())
 					{
-						to.Position = reader.GetInt64(0);
-						yield return new EventToStore()
-						{
-							AggregateRootId = reader.GetGuid(1),
-							Version = reader.GetInt32(2),
-							Timestamp = reader.GetDateTime(3),
-							EventType = reader.GetString(4),
-							Data = reader.GetSqlBinary(5).Value
-						};
+						to.Position = reader.GetInt64(6);
+						yield return CreateEventToStore(reader, reader.GetGuid(5));
 					}
 				}
 			}
+		}
+
+		private EventToStore CreateEventToStore(SqlDataReader reader, Guid aggregateRootId)
+		{
+			return new EventToStore()
+			{
+				AggregateRootId = aggregateRootId,
+				Version = reader.GetInt32(0),
+				Timestamp = reader.GetDateTime(1),
+				AggregateRootType = reader.GetString(2),
+				EventType = reader.GetString(3),
+				Data = reader.GetSqlBinary(4).Value
+			};
 		}
 
 		public void Dispose()

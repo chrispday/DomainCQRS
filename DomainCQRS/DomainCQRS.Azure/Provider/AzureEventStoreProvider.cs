@@ -89,6 +89,7 @@ namespace DomainCQRS.Azure.Provider
 			entity.Properties = SplitData(eventToStore.Data);
 			entity.Properties["_Timestamp"] = new EntityProperty(eventToStore.Timestamp);
 			entity.Properties["EventType"] = new EntityProperty(eventToStore.EventType);
+			entity.Properties["AggregateRootType"] = new EntityProperty(eventToStore.AggregateRootType);
 			try
 			{
 				_events.Execute(TableOperation.Insert(entity));
@@ -228,7 +229,17 @@ namespace DomainCQRS.Azure.Provider
 
 		private EventToStore CreateEventToStore(DynamicTableEntity result)
 		{
-			var eventToStore = new EventToStore() { AggregateRootId = new Guid(result.PartitionKey), Version = int.Parse(result.RowKey), Timestamp = result.Timestamp.DateTime, EventType = result.Properties["EventType"].StringValue };
+			var eventToStore = new EventToStore() 
+			{ 
+				AggregateRootId = new Guid(result.PartitionKey), 
+				Version = int.Parse(result.RowKey), 
+				Timestamp = result.Timestamp.DateTime, 
+				EventType = result.Properties["EventType"].StringValue
+			};
+			if (result.Properties.ContainsKey("AggregateRootType"))
+			{
+				eventToStore.AggregateRootType = result.Properties["AggregateRootType"].StringValue;
+			}
 			eventToStore.Data = CombineData(result.Properties);
 			return eventToStore;
 		}

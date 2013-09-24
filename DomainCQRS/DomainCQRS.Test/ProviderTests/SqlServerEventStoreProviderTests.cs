@@ -17,7 +17,7 @@ namespace DomainCQRS.Test
 
 		protected override IEventStoreProvider CreateProvider()
 		{
-			return new SqlServerEventStoreProvider(new DebugLogger(), ConnectionString);
+			return new SqlServerEventStoreProvider(new DebugLogger(true), ConnectionString);
 		}
 
 		protected override bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder
@@ -56,7 +56,7 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void SqlServerEventStoreProvider_EnsuresExists()
 		{
-			var sqlEventEventStoreProvider = new SqlServerEventStoreProvider(new DebugLogger(), ConnectionString).EnsureExists();
+			var sqlEventEventStoreProvider = new SqlServerEventStoreProvider(new DebugLogger(true), ConnectionString).EnsureExists();
 			using (var conn = new SqlConnection(ConnectionString))
 			{
 				conn.Open();

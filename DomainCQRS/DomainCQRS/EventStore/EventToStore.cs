@@ -6,6 +6,7 @@ namespace DomainCQRS
 	public class EventToStore
 	{
 		public Guid AggregateRootId { get; set; }
+		public string AggregateRootType { get; set; }
 		public int Version { get; set; }
 		public DateTime Timestamp { get; set; }
 		public string EventType { get; set; }

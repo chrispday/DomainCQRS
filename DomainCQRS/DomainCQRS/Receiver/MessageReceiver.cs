@@ -111,7 +111,7 @@ namespace DomainCQRS
 						var eventsToStore = ApplyCommandToAggregate(messageType, aggregateRootType.Key, propertyAndMethod.Method, message, aggregateRootAndVersion.AggregateRoot);
 						foreach (var @event in eventsToStore)
 						{
-							EventStore.Save(aggregateRootId, ++aggregateRootAndVersion.LatestVersion, @event);
+							EventStore.Save(aggregateRootId, ++aggregateRootAndVersion.LatestVersion, aggregateRootType.Key, @event);
 							if (Synchronous)
 							{
 								EventPublisher.Publish(@event);

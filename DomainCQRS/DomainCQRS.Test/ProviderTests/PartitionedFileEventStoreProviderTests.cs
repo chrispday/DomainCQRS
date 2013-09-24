@@ -16,7 +16,8 @@ namespace DomainCQRS.Test
 
 		protected override IEventStoreProvider CreateProvider()
 		{
-			return new PartitionedFileEventStoreProvider(new DebugLogger(), BaseDirectory, 8, 1000, 8096);
+			System.Diagnostics.Debug.WriteLine("Create Provider " + BaseDirectory);
+			return new PartitionedFileEventStoreProvider(new DebugLogger(true), BaseDirectory, 8, 1000, 8096);
 		}
 
 		protected override bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder
@@ -45,6 +46,7 @@ namespace DomainCQRS.Test
 
 		protected override IConfigure RegisterProvider(IConfigure configure)
 		{
+			System.Diagnostics.Debug.WriteLine("Register Provider " + BaseDirectory);
 			return configure.PartitionedFileEventStoreProvider(8, BaseDirectory);
 		}
 	}

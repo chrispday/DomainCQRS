@@ -15,7 +15,7 @@ namespace DomainCQRS.Test
 		[ClassInitialize]
 		public static void ClassInit(TestContext ctx)
 		{
-			var logger = new DebugLogger();
+			var logger = new DebugLogger(true);
 			EventStore = new EventStore(logger, new MemoryEventStoreProvider(logger).EnsureExists(), new BinaryFormatterSerializer(), 8096);
 		}
 
@@ -28,32 +28,34 @@ namespace DomainCQRS.Test
 		public void MessageReceiver_Receive()
 		{
 			var eventStore = new MockEventStore();
-			var MessageReceiver = new MessageReceiver(new DebugLogger(), eventStore, new LRUAggregateRootCache(100), "AggregateRootId", "Apply").Register<MockCommand, MockAggregateRoot>();
+			var MessageReceiver = new MessageReceiver(new DebugLogger(true), eventStore, new LRUAggregateRootCache(100), "AggregateRootId", "Apply").Register<MockCommand, MockAggregateRoot>();
 			var command = new MockCommand() { AggregateRootId = Guid.NewGuid(), Increment = 1 };
 			MessageReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
 			Assert.AreEqual(command.AggregateRootId, eventStore.Saved[0].Item1);
-			Assert.IsInstanceOfType(eventStore.Saved[0].Item3, typeof(MockEvent));
-			Assert.AreEqual(command.Increment, ((MockEvent)eventStore.Saved[0].Item3).Increment);
+			Assert.AreEqual(typeof(MockAggregateRoot).AssemblyQualifiedName, eventStore.Saved[0].Item3);
+			Assert.IsInstanceOfType(eventStore.Saved[0].Item4, typeof(MockEvent));
+			Assert.AreEqual(command.Increment, ((MockEvent)eventStore.Saved[0].Item4).Increment);
 		}
 
 		[TestMethod]
 		public void MessageReceiver_Receive_CustomNames_NotICommand()
 		{
 			var eventStore = new MockEventStore();
-			var MessageReceiver = new MessageReceiver(new DebugLogger(), eventStore, new LRUAggregateRootCache(100), "Id", "Apply").Register<MockCommand2, MockAggregateRoot>();
+			var MessageReceiver = new MessageReceiver(new DebugLogger(true), eventStore, new LRUAggregateRootCache(100), "Id", "Apply").Register<MockCommand2, MockAggregateRoot>();
 			var command = new MockCommand2() { Id = Guid.NewGuid(), Increment = 0 };
 			MessageReceiver.Receive(command);
 			Assert.AreEqual(1, eventStore.Saved.Count);
 			Assert.AreEqual(command.Id, eventStore.Saved[0].Item1);
-			Assert.IsInstanceOfType(eventStore.Saved[0].Item3, typeof(MockEvent));
-			Assert.AreEqual(command.Increment, ((MockEvent)eventStore.Saved[0].Item3).Increment);
+			Assert.AreEqual(typeof(MockAggregateRoot).AssemblyQualifiedName, eventStore.Saved[0].Item3);
+			Assert.IsInstanceOfType(eventStore.Saved[0].Item4, typeof(MockEvent));
+			Assert.AreEqual(command.Increment, ((MockEvent)eventStore.Saved[0].Item4).Increment);
 		}
 
 		[TestMethod]
 		public void MessageReceiver_Receive2Commands()
 		{
-			var MessageReceiver = new MessageReceiver(new DebugLogger(), EventStore, new LRUAggregateRootCache(100), "AggregateRootId", "Apply")
+			var MessageReceiver = new MessageReceiver(new DebugLogger(true), EventStore, new LRUAggregateRootCache(100), "AggregateRootId", "Apply")
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 
@@ -74,7 +76,7 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void MessageReceiver_Receive3Aggregates3Commands()
 		{
-			var MessageReceiver = new MessageReceiver(new DebugLogger(), EventStore, new LRUAggregateRootCache(100), "AggregateRootId", "Apply")
+			var MessageReceiver = new MessageReceiver(new DebugLogger(true), EventStore, new LRUAggregateRootCache(100), "AggregateRootId", "Apply")
 				.Register<MockCommand, MockAggregateRoot>()
 				.Register<MockCommand2, MockAggregateRoot>("Id", "Apply");
 

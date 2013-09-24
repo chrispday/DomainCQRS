@@ -72,7 +72,7 @@ namespace DomainCQRS
 			_defaultSerializationBufferSize = defaultSerializationBufferSize;
 		}
 
-		public IEventStore Save(Guid aggregateRootId, int version, object data)
+		public IEventStore Save(Guid aggregateRootId, int version, Type aggregateRootType, object data)
 		{
 			if (Guid.Empty == aggregateRootId)
 			{
@@ -82,12 +82,16 @@ namespace DomainCQRS
 			{
 				throw new ArgumentOutOfRangeException("version", version, "version cannot be less than 1.");
 			}
+			if (null == aggregateRootType)
+			{
+				throw new ArgumentNullException("aggregateRootType");
+			}
 			if (null == data)
 			{
 				throw new ArgumentNullException("data");
 			}
 
-			EventStoreProvider.Save(new EventToStore() { AggregateRootId = aggregateRootId, Version = version, Timestamp = DateTime.Now, EventType = data.GetType().AssemblyQualifiedName, Data = Serialize(data) });
+			EventStoreProvider.Save(new EventToStore() { AggregateRootId = aggregateRootId, AggregateRootType = aggregateRootType.AssemblyQualifiedName, Version = version, Timestamp = DateTime.Now, EventType = data.GetType().AssemblyQualifiedName, Data = Serialize(data) });
 			return this;
 		}
 
@@ -107,7 +111,7 @@ namespace DomainCQRS
 				}
 				version = storedEvent.Version;
 
-				yield return new StoredEvent() { AggregateRootId = aggregateRootId, Version = version, Event = Deserialize(storedEvent.EventType, storedEvent.Data) };
+				yield return new StoredEvent() { AggregateRootId = aggregateRootId, AggregateRootType = storedEvent.AggregateRootType, Version = version, Event = Deserialize(storedEvent.EventType, storedEvent.Data) };
 			}
 		}
 
@@ -133,7 +137,7 @@ namespace DomainCQRS
 
 			foreach (var storedEvent in EventStoreProvider.Load(from, to))
 			{
-				yield return new StoredEvent() { AggregateRootId = storedEvent.AggregateRootId, Version = storedEvent.Version, Event = Deserialize(storedEvent.EventType, storedEvent.Data) };
+				yield return new StoredEvent() { AggregateRootId = storedEvent.AggregateRootId, AggregateRootType = storedEvent.AggregateRootType, Version = storedEvent.Version, Event = Deserialize(storedEvent.EventType, storedEvent.Data) };
 
 				if (0 >= --batchSize)
 				{

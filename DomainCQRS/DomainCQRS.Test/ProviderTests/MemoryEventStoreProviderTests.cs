@@ -16,7 +16,7 @@ namespace DomainCQRS.Test
 
 		protected override IEventStoreProvider CreateProvider()
 		{
-			return new MemoryEventStoreProvider(new DebugLogger());
+			return new MemoryEventStoreProvider(new DebugLogger(true));
 		}
 
 		protected override bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder

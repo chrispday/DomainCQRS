@@ -22,10 +22,10 @@ namespace DomainCQRS.Test
 			}
 		}
 
-		public List<Tuple<Guid, int, object>> Saved = new List<Tuple<Guid, int, object>>();
-		public IEventStore Save(Guid aggregateRootId, int version, object data)
+		public List<Tuple<Guid, int, string, object>> Saved = new List<Tuple<Guid, int, string, object>>();
+		public IEventStore Save(Guid aggregateRootId, int version, Type aggregateRootType, object data)
 		{
-			Saved.Add(Tuple.Create(aggregateRootId, version, (object)data));
+			Saved.Add(Tuple.Create(aggregateRootId, version, aggregateRootType.AssemblyQualifiedName, data));
 			return this;
 		}
 
@@ -33,7 +33,7 @@ namespace DomainCQRS.Test
 		{
 			return from s in Saved
 					 where s.Item1 == aggregateRootId
-					 select new StoredEvent() { AggregateRootId = aggregateRootId, Version = s.Item2, Event = s.Item3 };
+					 select new StoredEvent() { AggregateRootId = aggregateRootId, AggregateRootType = s.Item3, Version = s.Item2, Event = s.Item4 };
 		}
 
 		public Common.ILogger Logger

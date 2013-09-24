@@ -21,7 +21,7 @@ namespace DomainCQRS.Test
 
 		protected override IEventStoreProvider CreateProvider()
 		{
-			return new AzureEventStoreProvider(new DebugLogger(), ConnectionString).EnsureExists();
+			return new AzureEventStoreProvider(new DebugLogger(true), ConnectionString).EnsureExists();
 		}
 
 		[TestInitialize]

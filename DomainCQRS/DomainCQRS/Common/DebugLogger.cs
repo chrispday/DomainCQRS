@@ -17,7 +17,7 @@ namespace DomainCQRS
 				.BuildInstancesOf<ILogger>()
 				.TheDefaultIs(Registry.Instance<ILogger>()
 					.UsingConcreteType<DebugLogger>()
-					.WithProperty("LogVerbose").EqualTo(logVerbose))
+					.WithProperty("logVerbose").EqualTo(logVerbose))
 				.AsSingletons();
 			return configure;
 		}
@@ -29,6 +29,11 @@ namespace DomainCQRS.Common
 	public class DebugLogger : ILogger
 	{
 		public bool LogVerbose = false;
+
+		public DebugLogger(bool logVerbose)
+		{
+			LogVerbose = logVerbose;
+		}
 
 		public void Verbose(string format, params object[] pars)
 		{

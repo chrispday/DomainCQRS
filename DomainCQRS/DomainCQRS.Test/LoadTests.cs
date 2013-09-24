@@ -45,7 +45,7 @@ namespace DomainCQRS.Test
 				}
 			}
 			catch { }
-			SqlLoadTestProvider = new SqlServerEventStoreProvider(new DebugLogger(), ConnectionString).EnsureExists() as SqlServerEventStoreProvider;
+			SqlLoadTestProvider = new SqlServerEventStoreProvider(new DebugLogger(false), ConnectionString).EnsureExists() as SqlServerEventStoreProvider;
 		}
 
 		[TestCleanup]
@@ -64,7 +64,7 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void LoadTest_FileEventStoreProvider()
 		{
-			var fileLoadTestProvider = new FileEventStoreProvider(new DebugLogger(), Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1000, 8096).EnsureExists() as FileEventStoreProvider;
+			var fileLoadTestProvider = new FileEventStoreProvider(new DebugLogger(false), Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1000, 8096).EnsureExists() as FileEventStoreProvider;
 
 			var stopWatch = Stopwatch.StartNew();
 

@@ -43,7 +43,7 @@ namespace DomainCQRS.Test
 		private void AnEventHasBeenSaved()
 		{
 			@event = new MockEvent() { AggregateRootId = id, BatchNo = 1, Increment = 5 };
-			config.EventStore.Save(id, 1, @event);
+			config.EventStore.Save(id, 1, typeof(MockAggregateRoot), @event);
 		}
 
 		object loadedEvent;
