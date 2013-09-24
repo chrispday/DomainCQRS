@@ -21,7 +21,7 @@ namespace DomainCQRS
 				.TheDefaultIs(Registry.Instance<IEventPublisher>()
 					.UsingConcreteType<EventPublisher>()
 					.WithProperty("batchSize").EqualTo(batchSize)
-					.WithProperty("defaultPublishThreadSleep").EqualTo(DefaultPublishThreadSleep.Ticks)
+					.WithProperty("publishThreadSleep").EqualTo(DefaultPublishThreadSleep.Ticks)
 					.WithProperty("defaultSubscriberReceiveMethodName").EqualTo(DefaultSubscriberReceiveMethodName))
 				.AsSingletons();
 			return configure;

@@ -542,7 +542,7 @@ namespace DomainCQRS.Test
 				.EventStore()
 				.NoAggregateRootCache()
 				.MessageReceiver()
-				.MockEventPublisher(100, TimeSpan.FromSeconds(1))
+				.EventPublisher()
 				.SagaPublisher()
 				.Build()
 					.Register<MockSagaCommand, MockSagaAggregateRoot>()
