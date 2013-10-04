@@ -81,6 +81,10 @@
     <Compile Include="Publisher\IEventProjector.cs" />
     <Compile Include="Publisher\ISagaPublisher.cs" />
     <Compile Include="Publisher\SagaPublisher.cs" />
+    <Compile Include="Receiver\AggregateRootProxy.cs" />
+    <Compile Include="Receiver\IAggregateRootProxy.cs" />
+    <Compile Include="Receiver\IMessageProxy.cs" />
+    <Compile Include="Receiver\MessageProxy.cs" />
     <Compile Include="Receiver\MessageReceiver.cs" />
     <Compile Include="Receiver\IMessageReceiver.cs" />
     <Compile Include="EventStore\IEventResequencer.cs" />

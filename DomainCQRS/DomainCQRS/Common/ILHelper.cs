@@ -49,17 +49,16 @@ namespace DomainCQRS.Common
 			return (Receive)dynamicMethod.CreateDelegate(typeof(Receive));
 		}
 
-		public static CreateAggreateRoot CreateCreateAggreateRoot(Type aggregateRootType, CreateAggreateRoot createAggregateRoot)
+		public static AggregateRootProxy.CreateAggreateRootDelegate CreateCreateAggreateRoot(Type aggregateRootType)
 		{
 			var dynamicMethod = new DynamicMethod(aggregateRootType.Name + "_Create", typeof(object), null);
 			var ilGenerator = dynamicMethod.GetILGenerator();
 			ilGenerator.Emit(OpCodes.Newobj, aggregateRootType.GetConstructor(Type.EmptyTypes));
 			ilGenerator.Emit(OpCodes.Ret);
-			createAggregateRoot = (CreateAggreateRoot)dynamicMethod.CreateDelegate(typeof(CreateAggreateRoot));
-			return createAggregateRoot;
+			return (AggregateRootProxy.CreateAggreateRootDelegate)dynamicMethod.CreateDelegate(typeof(AggregateRootProxy.CreateAggreateRootDelegate));
 		}
 
-		public static ApplyEvent CreateApplyEvent(Type eventType, Type aggregateRootType)
+		public static AggregateRootProxy.ApplyEventDelegate CreateApplyEvent(Type eventType, Type aggregateRootType)
 		{
 			MethodInfo applyMethod = null;
 			foreach (var method in aggregateRootType.GetMethods())
@@ -105,7 +104,7 @@ namespace DomainCQRS.Common
 			ilGenerator.Emit(OpCodes.Nop);
 			ilGenerator.Emit(OpCodes.Ret);
 
-			return (ApplyEvent)dynamicMethod.CreateDelegate(typeof(ApplyEvent));
+			return (AggregateRootProxy.ApplyEventDelegate)dynamicMethod.CreateDelegate(typeof(AggregateRootProxy.ApplyEventDelegate));
 		}
 
 		public static Delegate CreateApplyCommand(Type commandType, Type aggregateRootType, MethodInfo applyMethod)
@@ -121,12 +120,12 @@ namespace DomainCQRS.Common
 			ilGenerator.EmitCall(OpCodes.Callvirt, applyMethod, null);
 			ilGenerator.Emit(OpCodes.Ret);
 
-			return dynamicMethod.CreateDelegate(enumerable ? typeof(ApplyEnumerableCommand) : typeof(ApplyObjectCommand));
+			return dynamicMethod.CreateDelegate(enumerable ? typeof(AggregateRootProxy.ApplyEnumerableCommandDelegate) : typeof(AggregateRootProxy.ApplyObjectCommandDelegate));
 		}
 
-		public static GetAggregateRootIds CreateGetAggregateRootIdDelegate(Type messageType, PropertyInfo property)
+		public static MessageProxy.GetAggregateRootIdsDelegate CreateGetAggregateRootIdDelegate(Type messageType, PropertyInfo property)
 		{
-			var dynamicMethod = new DynamicMethod(messageType.Name + "_" + property.Name, typeof(IEnumerable<Guid>), new Type[] { typeof(object) });
+			var dynamicMethod = new DynamicMethod("GetAggregateRootId_" + messageType.Name, typeof(IEnumerable<Guid>), new Type[] { typeof(object) });
 			var ilGenerator = dynamicMethod.GetILGenerator();
 
 			var guidArray = ilGenerator.DeclareLocal(typeof(Guid[]));
@@ -146,10 +145,10 @@ namespace DomainCQRS.Common
 			ilGenerator.Emit(OpCodes.Ldloc_1);
 			ilGenerator.Emit(OpCodes.Ret);
 
-			return (GetAggregateRootIds)dynamicMethod.CreateDelegate(typeof(GetAggregateRootIds));
+			return (MessageProxy.GetAggregateRootIdsDelegate)dynamicMethod.CreateDelegate(typeof(MessageProxy.GetAggregateRootIdsDelegate));
 		}
 
-		public static GetAggregateRootIds CreateGetAggregateRootIdsDelegate(Type messageType, PropertyInfo property)
+		public static MessageProxy.GetAggregateRootIdsDelegate CreateGetAggregateRootIdsDelegate(Type messageType, PropertyInfo property)
 		{
 			var dynamicMethod = new DynamicMethod("GetAggregateRootIds_" + messageType.Name, typeof(IEnumerable<Guid>), new Type[] { typeof(object) });
 			var ilGenerator = dynamicMethod.GetILGenerator();
@@ -160,7 +159,7 @@ namespace DomainCQRS.Common
 			ilGenerator.Emit(OpCodes.Castclass, typeof(IEnumerable<Guid>));
 			ilGenerator.Emit(OpCodes.Ret);
 
-			return (GetAggregateRootIds)dynamicMethod.CreateDelegate(typeof(GetAggregateRootIds));
+			return (MessageProxy.GetAggregateRootIdsDelegate)dynamicMethod.CreateDelegate(typeof(MessageProxy.GetAggregateRootIdsDelegate));
 		}
 	}
 }
