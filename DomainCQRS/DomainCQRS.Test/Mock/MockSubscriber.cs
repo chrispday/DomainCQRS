@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using DomainCQRS.Common;
 
 namespace DomainCQRS.Test.Mock
 {
@@ -13,7 +14,7 @@ namespace DomainCQRS.Test.Mock
 		{
 		}
 
-		public Common.ILogger Logger { get;  set; }
+		public ILogger Logger { get;  set; }
 
 		public AutoResetEvent ReceivedEvent = new AutoResetEvent(false);
 		public volatile int SignalOnCount = 1;

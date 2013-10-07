@@ -26,6 +26,10 @@ namespace DomainCQRS.Test
 		public IEventStore Save(Guid aggregateRootId, int version, Type aggregateRootType, object data)
 		{
 			Saved.Add(Tuple.Create(aggregateRootId, version, aggregateRootType.AssemblyQualifiedName, data));
+			if (null != EventStored)
+			{
+				EventStored(this, new StoredEvent() { AggregateRootId = aggregateRootId, AggregateRootType = aggregateRootType.AssemblyQualifiedName, Event = data, Timestamp = DateTime.Now, Version = version });
+			}
 			return this;
 		}
 
@@ -36,7 +40,7 @@ namespace DomainCQRS.Test
 					 select new StoredEvent() { AggregateRootId = aggregateRootId, AggregateRootType = s.Item3, Version = s.Item2, Event = s.Item4 };
 		}
 
-		public Common.ILogger Logger
+		public ILogger Logger
 		{
 			get
 			{
@@ -76,6 +80,8 @@ namespace DomainCQRS.Test
 		{
 			throw new NotImplementedException();
 		}
+
+		public event EventHandler<StoredEvent> EventStored;
 	}
 
 	public static class MockEventStore2Configure

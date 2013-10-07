@@ -94,8 +94,6 @@ namespace DomainCQRS
 
 			if (Synchronous)
 			{
-				_messageReceiver.EventPublisher = _eventPublisher;
-				_messageReceiver.Synchronous = true;
 				_eventPublisher.MessageReceiver = _messageReceiver;
 				_eventPublisher.Synchronous = true;
 			}

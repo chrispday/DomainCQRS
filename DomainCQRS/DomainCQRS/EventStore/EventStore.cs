@@ -44,8 +44,8 @@ namespace DomainCQRS
 		private readonly int _defaultSerializationBufferSize;
 		public int DefaultSerializationBufferSize { get { return _defaultSerializationBufferSize; } }
 
-		private MethodInfo _deserialize = typeof(IEventSerializer).GetMethod("Deserialize");
-		private MethodInfo _serialize = typeof(IEventSerializer).GetMethod("Serialize");
+		private static readonly MethodInfo DeserializeMethod = typeof(IEventSerializer).GetMethod("Deserialize");
+		private static readonly MethodInfo SerializeMethod = typeof(IEventSerializer).GetMethod("Serialize");
 
 		public EventStore(ILogger logger, IEventStoreProvider eventStoreProvider, IEventSerializer eventSerializer, int defaultSerializationBufferSize)
 		{
@@ -72,6 +72,8 @@ namespace DomainCQRS
 			_defaultSerializationBufferSize = defaultSerializationBufferSize;
 		}
 
+		public event EventHandler<StoredEvent> EventStored;
+
 		public IEventStore Save(Guid aggregateRootId, int version, Type aggregateRootType, object data)
 		{
 			if (Guid.Empty == aggregateRootId)
@@ -91,7 +93,21 @@ namespace DomainCQRS
 				throw new ArgumentNullException("data");
 			}
 
-			EventStoreProvider.Save(new EventToStore() { AggregateRootId = aggregateRootId, AggregateRootType = aggregateRootType.AssemblyQualifiedName, Version = version, Timestamp = DateTime.Now, EventType = data.GetType().AssemblyQualifiedName, Data = Serialize(data) });
+			var eventToStore = new EventToStore() { AggregateRootId = aggregateRootId, AggregateRootType = aggregateRootType.AssemblyQualifiedName, Version = version, Timestamp = DateTime.Now, EventType = data.GetType().AssemblyQualifiedName, Data = Serialize(data) };
+			EventStoreProvider.Save(eventToStore);
+
+			if (null != EventStored)
+			{
+				EventStored(this, new StoredEvent()
+				{
+					AggregateRootId = aggregateRootId,
+					AggregateRootType = eventToStore.AggregateRootType,
+					Event = data,
+					Timestamp = eventToStore.Timestamp,
+					Version = version
+				});
+			}
+
 			return this;
 		}
 
@@ -102,7 +118,7 @@ namespace DomainCQRS
 				throw new ArgumentOutOfRangeException("aggregateRootId", aggregateRootId, "AggregateRootId cannot be an empty guid.");
 			}
 
-			var version = fromVersion ?? 0;
+			var version = (fromVersion ?? 1) - 1;
 			foreach (var storedEvent in EventStoreProvider.Load(aggregateRootId, fromVersion, toVersion, fromTimestamp, toTimestamp))
 			{
 				if (version + 1 != storedEvent.Version)
@@ -111,7 +127,7 @@ namespace DomainCQRS
 				}
 				version = storedEvent.Version;
 
-				yield return new StoredEvent() { AggregateRootId = aggregateRootId, AggregateRootType = storedEvent.AggregateRootType, Version = version, Event = Deserialize(storedEvent.EventType, storedEvent.Data) };
+				yield return new StoredEvent() { AggregateRootId = aggregateRootId, AggregateRootType = storedEvent.AggregateRootType, Version = version,	Timestamp = storedEvent.Timestamp, Event = Deserialize(storedEvent.EventType, storedEvent.Data) };
 			}
 		}
 
@@ -153,7 +169,7 @@ namespace DomainCQRS
 				throw new ArgumentNullException("eventType");
 			}
 
-			var deserialize = _deserialize.MakeGenericMethod(Type.GetType(eventType));
+			var deserialize = DeserializeMethod.MakeGenericMethod(Type.GetType(eventType));
 			object @event = deserialize.Invoke(EventSerializer, new object[] { new MemoryStream(data) });
 
 			EventUpgrader eventUpgrader;
@@ -169,7 +185,7 @@ namespace DomainCQRS
 		{
 			var stream = new MemoryStream(DefaultSerializationBufferSize);
 
-			var serialize = _serialize.MakeGenericMethod(data.GetType());
+			var serialize = SerializeMethod.MakeGenericMethod(data.GetType());
 			serialize.Invoke(EventSerializer, new object[] { stream, data });
 
 			stream.Flush();

@@ -29,12 +29,13 @@ namespace DomainCQRS
 
 		public static IBuiltConfigure Subscribe<Subscriber>(this IBuiltConfigure configure, Guid subscriptionId) { return Subscribe<Subscriber, object>(configure, subscriptionId); }
 		public static IBuiltConfigure Subscribe<Subscriber>(this IBuiltConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriberReceiveMethodName); }
-		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId) { return Subscribe<Subscriber, Event>(configure, subscriptionId, DefaultSubscriberReceiveMethodName); }
-		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, Event>(configure, subscriptionId, Activator.CreateInstance<Subscriber>(), subscriberReceiveMethodName); }
+		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId) where Event : class { return Subscribe<Subscriber, Event>(configure, subscriptionId, DefaultSubscriberReceiveMethodName); }
+		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) where Event : class { return Subscribe<Subscriber, Event>(configure, subscriptionId, Activator.CreateInstance<Subscriber>(), subscriberReceiveMethodName); }
 		public static IBuiltConfigure Subscribe<Subscriber>(this IBuiltConfigure configure, Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriber); }
 		public static IBuiltConfigure Subscribe<Subscriber>(this IBuiltConfigure configure, Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriber, subscriberReceiveMethodName); }
-		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, Event>(configure, subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
+		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId, Subscriber subscriber) where Event : class { return Subscribe<Subscriber, Event>(configure, subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
 		public static IBuiltConfigure Subscribe<Subscriber, Event>(this IBuiltConfigure configure, Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName)
+			where Event : class
 		{
 			configure.EventPublisher.Subscribe<Subscriber, Event>(subscriptionId, subscriber, subscriberReceiveMethodName);
 			return configure;
@@ -63,13 +64,19 @@ namespace DomainCQRS
 			set
 			{
 				_synchronous = value;
-				if (value)
+				if (_synchronous)
 				{
+					if (null == MessageReceiver)
+					{
+						throw new ArgumentNullException("MessageReceiver");
+					}
 					StopPublishingThread();
+					EventStore.EventStored += EventStore_EventStored;
 				}
 				else
 				{
 					StartPublishingThread();
+					EventStore.EventStored -= EventStore_EventStored;
 				}
 			}
 		}
@@ -119,12 +126,13 @@ namespace DomainCQRS
 
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId) { return Subscribe<Subscriber, object>(subscriptionId, DefaultSubscriberReceiveMethodName); }
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(subscriptionId, subscriberReceiveMethodName); }
-		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId) { return Subscribe<Subscriber, Event>(subscriptionId, DefaultSubscriberReceiveMethodName); }
-		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, Event>(subscriptionId, Activator.CreateInstance<Subscriber>(), DefaultSubscriberReceiveMethodName); }
+		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId) where Event : class { return Subscribe<Subscriber, Event>(subscriptionId, DefaultSubscriberReceiveMethodName); }
+		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, string subscriberReceiveMethodName) where Event : class { return Subscribe<Subscriber, Event>(subscriptionId, Activator.CreateInstance<Subscriber>(), DefaultSubscriberReceiveMethodName); }
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, object>(subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
-		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, Event>(subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
+		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, Subscriber subscriber) where Event : class { return Subscribe<Subscriber, Event>(subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
 		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName)
+			where Event : class
 		{
 			SubscriberAndPosition subscriberAndPosition;
 			if (!_subscribers.TryGetValue(subscriptionId, out subscriberAndPosition))
@@ -214,7 +222,12 @@ namespace DomainCQRS
 			_finishedPublishing.Set();
 		}
 
-		public void Publish(object @event)
+		void EventStore_EventStored(object sender, StoredEvent e)
+		{
+			Publish(e.Event);
+		}
+
+		private void Publish(object @event)
 		{
 			if (!Synchronous)
 			{

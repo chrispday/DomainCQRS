@@ -15,6 +15,7 @@ namespace DomainCQRS
 		// Messages
 		IEventStore Save(Guid aggregateRootId, int version, Type aggregateRootType, object data);
 		IEnumerable<StoredEvent> Load(Guid aggregateRootId, int? fromVersion, int? toVersion, DateTime? fromTimestamp, DateTime? toTimestamp);
+		event EventHandler<StoredEvent> EventStored;
 
 		// Publishing
 		IEventStoreProviderPosition CreateEventStoreProviderPosition();

@@ -50,8 +50,6 @@ namespace DomainCQRS
 		public string DefaultAggregateRootIdProperty { get { return _defaultAggregateRootIdProperty; } }
 		private readonly string _defaultAggregateRootApplyMethod;
 		public string DefaultAggregateRootApplyMethod { get { return _defaultAggregateRootApplyMethod; } }
-		public bool Synchronous { get; set; }
-		public IEventPublisher EventPublisher { get; set; }
 
 		public MessageReceiver(ILogger logger, IEventStore eventStore, IAggregateRootCache aggregateRootCache, string defaultAggregateRootIdProperty, string defaultAggregateRootApplyMethod)
 		{
@@ -104,10 +102,6 @@ namespace DomainCQRS
 					foreach (var @event in eventsToStore)
 					{
 						EventStore.Save(aggregateRootId, ++aggregateRootAndVersion.LatestVersion, aggregateRootProxy.Type, @event);
-						if (Synchronous)
-						{
-							EventPublisher.Publish(@event);
-						}
 					}
 				}
 			}

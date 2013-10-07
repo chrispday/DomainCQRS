@@ -13,8 +13,6 @@ namespace DomainCQRS
 		IAggregateRootCache AggregateRootCache { get; }
 		string DefaultAggregateRootIdProperty { get; }
 		string DefaultAggregateRootApplyMethod { get; }
-		bool Synchronous { get; set; }
-		IEventPublisher EventPublisher { get; set; }
 
 		IMessageReceiver Receive(object message);
 		IMessageReceiver Register<Message, AggregateRoot>();
