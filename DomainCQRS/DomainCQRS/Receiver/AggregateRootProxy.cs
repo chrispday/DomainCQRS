@@ -16,6 +16,7 @@ namespace DomainCQRS
 			}
 
 			_type = type;
+			CreateCreate();
 		}
 
 		public delegate object CreateAggreateRootDelegate();
@@ -61,12 +62,7 @@ namespace DomainCQRS
 
 		public IAggregateRootProxy Register(IMessageProxy messageProxy, string aggregateRootApplyMethod)
 		{
-			if (null == _createAggreateRoot)
-			{
-				CreateCreate();
-			}
 			CreateCommandApply(messageProxy, aggregateRootApplyMethod);
-
 			return this;
 		}
 

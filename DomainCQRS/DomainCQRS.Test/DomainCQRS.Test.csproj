@@ -95,6 +95,12 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Cache\AggregateRootAndVersionTest.cs" />
+    <Compile Include="Cache\LRUAggregateRootCacheTest.cs" />
+    <Compile Include="Cache\NoAggregateRootCacheTest.cs" />
+    <Compile Include="Common\ConfigureTest.cs" />
+    <Compile Include="Common\DebugLoggerTest.cs" />
+    <Compile Include="EventStore\EventStoreTest.cs" />
     <Compile Include="JsonSerializerTests.cs" />
     <Compile Include="ProviderTests\AzureEventStoreProviderTests.cs" />
     <Compile Include="LoadTests.cs" />
@@ -107,6 +113,10 @@
     <Compile Include="ProviderTests\MemoryEventStoreProviderTests.cs" />
     <Compile Include="ProviderTests\PartitionedFileEventStoreProviderTests.cs" />
     <Compile Include="ProviderTests\EventStoreProviderTestsBase.cs" />
+    <Compile Include="Publisher\EventPublisherTest.cs" />
+    <Compile Include="Publisher\SagaPublisherTest.cs" />
+    <Compile Include="Receiver\AggregateRootProxyTest.cs" />
+    <Compile Include="Receiver\MessageProxyTest.cs" />
     <Compile Include="SagaTests.cs" />
     <Compile Include="XmlObjectSerializerTests.cs" />
     <Compile Include="Mock\MockAggregateRoot.cs" />
@@ -121,6 +131,10 @@
     <ProjectReference Include="..\DomainCQRS.Azure\DomainCQRS.Azure.csproj">
       <Project>{9b6cfd63-addc-4c3c-8c23-9bc7dbee2521}</Project>
       <Name>DomainCQRS.Azure</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\DomainCQRS.Domain\DomainCQRS.Domain.csproj">
+      <Project>{2a4dfbf7-cb6e-4bb2-8c26-5dcfa5579f88}</Project>
+      <Name>DomainCQRS.Domain</Name>
     </ProjectReference>
     <ProjectReference Include="..\DomainCQRS.Extensions\DomainCQRS.Extensions.csproj">
       <Project>{51cc1419-04d3-49f8-b512-630002639a50}</Project>
@@ -141,6 +155,7 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

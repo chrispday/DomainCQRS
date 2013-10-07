@@ -135,34 +135,43 @@ namespace DomainCQRS.Common
 
 			if (_dictionary.Count > _capacity)
 			{
-				var removedItems = new List<LValue<TKey, TValue>>();
-				var targetCapacity = (int)(_capacity * DefaultCapacityReduction);
-				while (_dictionary.Count > targetCapacity)
-				{
-					LValue<TKey, TValue> first;
-					lock (_linkedList)
-					{
-						first = _linkedList.First.Value;
-						_linkedList.RemoveFirst();
-					}
-					if (first.Deleted)
-					{
-						continue;
-					}
+				ReduceCount();
+			}
+		}
 
-					lock (_dictionary)
-					{
-						if (_dictionary.Remove(first.Key))
-						{
-							removedItems.Add(first);
-						}
-					}
+		private void ReduceCount()
+		{
+			var removedItems = new List<LValue<TKey, TValue>>();
+			var targetCapacity = (int)(_capacity * DefaultCapacityReduction);
+			if (Capacity == targetCapacity)
+			{
+				targetCapacity = Capacity - 1;
+			}
+			while (_dictionary.Count > targetCapacity)
+			{
+				LValue<TKey, TValue> first;
+				lock (_linkedList)
+				{
+					first = _linkedList.First.Value;
+					_linkedList.RemoveFirst();
+				}
+				if (first.Deleted)
+				{
+					continue;
 				}
 
-				foreach (var item in removedItems)
+				lock (_dictionary)
 				{
-					_OnRemoved(item.Key, item.Value);
+					if (_dictionary.Remove(first.Key))
+					{
+						removedItems.Add(first);
+					}
 				}
+			}
+
+			foreach (var item in removedItems)
+			{
+				_OnRemoved(item.Key, item.Value);
 			}
 		}
 
