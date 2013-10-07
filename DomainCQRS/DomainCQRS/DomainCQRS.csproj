@@ -48,18 +48,12 @@
     <Compile Include="Common\ExtensionAttribute.cs" />
     <Compile Include="Common\Extensions.cs" />
     <Compile Include="Common\ILHelper.cs" />
-    <Compile Include="Domain\AggregateRoot\AggregateRootBase.cs" />
-    <Compile Include="Domain\AggregateRoot\IAggregateRoot.cs" />
-    <Compile Include="Domain\AggregateRoot\IHandlesCommand.cs" />
-    <Compile Include="Domain\AggregateRoot\IHandlesEvent.cs" />
     <Compile Include="Cache\AggregateRootAndVersion.cs" />
     <Compile Include="Common\KeyValueRemovedArgs.cs" />
     <Compile Include="Cache\LRUAggregateRootCache.cs" />
-    <Compile Include="Domain\Commands\ICommand.cs" />
     <Compile Include="Common\DebugLogger.cs" />
     <Compile Include="Common\ILogger.cs" />
     <Compile Include="Common\LRUDictionary.cs" />
-    <Compile Include="Domain\Events\IEvent.cs" />
     <Compile Include="Common\Configure.cs" />
     <Compile Include="EventStore\EventStore.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
@@ -67,7 +61,6 @@
     <Compile Include="Exceptions\EventStoreException.cs" />
     <Compile Include="Exceptions\EventToStoreException.cs" />
     <Compile Include="Cache\IAggregateRootCache.cs" />
-    <Compile Include="EventStore\IEventDeduper.cs" />
     <Compile Include="Provider\File\FileEventStoreProviderPosition.cs" />
     <Compile Include="Provider\IEventStoreProviderPosition.cs" />
     <Compile Include="Provider\IPartitionedEventStoreProvider.cs" />
@@ -87,7 +80,6 @@
     <Compile Include="Receiver\MessageProxy.cs" />
     <Compile Include="Receiver\MessageReceiver.cs" />
     <Compile Include="Receiver\IMessageReceiver.cs" />
-    <Compile Include="EventStore\IEventResequencer.cs" />
     <Compile Include="Serializers\IEventSerializer.cs" />
     <Compile Include="EventStore\IEventStore.cs" />
     <Compile Include="Provider\IEventStoreProvider.cs" />
