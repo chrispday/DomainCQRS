@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 using System.Text;
 
-namespace DomainCQRS.Provider
+namespace DomainCQRS.Persister
 {
 	[Serializable]
-	public class FileEventStoreProviderPosition : IEventStoreProviderPosition
+	public class FileEventPersisterPosition : IEventPersisterPosition
 	{
 		public Dictionary<Guid, long> Positions = new Dictionary<Guid,long>();
 
@@ -27,16 +27,16 @@ namespace DomainCQRS.Provider
 	}
 
 	[Serializable]
-	public class PartitionedFileEventStoreProviderPosition : IEventStoreProviderPosition
+	public class PartitionedFileEventPersisterPosition : IEventPersisterPosition
 	{
-		public IEventStoreProviderPosition[] Positions;
+		public IEventPersisterPosition[] Positions;
 
-		public PartitionedFileEventStoreProviderPosition(int maximumPartitions)
+		public PartitionedFileEventPersisterPosition(int maximumPartitions)
 		{
-			Positions = new IEventStoreProviderPosition[maximumPartitions];
+			Positions = new IEventPersisterPosition[maximumPartitions];
 			for (int i = 0; i < maximumPartitions; i++)
 			{
-				Positions[i] = new FileEventStoreProviderPosition();
+				Positions[i] = new FileEventPersisterPosition();
 			}
 		}
 	}

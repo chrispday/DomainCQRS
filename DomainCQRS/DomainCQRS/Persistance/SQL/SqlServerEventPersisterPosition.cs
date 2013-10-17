@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 using System.Text;
 
-namespace DomainCQRS.Provider
+namespace DomainCQRS.Persister
 {
-	public class SqlServerEventStoreProviderPosition : IEventStoreProviderPosition
+	public class SqlServerEventPersisterPosition : IEventPersisterPosition
 	{
 		public long Position;
 

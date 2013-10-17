@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+
 using System.Text;
 
-namespace DomainCQRS.Azure.Provider
+namespace DomainCQRS.Persister
 {
-	[Serializable]
-	public class AzureEventStoreProviderPosition : IEventStoreProviderPosition
+	public class MemoryEventPersisterPostion : IEventPersisterPosition
 	{
 		public Dictionary<Guid, int> Positions = new Dictionary<Guid, int>();
 

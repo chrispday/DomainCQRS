@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ProtoBuf.Meta;
 using ProtoBuf.ServiceModel;
 using DomainCQRS.Common;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 using DomainCQRS.Test.Mock;
 
 namespace DomainCQRS.Test
@@ -21,7 +21,7 @@ namespace DomainCQRS.Test
 		string BaseDirectory;
 		Dictionary<Guid, int> LoadTestAggregateIds;
 		string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
-		SqlServerEventStoreProvider SqlLoadTestProvider;
+		SqlServerEventPersister SqlLoadTestProvider;
 
 		[TestInitialize]
 		public void Init()
@@ -45,7 +45,7 @@ namespace DomainCQRS.Test
 				}
 			}
 			catch { }
-			SqlLoadTestProvider = new SqlServerEventStoreProvider(new DebugLogger(false), ConnectionString).EnsureExists() as SqlServerEventStoreProvider;
+			SqlLoadTestProvider = new SqlServerEventPersister(new DebugLogger(false), ConnectionString).EnsureExists() as SqlServerEventPersister;
 		}
 
 		[TestCleanup]
@@ -64,7 +64,7 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void LoadTest_FileEventStoreProvider()
 		{
-			var fileLoadTestProvider = new FileEventStoreProvider(new DebugLogger(false), Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1000, 8096).EnsureExists() as FileEventStoreProvider;
+			var fileLoadTestProvider = new FileEventPersister(new DebugLogger(false), Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1000, 8096).EnsureExists() as FileEventPersister;
 
 			var stopWatch = Stopwatch.StartNew();
 
@@ -108,7 +108,7 @@ namespace DomainCQRS.Test
 
 			var configure = Configure.With()
 				.DebugLogger()
-				.PartitionedFileEventStoreProvider(2, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 5000, 8 * 1024)
+				.PartitionedFileEventPersister(2, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 5000, 8 * 1024)
 				.XmlObjectSerializer(serializer)
 				.EventStore()
 				.MessageReceiver()
@@ -136,7 +136,7 @@ namespace DomainCQRS.Test
 
 			stopWatch.Stop();
 
-			var fileInfos = Directory.GetFiles(((configure as Configure).EventStore.EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
+			var fileInfos = Directory.GetFiles(((configure as Configure).EventStore.EventStoreProvider as PartitionedFileEventPersister).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
 			Debug.WriteLine("Time taken {0}", stopWatch.Elapsed);
 			Debug.WriteLine("Per sec {0:#,##0.0}", amount / stopWatch.Elapsed.TotalSeconds);
 			Debug.WriteLine("Files in Event Store {0}", fileInfos.Count());
@@ -154,7 +154,7 @@ namespace DomainCQRS.Test
 
 			var configure = Configure.With()
 				.DebugLogger()
-				.PartitionedFileEventStoreProvider(8, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1500, 8 * 1024)
+				.PartitionedFileEventPersister(8, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1500, 8 * 1024)
 				.XmlObjectSerializer(serializer)
 				.EventStore()
 				.MessageReceiver()
@@ -204,7 +204,7 @@ namespace DomainCQRS.Test
 				
 			stopWatch.Stop();
 
-			var fileInfos = Directory.GetFiles(((configure as Configure).EventStore.EventStoreProvider as PartitionedFileEventStoreProvider).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
+			var fileInfos = Directory.GetFiles(((configure as Configure).EventStore.EventStoreProvider as PartitionedFileEventPersister).Directory, "*.*", SearchOption.AllDirectories).Select(f => new FileInfo(f)).ToList();
 			Debug.WriteLine("Time taken {0}", stopWatch.Elapsed);
 			Debug.WriteLine("Per sec {0:#,##0.0}", amount / stopWatch.Elapsed.TotalSeconds);
 			Debug.WriteLine("Files in Event Store {0}", fileInfos.Count());
@@ -225,7 +225,7 @@ namespace DomainCQRS.Test
 			var configure = Configure.With()
 				.DebugLogger(false)
 				//.PartitionedFileEventStoreProvider(8, Path.Combine(BaseDirectory, Guid.NewGuid().ToString()), 1500, 8 * 1024)
-				.MemoryEventStoreProvider()
+				.MemoryEventPersister()
 				//.SqlServerEventStoreProvider(ConnectionString)
 				.XmlObjectSerializer(serializer)
 				.EventStore()

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 using System.Linq;
 using System.Runtime.Serialization;
 using ProtoBuf.ServiceModel;
@@ -34,7 +34,7 @@ namespace DomainCQRS.Test
 			var config = Configure.With()
 				.DebugLogger()
 				.XmlObjectSerializer(new DataContractSerializer(typeof(object), new Type[] { typeof(MockEvent) }))
-				.MemoryEventStoreProvider()
+				.MemoryEventPersister()
 				.LRUAggregateRootCache()
 				.EventStore()
 				.MessageReceiver()
@@ -69,7 +69,7 @@ namespace DomainCQRS.Test
 			var config = Configure.With()
 				.DebugLogger()
 				.XmlObjectSerializer(serializer)
-				.MemoryEventStoreProvider()
+				.MemoryEventPersister()
 				.LRUAggregateRootCache()
 				.EventStore()
 				.MessageReceiver()

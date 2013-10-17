@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using DomainCQRS.Common;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StoryQ;
 
@@ -52,7 +52,7 @@ namespace DomainCQRS.Test
 			var logger = new DebugLogger(true);
 			eventStore = new EventStore(
 				logger,
-				new MemoryEventStoreProvider(logger).EnsureExists(),
+				new MemoryEventPersister(logger).EnsureExists(),
 				new BinaryFormatterSerializer(),
 				8096);
 		}
@@ -247,7 +247,8 @@ namespace DomainCQRS.Test
 
 		private void TheEventsShouldBeLoaded()
 		{
-			var e = eventStore.Load(int.MaxValue, eventStore.CreateEventStoreProviderPosition(), eventStore.CreateEventStoreProviderPosition());
+			IEventPersisterPosition to;
+			var e = eventStore.Load(int.MaxValue, eventStore.CreateEventStoreProviderPosition(), out to);
 			Assert.AreEqual(2, e.Count());
 			Assert.AreEqual(loadAR, e.First().AggregateRootId);
 			Assert.AreEqual(1, e.First().Version);
@@ -256,13 +257,13 @@ namespace DomainCQRS.Test
 		}
 
 		Guid someAR = Guid.NewGuid();
-		IEventStoreProviderPosition from;
-		IEventStoreProviderPosition to;
+		IEventPersisterPosition from;
+		IEventPersisterPosition to;
 		private void SomeEventsThatHaveBeenLoaded()
 		{
 			eventStore.Save(someAR, 1, typeof(Guid), someAR);
 			eventStore.Save(someAR, 2, typeof(Guid), someAR);
-			eventStore.Load(int.MaxValue, from = eventStore.CreateEventStoreProviderPosition(), to = eventStore.CreateEventStoreProviderPosition()).ToList();
+			eventStore.Load(int.MaxValue, from = eventStore.CreateEventStoreProviderPosition(), out to).ToList();
 		}
 
 		private void MoreEventsAreSaved()
@@ -273,7 +274,8 @@ namespace DomainCQRS.Test
 
 		private void ThoseEventsShouldBeLoaded()
 		{
-			var e = eventStore.Load(int.MaxValue, to, eventStore.CreateEventStoreProviderPosition());
+			IEventPersisterPosition to2;
+			var e = eventStore.Load(int.MaxValue, to, out to2);
 			Assert.AreEqual(2, e.Count());
 			Assert.AreEqual(someAR, e.First().AggregateRootId);
 			Assert.AreEqual(3, e.First().Version);
@@ -286,13 +288,15 @@ namespace DomainCQRS.Test
 		{
 			eventStore.Save(subsAR, 1, typeof(Guid), subsAR);
 			eventStore.Save(subsAR, 2, typeof(Guid), subsAR);
-			eventStore.Load(int.MaxValue, eventStore.CreateEventStoreProviderPosition(), eventStore.CreateEventStoreProviderPosition());
+			IEventPersisterPosition to;
+			eventStore.Load(int.MaxValue, eventStore.CreateEventStoreProviderPosition(), out to);
 		}
 
 		IEnumerable<StoredEvent> newE;
 		private void LoadingFromTheStartPosition()
 		{
-			newE = eventStore.Load(int.MaxValue, eventStore.CreateEventStoreProviderPosition(), eventStore.CreateEventStoreProviderPosition());
+			IEventPersisterPosition to;
+			newE = eventStore.Load(int.MaxValue, eventStore.CreateEventStoreProviderPosition(), out to);
 		}
 
 		private void EventsFromTheBeginningShouldBeLoaded()
@@ -323,11 +327,11 @@ namespace DomainCQRS.Test
 		private void LoadingFromTheStartPositionInBatches()
 		{
 			var from = eventStore.CreateEventStoreProviderPosition();
-			var to = eventStore.CreateEventStoreProviderPosition();
+			IEventPersisterPosition to;
 
 			while (true)
 			{
-				batches.Add(eventStore.Load(1, from, to));
+				batches.Add(eventStore.Load(1, from, out to));
 				if (0 == batches.Last().Count())
 				{
 					break;

@@ -31,7 +31,7 @@ namespace DomainCQRS.Test
 			config = Configure.With()
 				.BinaryFormatterSerializer()
 				.DebugLogger()
-				.MemoryEventStoreProvider()
+				.MemoryEventPersister()
 				.EventStore()
 				.Build()
 					.Upgrade<MockEvent, MockEvent2>()

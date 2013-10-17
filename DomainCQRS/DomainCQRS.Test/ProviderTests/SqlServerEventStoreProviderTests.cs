@@ -5,7 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Data.SqlClient;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 using DomainCQRS.Common;
 
 namespace DomainCQRS.Test
@@ -15,9 +15,9 @@ namespace DomainCQRS.Test
 	{
 		string ConnectionString = @"Data Source=.\SQLEXPRESS;Initial Catalog=EventStore;Integrated Security=True";
 
-		protected override IEventStoreProvider CreateProvider()
+		protected override IEventPersister CreateProvider()
 		{
-			return new SqlServerEventStoreProvider(new DebugLogger(true), ConnectionString);
+			return new SqlServerEventPersister(new DebugLogger(true), ConnectionString);
 		}
 
 		protected override bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder
@@ -56,7 +56,7 @@ namespace DomainCQRS.Test
 		[TestMethod]
 		public void SqlServerEventStoreProvider_EnsuresExists()
 		{
-			var sqlEventEventStoreProvider = new SqlServerEventStoreProvider(new DebugLogger(true), ConnectionString).EnsureExists();
+			var sqlEventEventStoreProvider = new SqlServerEventPersister(new DebugLogger(true), ConnectionString).EnsureExists();
 			using (var conn = new SqlConnection(ConnectionString))
 			{
 				conn.Open();
@@ -69,7 +69,7 @@ namespace DomainCQRS.Test
 
 		protected override IConfigure RegisterProvider(IConfigure configure)
 		{
-			return configure.SqlServerEventStoreProvider(ConnectionString);
+			return configure.SqlServerEventPersister(ConnectionString);
 		}
 	}
 }

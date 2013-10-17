@@ -12,7 +12,7 @@ namespace DomainCQRS.Test
 	public abstract class EventStoreProviderTestsBase
 	{
 		protected abstract IConfigure RegisterProvider(IConfigure configure);
-		protected abstract IEventStoreProvider CreateProvider();
+		protected abstract IEventPersister CreateProvider();
 		protected abstract bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder { get; }
 
 		[TestMethod]

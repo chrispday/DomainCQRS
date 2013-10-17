@@ -6,20 +6,20 @@ using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Table;
-using DomainCQRS.Azure.Provider;
+using DomainCQRS.Azure.Persister;
 using DomainCQRS.Common;
 using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
-	public static class AzureEventStoreProviderConfigure
+	public static class AzureEventPersisterConfigure
 	{
-		public static IConfigure AzureEventStoreProvider(this IConfigure configure, string connectionString)
+		public static IConfigure AzureEventPersister(this IConfigure configure, string connectionString)
 		{
 			configure.Registry
-				.BuildInstancesOf<IEventStoreProvider>()
-				.TheDefaultIs(Registry.Instance<IEventStoreProvider>()
-					.UsingConcreteType<AzureEventStoreProvider>()
+				.BuildInstancesOf<IEventPersister>()
+				.TheDefaultIs(Registry.Instance<IEventPersister>()
+					.UsingConcreteType<AzureEventPersister>()
 					.WithProperty("connectionString").EqualTo(connectionString))
 				.AsSingletons();
 			return configure;
@@ -27,9 +27,9 @@ namespace DomainCQRS
 	}
 }
 
-namespace DomainCQRS.Azure.Provider
+namespace DomainCQRS.Azure.Persister
 {
-	public class AzureEventStoreProvider : IEventStoreProvider
+	public class AzureEventPersister : IEventPersister
 	{
 		private readonly ILogger _logger;
 		public ILogger Logger { get { return _logger; } }
@@ -48,7 +48,7 @@ namespace DomainCQRS.Azure.Provider
 		private static readonly int MaximumPropertySize = 64 * 1024 * 1024;
 		private static readonly string RowKeyFormat = "D12";
 
-		public AzureEventStoreProvider(ILogger logger, string connectionString)
+		public AzureEventPersister(ILogger logger, string connectionString)
 		{
 			if (null == logger)
 			{
@@ -63,7 +63,7 @@ namespace DomainCQRS.Azure.Provider
 			_connectionString = connectionString;
 		}
 
-		public IEventStoreProvider EnsureExists()
+		public IEventPersister EnsureExists()
 		{
 			_storageAccount = CloudStorageAccount.Parse(ConnectionString);
 			_tableClient = _storageAccount.CreateCloudTableClient();
@@ -80,7 +80,7 @@ namespace DomainCQRS.Azure.Provider
 			return this;
 		}
 
-		public IEventStoreProvider Save(EventToStore eventToStore)
+		public IEventPersister Save(EventToStore eventToStore)
 		{
 			var entity = new DynamicTableEntity(eventToStore.AggregateRootId.ToString(), "");
 			_aggregateRootIds.Execute(TableOperation.InsertOrMerge(entity));
@@ -125,14 +125,14 @@ namespace DomainCQRS.Azure.Provider
 			}
 		}
 
-		public IEventStoreProviderPosition CreatePosition()
+		public IEventPersisterPosition CreatePosition()
 		{
-			return new AzureEventStoreProviderPosition();
+			return new AzureEventPersisterPosition();
 		}
 
-		public IEventStoreProviderPosition LoadPosition(Guid subscriberId)
+		public IEventPersisterPosition LoadPosition(Guid subscriberId)
 		{
-			var position = new AzureEventStoreProviderPosition();
+			var position = new AzureEventPersisterPosition();
 
 			var query = new TableQuery<DynamicTableEntity>()
 				.Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, subscriberId.ToString()));
@@ -145,12 +145,12 @@ namespace DomainCQRS.Azure.Provider
 			return position;
 		}
 
-		public IEventStoreProvider SavePosition(Guid subscriberId, IEventStoreProviderPosition position)
+		public IEventPersister SavePosition(Guid subscriberId, IEventPersisterPosition position)
 		{
-			return SavePosition(subscriberId, position as AzureEventStoreProviderPosition);
+			return SavePosition(subscriberId, position as AzureEventPersisterPosition);
  		}
 
-		public IEventStoreProvider SavePosition(Guid subscriberId, AzureEventStoreProviderPosition position)
+		public IEventPersister SavePosition(Guid subscriberId, AzureEventPersisterPosition position)
 		{
 			var tableEntity = new DynamicTableEntity(subscriberId.ToString(), "");
 
@@ -164,12 +164,12 @@ namespace DomainCQRS.Azure.Provider
 			return this;
 		}
 
-		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		public IEnumerable<EventToStore> Load(IEventPersisterPosition from, IEventPersisterPosition to)
 		{
-			return Load(from as AzureEventStoreProviderPosition, to as AzureEventStoreProviderPosition);
+			return Load(from as AzureEventPersisterPosition, to as AzureEventPersisterPosition);
 		}
 
-		public IEnumerable<EventToStore> Load(AzureEventStoreProviderPosition from, AzureEventStoreProviderPosition to)
+		public IEnumerable<EventToStore> Load(AzureEventPersisterPosition from, AzureEventPersisterPosition to)
 		{
 			Logger.Verbose("from {0} to {1}", from, to);
 

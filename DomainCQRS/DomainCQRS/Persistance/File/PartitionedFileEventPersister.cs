@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using DomainCQRS.Common;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
-	public static class PartitionedFileEventStoreProviderConfigure
+	public static class PartitionedFileEventPersisterConfigure
 	{
 		public static int DefaultEventStreamCacheCapacityPerPartition = 50;
 		public static int DefaultEventStreamBufferSize = 1024 * 8;
 
-		public static IConfigure PartitionedFileEventStoreProvider(this IConfigure configure, int maximumPartitions, string directory) { return configure.PartitionedFileEventStoreProvider(maximumPartitions, directory, DefaultEventStreamCacheCapacityPerPartition, DefaultEventStreamBufferSize); }
-		public static IConfigure PartitionedFileEventStoreProvider(this IConfigure configure, int maximumPartitions, string directory, int eventStreamCacheCapacityPerPartition, int eventStreamBufferSize)
+		public static IConfigure PartitionedFileEventPersister(this IConfigure configure, int maximumPartitions, string directory) { return configure.PartitionedFileEventPersister(maximumPartitions, directory, DefaultEventStreamCacheCapacityPerPartition, DefaultEventStreamBufferSize); }
+		public static IConfigure PartitionedFileEventPersister(this IConfigure configure, int maximumPartitions, string directory, int eventStreamCacheCapacityPerPartition, int eventStreamBufferSize)
 		{
 			configure.Registry
-				.BuildInstancesOf<IEventStoreProvider>()
-				.TheDefaultIs(Registry.Instance<IEventStoreProvider>()
-					.UsingConcreteType<PartitionedFileEventStoreProvider>()
+				.BuildInstancesOf<IEventPersister>()
+				.TheDefaultIs(Registry.Instance<IEventPersister>()
+					.UsingConcreteType<PartitionedFileEventPersister>()
 					.WithProperty("directory").EqualTo(directory)
 					.WithProperty("maximumPartitions").EqualTo(maximumPartitions)
 					.WithProperty("eventStreamCacheCapacityPerPartition").EqualTo(eventStreamCacheCapacityPerPartition)
@@ -30,9 +30,9 @@ namespace DomainCQRS
 	}
 }
 
-namespace DomainCQRS.Provider
+namespace DomainCQRS.Persister
 {
-	public class PartitionedFileEventStoreProvider : IPartitionedEventStoreProvider
+	public class PartitionedFileEventPersister : IPartitionedEventPersister
 	{
 		private readonly string _directory;
 		public string Directory { get { return _directory; } }
@@ -45,9 +45,9 @@ namespace DomainCQRS.Provider
 		private readonly int _maximumPartitions;
 		public int MaximumPartitions { get { return _maximumPartitions; } }
 
-		private FileEventStoreProvider[] _fileEventStoreProviders;
+		private FileEventPersister[] _fileEventStoreProviders;
 
-		public PartitionedFileEventStoreProvider(ILogger logger, string directory, int maximumPartitions, int eventStreamCacheCapacityPerPartition, int eventStreamBufferSize)
+		public PartitionedFileEventPersister(ILogger logger, string directory, int maximumPartitions, int eventStreamCacheCapacityPerPartition, int eventStreamBufferSize)
 		{
 			if (null == logger)
 			{
@@ -77,7 +77,7 @@ namespace DomainCQRS.Provider
 			_eventStreamBufferSize = eventStreamBufferSize;
 		}
 
-		public IEventStoreProvider EnsureExists()
+		public IEventPersister EnsureExists()
 		{
 			if (2 > MaximumPartitions)
 			{
@@ -89,21 +89,21 @@ namespace DomainCQRS.Provider
 				System.IO.Directory.CreateDirectory(Directory);
 			}
 
-			_fileEventStoreProviders = new FileEventStoreProvider[MaximumPartitions];
+			_fileEventStoreProviders = new FileEventPersister[MaximumPartitions];
 			for (int i = 0; i < MaximumPartitions; i++)
 			{
-				_fileEventStoreProviders[i] = new FileEventStoreProvider(
+				_fileEventStoreProviders[i] = new FileEventPersister(
 					Logger,
 					Path.Combine(Directory, i.ToString()),
 					EventStreamCacheCapacityPerPartition,
 					EventStreamBufferSize
-					).EnsureExists() as FileEventStoreProvider;
+					).EnsureExists() as FileEventPersister;
 			}
 
 			return this;
 		}
 
-		public IEventStoreProvider Save(EventToStore eventToStore)
+		public IEventPersister Save(EventToStore eventToStore)
 		{
 			var fileEventStoreProvider = _fileEventStoreProviders[GetIndex(eventToStore.AggregateRootId)];
 			lock (fileEventStoreProvider)
@@ -121,14 +121,14 @@ namespace DomainCQRS.Provider
 			}
 		}
 
-		public IEventStoreProviderPosition CreatePosition()
+		public IEventPersisterPosition CreatePosition()
 		{
-			return new PartitionedFileEventStoreProviderPosition(MaximumPartitions);
+			return new PartitionedFileEventPersisterPosition(MaximumPartitions);
 		}
 
-		public IEventStoreProviderPosition LoadPosition(Guid subscriberId)
+		public IEventPersisterPosition LoadPosition(Guid subscriberId)
 		{
-			var position = new PartitionedFileEventStoreProviderPosition(MaximumPartitions);
+			var position = new PartitionedFileEventPersisterPosition(MaximumPartitions);
 			for (int i = 0; i < MaximumPartitions; i++)
 			{
 				position.Positions[i] = _fileEventStoreProviders[i].LoadPosition(subscriberId);
@@ -136,12 +136,12 @@ namespace DomainCQRS.Provider
 			return position;
 		}
 
-		public IEventStoreProvider SavePosition(Guid subscriberId, IEventStoreProviderPosition position)
+		public IEventPersister SavePosition(Guid subscriberId, IEventPersisterPosition position)
 		{
-			return SavePosition(subscriberId, position as PartitionedFileEventStoreProviderPosition);
+			return SavePosition(subscriberId, position as PartitionedFileEventPersisterPosition);
 		}
 
-		public IEventStoreProvider SavePosition(Guid subscriberId, PartitionedFileEventStoreProviderPosition position)
+		public IEventPersister SavePosition(Guid subscriberId, PartitionedFileEventPersisterPosition position)
 		{
 			for (int i = 0; i < MaximumPartitions; i++)
 			{
@@ -150,21 +150,21 @@ namespace DomainCQRS.Provider
 			return this;
 		}
 
-		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition to)
+		//public IEnumerable<EventToStore> Load(IEventStoreProviderPosition to)
+		//{
+		//	return Load(CreatePosition(), to);
+		//}
+
+		public IEnumerable<EventToStore> Load(IEventPersisterPosition from, IEventPersisterPosition to)
 		{
-			return Load(CreatePosition(), to);
+			return Load(from as PartitionedFileEventPersisterPosition, to as PartitionedFileEventPersisterPosition);
 		}
 
-		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
-		{
-			return Load(from as PartitionedFileEventStoreProviderPosition, to as PartitionedFileEventStoreProviderPosition);
-		}
-
-		public IEnumerable<EventToStore> Load(PartitionedFileEventStoreProviderPosition from, PartitionedFileEventStoreProviderPosition to)
+		public IEnumerable<EventToStore> Load(PartitionedFileEventPersisterPosition from, PartitionedFileEventPersisterPosition to)
 		{
 			if (null == from)
 			{
-				from = new PartitionedFileEventStoreProviderPosition(MaximumPartitions);
+				from = new PartitionedFileEventPersisterPosition(MaximumPartitions);
 			}
 
 			for (int i = 0; i < MaximumPartitions; i++)

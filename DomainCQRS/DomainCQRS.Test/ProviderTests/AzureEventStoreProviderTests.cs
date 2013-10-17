@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DomainCQRS.Common;
 using Microsoft.WindowsAzure.Storage;
-using DomainCQRS.Azure.Provider;
+using DomainCQRS.Azure.Persister;
 using Microsoft.WindowsAzure.Storage.Table;
 
 namespace DomainCQRS.Test
@@ -19,9 +19,9 @@ namespace DomainCQRS.Test
 		private static readonly string SubscriberTable = "Subscriber";
 		private static readonly string AggregateRootIdsTable = "AggregateRootIds";
 
-		protected override IEventStoreProvider CreateProvider()
+		protected override IEventPersister CreateProvider()
 		{
-			return new AzureEventStoreProvider(new DebugLogger(true), ConnectionString).EnsureExists();
+			return new AzureEventPersister(new DebugLogger(true), ConnectionString).EnsureExists();
 		}
 
 		[TestInitialize]
@@ -47,7 +47,7 @@ namespace DomainCQRS.Test
 
 		protected override IConfigure RegisterProvider(IConfigure configure)
 		{
-			return configure.AzureEventStoreProvider(ConnectionString);
+			return configure.AzureEventPersister(ConnectionString);
 		}
 	}
 }

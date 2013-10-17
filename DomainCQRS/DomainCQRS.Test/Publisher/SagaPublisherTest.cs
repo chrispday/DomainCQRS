@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using DomainCQRS.Common;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StoryQ;
 
@@ -36,7 +36,7 @@ namespace DomainCQRS.Test.Publisher
 			logger = new DebugLogger(true);
 			eventStore = new EventStore(
 	logger,
-	new MemoryEventStoreProvider(logger).EnsureExists(),
+	new MemoryEventPersister(logger).EnsureExists(),
 	new BinaryFormatterSerializer(),
 	8096);
 		}

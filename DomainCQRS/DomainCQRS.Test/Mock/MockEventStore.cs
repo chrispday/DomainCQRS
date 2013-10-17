@@ -10,7 +10,7 @@ namespace DomainCQRS.Test
 {
 	public class MockEventStore : IEventStore
 	{
-		public IEventStoreProvider EventStoreProvider
+		public IEventPersister EventStoreProvider
 		{
 			get
 			{
@@ -65,12 +65,12 @@ namespace DomainCQRS.Test
 		}
 
 
-		public IEventStoreProviderPosition CreateEventStoreProviderPosition()
+		public IEventPersisterPosition CreateEventStoreProviderPosition()
 		{
 			throw new NotImplementedException();
 		}
 
-		public IEnumerable<StoredEvent> Load(int batchSize, IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		public IEnumerable<StoredEvent> Load(int batchSize, IEventPersisterPosition from, out IEventPersisterPosition to)
 		{
 			throw new NotImplementedException();
 		}
@@ -100,12 +100,15 @@ namespace DomainCQRS.Test
 
 	public class MockEventStore2 : EventStore
 	{
-		public MockEventStore2(ILogger logger, IEventStoreProvider eventStoreProvider, IEventSerializer eventSerializer, int defaultSerializationBufferSize)
+		public MockEventStore2(ILogger logger, IEventPersister eventStoreProvider, IEventSerializer eventSerializer, int defaultSerializationBufferSize)
 			:base(logger, eventStoreProvider, eventSerializer, defaultSerializationBufferSize)
 		{}
 
-		public override IEnumerable<StoredEvent> Load(int batchSize, IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		public override IEnumerable<StoredEvent> Load(int batchSize, IEventPersisterPosition from, out IEventPersisterPosition to)
 		{
+			to = CreateEventStoreProviderPosition();
+			var storedEvents = new List<StoredEvent>();
+
 			foreach (var storedEvent in EventStoreProvider.Load(from, to))
 			{
 				var e = new StoredEvent() { AggregateRootId = storedEvent.AggregateRootId, Version = storedEvent.Version, Event = Deserialize(storedEvent.EventType, storedEvent.Data) };
@@ -113,13 +116,14 @@ namespace DomainCQRS.Test
 				{
 					(e.Event as MockEvent).BatchNo = batchSize;
 				}
-				yield return e;
+				storedEvents.Add(e);
 
 				if (0 >= --batchSize)
 				{
 					break;
 				}
 			}
+			return storedEvents;
 		}
 	}
 }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 using System.Linq;
 using System.Runtime.Serialization;
 using ProtoBuf.ServiceModel;
@@ -20,7 +20,7 @@ namespace DomainCQRS.Test
 		{
 			var config = Configure.With()
 				.DebugLogger(true)
-				.MemoryEventStoreProvider()
+				.MemoryEventPersister()
 				.JsonSerializer()
 				.LRUAggregateRootCache()
 				.EventStore()

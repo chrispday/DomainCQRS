@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 using System.Linq;
 using DomainCQRS.Common;
 
@@ -16,7 +16,7 @@ namespace DomainCQRS.Test
 		public static void ClassInit(TestContext ctx)
 		{
 			var logger = new DebugLogger(true);
-			EventStore = new EventStore(logger, new MemoryEventStoreProvider(logger).EnsureExists(), new BinaryFormatterSerializer(), 8096);
+			EventStore = new EventStore(logger, new MemoryEventPersister(logger).EnsureExists(), new BinaryFormatterSerializer(), 8096);
 		}
 
 		[ClassCleanup]

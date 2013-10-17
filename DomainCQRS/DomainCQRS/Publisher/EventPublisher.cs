@@ -86,7 +86,7 @@ namespace DomainCQRS
 			public object Subscriber;
 			public Dictionary<Type, Receive> Receives = new Dictionary<Type, Receive>();
 			public Receive ReceiveObject;
-			public IEventStoreProviderPosition Position;
+			public IEventPersisterPosition Position;
 		}
 		protected Dictionary<Guid, SubscriberAndPosition> _subscribers = new Dictionary<Guid, SubscriberAndPosition>();
 		private Thread _publisherThread;
@@ -263,8 +263,8 @@ namespace DomainCQRS
 					subscription.Value.Position = EventStore.CreateEventStoreProviderPosition();
 				}
 
-				var to = EventStore.CreateEventStoreProviderPosition();
-				foreach (var @event in EventStore.Load(BatchSize, subscription.Value.Position, to))
+				IEventPersisterPosition to;
+				foreach (var @event in EventStore.Load(BatchSize, subscription.Value.Position, out to))
 				{
 					Receive receive;
 					if (0 == subscription.Value.Receives.Count

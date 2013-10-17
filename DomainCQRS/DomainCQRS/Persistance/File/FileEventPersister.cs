@@ -1,25 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
-using System.Runtime.InteropServices;
 using DomainCQRS.Common;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
-	public static class FileEventStoreProviderConfigure
+	public static class FileEventPersisterConfigure
 	{
 		public static int DefaultEventStreamCacheCapacity = 10000;
 		public static int DefaultEventStreamBufferSize = 8 * 1024;
-		public static IConfigure FileEventStoreProvider(this IConfigure configure, string directory) { return configure.FileEventStoreProvider(directory, DefaultEventStreamCacheCapacity, DefaultEventStreamBufferSize); }
-		public static IConfigure FileEventStoreProvider(this IConfigure configure, string directory, int eventStreamCacheCapacity, int eventStreamBufferSize)
+		public static IConfigure FileEventPersister(this IConfigure configure, string directory) { return configure.FileEventPersister(directory, DefaultEventStreamCacheCapacity, DefaultEventStreamBufferSize); }
+		public static IConfigure FileEventPersister(this IConfigure configure, string directory, int eventStreamCacheCapacity, int eventStreamBufferSize)
 		{
 			configure.Registry
-				.BuildInstancesOf<IEventStoreProvider>()
-				.TheDefaultIs(Registry.Instance<IEventStoreProvider>()
-					.UsingConcreteType<FileEventStoreProvider>()
+				.BuildInstancesOf<IEventPersister>()
+				.TheDefaultIs(Registry.Instance<IEventPersister>()
+					.UsingConcreteType<FileEventPersister>()
 					.WithProperty("directory").EqualTo(directory)
 					.WithProperty("eventStreamCacheCapacity").EqualTo(eventStreamCacheCapacity)
 					.WithProperty("eventStreamBufferSize").EqualTo(eventStreamBufferSize))
@@ -29,9 +27,9 @@ namespace DomainCQRS
 	}
 }
 
-namespace DomainCQRS.Provider
+namespace DomainCQRS.Persister
 {
-	public class FileEventStoreProvider : IEventStoreProvider
+	public class FileEventPersister : IEventPersister
 	{
 		private readonly string _directory;
 		public string Directory { get { return _directory; } }
@@ -47,7 +45,7 @@ namespace DomainCQRS.Provider
 		private string _eventDirectory;
 		private string _subscriberDirectory;
 
-		public FileEventStoreProvider(ILogger logger, string directory, int eventStreamCacheCapacity, int eventStreamBufferSize)
+		public FileEventPersister(ILogger logger, string directory, int eventStreamCacheCapacity, int eventStreamBufferSize)
 		{
 			if (null == logger)
 			{
@@ -72,7 +70,7 @@ namespace DomainCQRS.Provider
 			_eventStreamBufferSize = eventStreamBufferSize;
 		}
 
-		public IEventStoreProvider EnsureExists()
+		public IEventPersister EnsureExists()
 		{
 			if (!System.IO.Directory.Exists(Directory))
 			{
@@ -105,7 +103,7 @@ namespace DomainCQRS.Provider
 			e.Value.Dispose();
 		}
 
-		public IEventStoreProvider Save(EventToStore eventToStore)
+		public IEventPersister Save(EventToStore eventToStore)
 		{
 			GetFileEventStream(eventToStore.AggregateRootId).Save(eventToStore);
 			return this;
@@ -116,14 +114,14 @@ namespace DomainCQRS.Provider
 			return GetFileEventStream(aggregateRootId).Load(aggregateRootId, fromVersion, toVersion, fromTimestamp, toTimestamp);
 		}
 
-		public IEventStoreProviderPosition CreatePosition()
+		public IEventPersisterPosition CreatePosition()
 		{
-			return new FileEventStoreProviderPosition();
+			return new FileEventPersisterPosition();
 		}
 
-		public IEventStoreProviderPosition LoadPosition(Guid subscriberId)
+		public IEventPersisterPosition LoadPosition(Guid subscriberId)
 		{
-			var positions = new FileEventStoreProviderPosition();
+			var positions = new FileEventPersisterPosition();
 
 			try
 			{
@@ -146,12 +144,12 @@ namespace DomainCQRS.Provider
 			return positions;
 		}
 
-		public IEventStoreProvider SavePosition(Guid subscriberId, IEventStoreProviderPosition position)
+		public IEventPersister SavePosition(Guid subscriberId, IEventPersisterPosition position)
 		{
-			return SaveEventStoreProviderPosition(subscriberId, position as FileEventStoreProviderPosition);
+			return SaveEventStoreProviderPosition(subscriberId, position as FileEventPersisterPosition);
 		}
 
-		public IEventStoreProvider SaveEventStoreProviderPosition(Guid subscriberId, FileEventStoreProviderPosition position)
+		public IEventPersister SaveEventStoreProviderPosition(Guid subscriberId, FileEventPersisterPosition position)
 		{
 			var stream = new MemoryStream();
 			var writer = new BinaryWriter(stream);
@@ -172,12 +170,12 @@ namespace DomainCQRS.Provider
 			return Path.Combine(_subscriberDirectory, subscriberId.ToString());
 		}
 
-		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		public IEnumerable<EventToStore> Load(IEventPersisterPosition from, IEventPersisterPosition to)
 		{
-			return Load(from as FileEventStoreProviderPosition, to as FileEventStoreProviderPosition);
+			return Load(from as FileEventPersisterPosition, to as FileEventPersisterPosition);
 		}
 
-		private IEnumerable<EventToStore> Load(FileEventStoreProviderPosition from, FileEventStoreProviderPosition to)
+		private IEnumerable<EventToStore> Load(FileEventPersisterPosition from, FileEventPersisterPosition to)
 		{
 			foreach (var file in new DirectoryInfo(_eventDirectory).GetFiles())
 			{

@@ -75,7 +75,8 @@ namespace DomainCQRS.Test.Common
 			}
 			if (null == listener)
 			{
-				Debug.Listeners.Add(listener = new DebugListener());
+				listener = new DebugListener();
+				Debug.Listeners.Add(listener);
 			}
 
 		}

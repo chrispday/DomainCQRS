@@ -5,7 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DomainCQRS.Common;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 
 namespace DomainCQRS.Test
 {
@@ -14,9 +14,9 @@ namespace DomainCQRS.Test
 	{
 		string BaseDirectory;
 
-		protected override IEventStoreProvider CreateProvider()
+		protected override IEventPersister CreateProvider()
 		{
-			return new MemoryEventStoreProvider(new DebugLogger(true));
+			return new MemoryEventPersister(new DebugLogger(true));
 		}
 
 		protected override bool ExpectConcurrencyExceptionExceptionOnSaveOutOfOrder
@@ -36,7 +36,7 @@ namespace DomainCQRS.Test
 
 		protected override IConfigure RegisterProvider(IConfigure configure)
 		{
-			return configure.MemoryEventStoreProvider();
+			return configure.MemoryEventPersister();
 		}
 	}
 }

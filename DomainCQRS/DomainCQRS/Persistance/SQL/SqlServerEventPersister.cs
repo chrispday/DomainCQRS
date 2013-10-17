@@ -4,14 +4,14 @@ using System.Data.SqlClient;
 using System.Data.SqlTypes;
 using System.Text;
 using DomainCQRS.Common;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
-	public static class SqlServerEventStoreProviderConfigure
+	public static class SqlServerEventPersisterConfigure
 	{
-		public static IConfigure SqlServerEventStoreProvider(this IConfigure configure, string connectionString)
+		public static IConfigure SqlServerEventPersister(this IConfigure configure, string connectionString)
 		{
 			if (string.IsNullOrEmpty(connectionString))
 			{
@@ -19,9 +19,9 @@ namespace DomainCQRS
 			}
 
 			configure.Registry
-				.BuildInstancesOf<IEventStoreProvider>()
-				.TheDefaultIs(Registry.Instance<IEventStoreProvider>()
-					.UsingConcreteType<SqlServerEventStoreProvider>()
+				.BuildInstancesOf<IEventPersister>()
+				.TheDefaultIs(Registry.Instance<IEventPersister>()
+					.UsingConcreteType<SqlServerEventPersister>()
 					.WithProperty("connectionString").EqualTo(connectionString))
 				.AsSingletons();
 			return configure;
@@ -29,16 +29,16 @@ namespace DomainCQRS
 	}
 }
 
-namespace DomainCQRS.Provider
+namespace DomainCQRS.Persister
 {
-	public class SqlServerEventStoreProvider : IEventStoreProvider
+	public class SqlServerEventPersister : IEventPersister
 	{
 		private readonly ILogger _logger;
 		public ILogger Logger { get { return _logger; } }
 		private readonly string _connectionString;
 		public string ConnectionString { get { return _connectionString; } }
 
-		public SqlServerEventStoreProvider(ILogger logger, string connectionString)
+		public SqlServerEventPersister(ILogger logger, string connectionString)
 		{
 			if (null == logger)
 			{
@@ -106,7 +106,7 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 
 		#endregion
 
-		public IEventStoreProvider EnsureExists()
+		public IEventPersister EnsureExists()
 		{
 			try
 			{
@@ -151,7 +151,7 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 			return this;
 		}
 
-		public IEventStoreProvider Save(EventToStore eventToStore)
+		public IEventPersister Save(EventToStore eventToStore)
 		{
 			if (0 > eventToStore.Version)
 			{
@@ -224,12 +224,12 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 		}
 
 
-		public IEventStoreProviderPosition CreatePosition()
+		public IEventPersisterPosition CreatePosition()
 		{
-			return new SqlServerEventStoreProviderPosition();
+			return new SqlServerEventPersisterPosition();
 		}
 
-		public IEventStoreProviderPosition LoadPosition(Guid subscriberId)
+		public IEventPersisterPosition LoadPosition(Guid subscriberId)
 		{
 			using (var conn = new SqlConnection(ConnectionString))
 			using (var cmd = new SqlCommand() { Connection = conn, CommandText = SelectPosition })
@@ -237,16 +237,16 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 				cmd.Parameters.Add(new SqlParameter("@SubscriberId", subscriberId));
 				conn.Open();
 				var position = cmd.ExecuteScalar();
-				return new SqlServerEventStoreProviderPosition() { Position = (long) (position ?? 0L) };
+				return new SqlServerEventPersisterPosition() { Position = (long) (position ?? 0L) };
 			}
 		}
 
-		public IEventStoreProvider SavePosition(Guid subscriberId, IEventStoreProviderPosition position)
+		public IEventPersister SavePosition(Guid subscriberId, IEventPersisterPosition position)
 		{
-			return SaveEventStoreProviderPosition(subscriberId, position as SqlServerEventStoreProviderPosition);
+			return SaveEventStoreProviderPosition(subscriberId, position as SqlServerEventPersisterPosition);
 		}
 
-		public IEventStoreProvider SaveEventStoreProviderPosition(Guid subscriberId, SqlServerEventStoreProviderPosition position)
+		public IEventPersister SaveEventStoreProviderPosition(Guid subscriberId, SqlServerEventPersisterPosition position)
 		{
 			using (var conn = new SqlConnection(ConnectionString))
 			using (var cmd = new SqlCommand() { Connection = conn, CommandText = InsertUpdatePosition })
@@ -259,12 +259,12 @@ CREATE NONCLUSTERED INDEX NCI_Sequence ON [Event] ([Sequence]);",
 			return this;
 		}
 
-		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		public IEnumerable<EventToStore> Load(IEventPersisterPosition from, IEventPersisterPosition to)
 		{
-			return Load(from as SqlServerEventStoreProviderPosition, to as SqlServerEventStoreProviderPosition);
+			return Load(from as SqlServerEventPersisterPosition, to as SqlServerEventPersisterPosition);
 		}
 
-		public IEnumerable<EventToStore> Load(SqlServerEventStoreProviderPosition from, SqlServerEventStoreProviderPosition to)
+		public IEnumerable<EventToStore> Load(SqlServerEventPersisterPosition from, SqlServerEventPersisterPosition to)
 		{
 			Logger.Verbose("from {0} to {1}", from, to);
 

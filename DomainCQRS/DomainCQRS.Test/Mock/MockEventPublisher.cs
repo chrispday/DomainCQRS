@@ -44,7 +44,7 @@ namespace DomainCQRS.Test.Mock
 		{
 		}
 
-		public Dictionary<Guid, Tuple<IEventProjector<object>, IEventStoreProviderPosition>> Subscribers
+		public Dictionary<Guid, Tuple<IEventProjector<object>, IEventPersisterPosition>> Subscribers
 		{ 
 			get 
 			{ 

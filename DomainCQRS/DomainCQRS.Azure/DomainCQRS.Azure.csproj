@@ -64,8 +64,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Provider\AzureEventStoreProvider.cs" />
-    <Compile Include="Provider\AzureEventStoreProviderPosition.cs" />
+    <Compile Include="Persister\AzureEventPersister.cs" />
+    <Compile Include="Persister\AzureEventPersisterPosition.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

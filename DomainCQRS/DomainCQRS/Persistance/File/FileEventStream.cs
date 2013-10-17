@@ -4,9 +4,9 @@ using System.IO;
 
 using System.Text;
 using DomainCQRS.Common;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 
-namespace DomainCQRS.Provider
+namespace DomainCQRS.Persister
 {
 	public class FileEventStream : IDisposable
 	{
@@ -99,7 +99,7 @@ namespace DomainCQRS.Provider
 			}
 		}
 
-		public IEnumerable<EventToStore> Load(Guid aggregateRootId, FileEventStoreProviderPosition from, FileEventStoreProviderPosition to)
+		public IEnumerable<EventToStore> Load(Guid aggregateRootId, FileEventPersisterPosition from, FileEventPersisterPosition to)
 		{
 			if (null == to)
 			{
@@ -138,7 +138,7 @@ namespace DomainCQRS.Provider
 
 				Logger.Verbose("Publishing from {1} to {2} for {0}", aggregateRootId, fromPosition, toPosition);
 
-				EventToStore eventToStore;
+				FileEventToStore eventToStore;
 				while ((_publisherPosition < toPosition)
 					&& (null != (eventToStore = Read(_publisherStream, _publisherReader, aggregateRootId, true))))
 				{
@@ -166,7 +166,7 @@ namespace DomainCQRS.Provider
 			return lastVersion;
 		}
 
-		private EventToStore Read(Stream readerStream, BinaryReader reader, Guid aggregateRootId, bool readData)
+		private FileEventToStore Read(Stream readerStream, BinaryReader reader, Guid aggregateRootId, bool readData)
 		{
 			if (_storeAggregateId)
 			{
@@ -203,7 +203,7 @@ namespace DomainCQRS.Provider
 				readerStream.Seek(aggregateRootTypeSize + eventTypeSize + dataSize, SeekOrigin.Current);
 			}
 
-			return new EventToStore()
+			return new FileEventToStore()
 			{
 				AggregateRootId = aggregateRootId,
 				AggregateRootType = Encoding.UTF8.GetString(aggregateRootType),

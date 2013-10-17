@@ -2,35 +2,35 @@
 using System.Collections.Generic;
 using System.Text;
 using DomainCQRS.Common;
-using DomainCQRS.Provider;
+using DomainCQRS.Persister;
 
 namespace DomainCQRS
 {
-	public static class MemoryEventStoreProviderConfigure
+	public static class MemoryEventPersisterConfigure
 	{
-		public static IConfigure MemoryEventStoreProvider(this IConfigure configure)
+		public static IConfigure MemoryEventPersister(this IConfigure configure)
 		{
 			configure.Registry
-				.BuildInstancesOf<IEventStoreProvider>()
-				.TheDefaultIsConcreteType<MemoryEventStoreProvider>()
+				.BuildInstancesOf<IEventPersister>()
+				.TheDefaultIsConcreteType<MemoryEventPersister>()
 				.AsSingletons();
 			return configure;
 		}
 	}
 }
 
-namespace DomainCQRS.Provider
+namespace DomainCQRS.Persister
 {
-	public class MemoryEventStoreProvider : IEventStoreProvider
+	public class MemoryEventPersister : IEventPersister
 	{
 		private readonly ILogger _logger;
 		public ILogger Logger { get { return _logger; } }
 
 		private Dictionary<Guid, List<EventToStore>> _eventStore;
 		private Dictionary<Guid, int> _versionTracker;
-		private Dictionary<Guid, IEventStoreProviderPosition> _positions = new Dictionary<Guid, IEventStoreProviderPosition>();
+		private Dictionary<Guid, IEventPersisterPosition> _positions = new Dictionary<Guid, IEventPersisterPosition>();
 
-		public MemoryEventStoreProvider(ILogger logger)
+		public MemoryEventPersister(ILogger logger)
 		{
 			if (null == logger)
 			{
@@ -40,14 +40,14 @@ namespace DomainCQRS.Provider
 			_logger = logger;
 		}
 
-		public IEventStoreProvider EnsureExists()
+		public IEventPersister EnsureExists()
 		{
 			_eventStore = new Dictionary<Guid, List<EventToStore>>();
 			_versionTracker = new Dictionary<Guid, int>();
 			return this;
 		}
 
-		public IEventStoreProvider Save(EventToStore eventToStore)
+		public IEventPersister Save(EventToStore eventToStore)
 		{
 			List<EventToStore> events;
 			lock (_eventStore)
@@ -104,30 +104,30 @@ namespace DomainCQRS.Provider
 			}
 		}
 
-		public IEnumerable<EventToStore> Load(IEventStoreProviderPosition from, IEventStoreProviderPosition to)
+		public IEnumerable<EventToStore> Load(IEventPersisterPosition from, IEventPersisterPosition to)
 		{
-			return Load(from as MemoryEventStoreProviderPostion, to as MemoryEventStoreProviderPostion);
+			return Load(from as MemoryEventPersisterPostion, to as MemoryEventPersisterPostion);
 		}
 
-		public IEventStoreProviderPosition CreatePosition()
+		public IEventPersisterPosition CreatePosition()
 		{
-			return new MemoryEventStoreProviderPostion();
+			return new MemoryEventPersisterPostion();
 		}
 
-		public IEventStoreProviderPosition LoadPosition(Guid subscriberId)
+		public IEventPersisterPosition LoadPosition(Guid subscriberId)
 		{
-			IEventStoreProviderPosition position = new MemoryEventStoreProviderPostion();
+			IEventPersisterPosition position = new MemoryEventPersisterPostion();
 			_positions.TryGetValue(subscriberId, out position);
 			return position;
 		}
 
-		public IEventStoreProvider SavePosition(Guid subscriberId, IEventStoreProviderPosition position)
+		public IEventPersister SavePosition(Guid subscriberId, IEventPersisterPosition position)
 		{
 			_positions[subscriberId] = position;
 			return this;
 		}
 
-		private IEnumerable<EventToStore> Load(MemoryEventStoreProviderPostion from, MemoryEventStoreProviderPostion to)
+		private IEnumerable<EventToStore> Load(MemoryEventPersisterPostion from, MemoryEventPersisterPostion to)
 		{
 			Logger.Verbose("from {0} to {1}", from, to);
 

@@ -5,8 +5,7 @@ using System.Text;
 
 namespace DomainCQRS
 {
-	public interface IPartitionedEventStoreProvider : IEventStoreProvider
+	public interface IEventPersisterPosition
 	{
-		int MaximumPartitions { get; }
 	}
 }
