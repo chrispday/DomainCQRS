@@ -73,7 +73,6 @@
     <Compile Include="Persistance\SQL\SqlServerEventPersisterPosition.cs" />
     <Compile Include="Publisher\EventPublisher.cs" />
     <Compile Include="Publisher\IEventPublisher.cs" />
-    <Compile Include="Publisher\IEventProjector.cs" />
     <Compile Include="Publisher\ISagaPublisher.cs" />
     <Compile Include="Publisher\SagaPublisher.cs" />
     <Compile Include="Receiver\AggregateRootProxy.cs" />

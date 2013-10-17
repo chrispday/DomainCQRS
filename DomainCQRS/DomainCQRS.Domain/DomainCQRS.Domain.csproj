@@ -41,6 +41,7 @@
     <Compile Include="AggregateRoot\IHandlesEvent.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Events\IEvent.cs" />
+    <Compile Include="Projectors\IEventProjector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
