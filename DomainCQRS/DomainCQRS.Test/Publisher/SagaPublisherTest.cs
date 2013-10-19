@@ -44,15 +44,11 @@ namespace DomainCQRS.Test.Publisher
 		IEventPublisher eventPublisher;
 		private void ASynchronousEventPublisher()
 		{
-			eventPublisher = new EventPublisher(
+			eventPublisher = new SynchronousEventPublisher(
 				logger,
 				eventStore,
-				int.MaxValue,
-				10,
+				new DirectMessageSender(logger, receiver),
 				"Receive");
-	
-			eventPublisher.MessageReceiver = receiver;
-			eventPublisher.Synchronous = true;
 		}
 
 		IMessageReceiver receiver;

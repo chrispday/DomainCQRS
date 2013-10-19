@@ -33,6 +33,10 @@ namespace DomainCQRS
 		private IMessageReceiver _messageReceiver;
 		public IMessageReceiver MessageReceiver { get { return _messageReceiver; } }
 		private Dictionary<Type, object> _events = new Dictionary<Type, object>();
+		public Guid SubscriptionId
+		{
+			get { return SagaPublisherConfigure.SagaPublisherGuid; }
+		}
 
 		public SagaPublisher(IMessageReceiver messageReceiver)
 		{

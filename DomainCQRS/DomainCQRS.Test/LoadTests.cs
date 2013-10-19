@@ -231,13 +231,13 @@ namespace DomainCQRS.Test
 				.EventStore()
 				.MessageReceiver()
 				.LRUAggregateRootCache()
-				.MockEventPublisher(10000, TimeSpan.FromSeconds(1))
+				.MockSyncroEventPublisher()
 				.Build()
 					.Register<MockCommand, MockAggregateRoot>()
 					.Register<MockCommand2, MockAggregateRoot>("Id", "Apply")
 					.Subscribe<MockSubscriber>(Guid.NewGuid());
 
-			var publisher = (configure as Configure).EventPublisher as MockEventPublisher;
+			var publisher = (configure as Configure).EventPublisher as MockSynchroEventPublisher;
 			Assert.AreEqual(1, publisher.Subscribers.Count);
 			var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
 

@@ -27,5 +27,11 @@ namespace DomainCQRS.Test.Mock
 				ReceivedEvent.Set();
 			}
 		}
+
+		private Guid _subscriptionId = Guid.NewGuid();
+		public Guid SubscriptionId
+		{
+			get { return _subscriptionId; }
+		}
 	}
 }

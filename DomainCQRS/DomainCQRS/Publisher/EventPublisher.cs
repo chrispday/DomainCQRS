@@ -9,23 +9,7 @@ namespace DomainCQRS
 {
 	public static class EventPublisherConfigure
 	{
-		public static int DefaultBatchSize = 10000;
-		public static TimeSpan DefaultPublishThreadSleep = TimeSpan.FromSeconds(1);
 		public static string DefaultSubscriberReceiveMethodName = "Receive";
-
-		public static IConfigure EventPublisher(this IConfigure configure) { return configure.EventPublisher(DefaultBatchSize); }
-		public static IConfigure EventPublisher(this IConfigure configure, int batchSize)
-		{
-			configure.Registry
-				.BuildInstancesOf<IEventPublisher>()
-				.TheDefaultIs(Registry.Instance<IEventPublisher>()
-					.UsingConcreteType<EventPublisher>()
-					.WithProperty("batchSize").EqualTo(batchSize)
-					.WithProperty("publishThreadSleep").EqualTo(DefaultPublishThreadSleep.Ticks)
-					.WithProperty("defaultSubscriberReceiveMethodName").EqualTo(DefaultSubscriberReceiveMethodName))
-				.AsSingletons();
-			return configure;
-		}
 
 		public static IBuiltConfigure Subscribe<Subscriber>(this IBuiltConfigure configure, Guid subscriptionId) { return Subscribe<Subscriber, object>(configure, subscriptionId); }
 		public static IBuiltConfigure Subscribe<Subscriber>(this IBuiltConfigure configure, Guid subscriptionId, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(configure, subscriptionId, subscriberReceiveMethodName); }
@@ -44,42 +28,16 @@ namespace DomainCQRS
 
 	public delegate void Receive(object subscriber, object @event);
 
-	public class EventPublisher : IEventPublisher
+	public abstract class EventPublisherBase : IEventPublisher
 	{
 		private readonly ILogger _logger;
 		public ILogger Logger { get { return _logger; } }
 		private readonly IEventStore _eventStore;
 		public IEventStore EventStore { get { return _eventStore; } }
-		private readonly int _batchSize;
-		public int BatchSize { get { return _batchSize; } }
-		private readonly TimeSpan _publishThreadSleep;
-		public TimeSpan PublishThreadSleep { get { return _publishThreadSleep; } }
+		private readonly IMessageSender _sender;
+		public IMessageSender Sender { get { return _sender; } }
 		private readonly string _defaultSubscriberReceiveMethodName;
 		public string DefaultSubscriberReceiveMethodName { get { return _defaultSubscriberReceiveMethodName; } }
-		public IMessageReceiver MessageReceiver { get; set; }
-		private bool _synchronous = false;
-		public bool Synchronous
-		{
-			get { return _synchronous; }
-			set
-			{
-				_synchronous = value;
-				if (_synchronous)
-				{
-					if (null == MessageReceiver)
-					{
-						throw new ArgumentNullException("MessageReceiver");
-					}
-					StopPublishingThread();
-					EventStore.EventStored += EventStore_EventStored;
-				}
-				else
-				{
-					StartPublishingThread();
-					EventStore.EventStored -= EventStore_EventStored;
-				}
-			}
-		}
 
 		protected class SubscriberAndPosition
 		{
@@ -89,12 +47,8 @@ namespace DomainCQRS
 			public IEventPersisterPosition Position;
 		}
 		protected Dictionary<Guid, SubscriberAndPosition> _subscribers = new Dictionary<Guid, SubscriberAndPosition>();
-		private Thread _publisherThread;
-		private Dictionary<Guid, Thread> _subscriptionThreads = new Dictionary<Guid, Thread>();
-		private volatile bool _continuePublishing = true;
-		private AutoResetEvent _finishedPublishing = new AutoResetEvent(false);
 
-		public EventPublisher(ILogger logger, IEventStore eventStore, int batchSize, long publishThreadSleep, string defaultSubscriberReceiveMethodName)
+		public EventPublisherBase(ILogger logger, IEventStore eventStore, IMessageSender sender, string defaultSubscriberReceiveMethodName)
 		{
 			if (null == logger)
 			{
@@ -104,13 +58,9 @@ namespace DomainCQRS
 			{
 				throw new ArgumentNullException("eventStore");
 			}
-			if (0 >= batchSize)
+			if (null == sender)
 			{
-				throw new ArgumentOutOfRangeException("batchSize");
-			}
-			if (0 >= publishThreadSleep)
-			{
-				throw new ArgumentOutOfRangeException("publishThreadSleep");
+				throw new ArgumentNullException("sender");
 			}
 			if (null == defaultSubscriberReceiveMethodName)
 			{
@@ -119,8 +69,7 @@ namespace DomainCQRS
 
 			_logger = logger;
 			_eventStore = eventStore;
-			_batchSize = batchSize;
-			_publishThreadSleep = TimeSpan.FromTicks(publishThreadSleep);
+			_sender = sender;
 			_defaultSubscriberReceiveMethodName = defaultSubscriberReceiveMethodName;
 		}
 
@@ -153,154 +102,7 @@ namespace DomainCQRS
 				subscriberAndPosition.Receives.Add(eventType, ILHelper.CreateReceive<Subscriber, Event>(subscriberReceiveMethodName));
 			}
 
-			if (!Synchronous
-				&& null == _publisherThread)
-			{
-				StartPublishingThread();
-			}
-
 			return this;
-		}
-
-		public void Dispose()
-		{
-			StopPublishingThread();
-		}
-
-		private void StartPublishingThread()
-		{
-			lock (this)
-			{
-				if (null == _publisherThread)
-				{
-					_continuePublishing = true;
-					_finishedPublishing.Reset();
-					_publisherThread = new ThreadStart(Publish).Start("EventPublisher");
-				}
-			}
-		}
-
-		private void StopPublishingThread()
-		{
-			lock (this)
-			{
-				if (null != _publisherThread)
-				{
-					_publisherThread = null;
-					_continuePublishing = false;
-					_finishedPublishing.WaitOne();
-				}
-			}
-		}
-
-		private void Publish()
-		{
-			Logger.Information("Starting publishing thread.");
-
-			while (_continuePublishing)
-			{
-				Logger.Verbose("Next publish run.");
-
-				foreach (var subscription in new Dictionary<Guid, SubscriberAndPosition>(_subscribers))
-				{
-					lock (_subscriptionThreads)
-					{
-						if (_subscriptionThreads.ContainsKey(subscription.Key))
-						{
-							Logger.Warning("Skipped publishing for {0}, still waiting for previous thread to finish.", subscription.Key);
-							continue;
-						}
-
-						_subscriptionThreads.Add(subscription.Key, new Action<KeyValuePair<Guid, SubscriberAndPosition>>(PublishForSubscription).Start("Subscription" + subscription.Key.ToString(), subscription));
-					}
-				}
-
-				Thread.Sleep(PublishThreadSleep);
-			}
-
-			Logger.Information("Shutting down publishing thread.");
-			_finishedPublishing.Set();
-		}
-
-		void EventStore_EventStored(object sender, StoredEvent e)
-		{
-			Publish(e.Event);
-		}
-
-		private void Publish(object @event)
-		{
-			if (!Synchronous)
-			{
-				throw new InvalidOperationException("Not publishing synchronously.");
-			}
-
-			var subscribers = new List<SubscriberAndPosition>(_subscribers.Values);
-			foreach (var subscriber in subscribers)
-			{
-				Receive receive = subscriber.ReceiveObject;
-				if (null == receive)
-				{
-					subscriber.Receives.TryGetValue(@event.GetType(), out receive);
-				}
-
-				if (null != receive)
-				{
-					receive(subscriber.Subscriber, @event);
-				}
-			}
-		}
-
-		private void PublishForSubscription(KeyValuePair<Guid, SubscriberAndPosition> subscription)
-		{
-			try
-			{
-				Logger.Verbose("Publishing for {0} {1}.", subscription.Value.Subscriber, subscription.Key);
-
-				int eventsPublished = 0;
-
-				if (null == subscription.Value.Position)
-				{
-					subscription.Value.Position = EventStore.CreateEventStoreProviderPosition();
-				}
-
-				IEventPersisterPosition to;
-				foreach (var @event in EventStore.Load(BatchSize, subscription.Value.Position, out to))
-				{
-					Receive receive;
-					if (0 == subscription.Value.Receives.Count
-						|| !subscription.Value.Receives.TryGetValue(@event.Event.GetType(), out receive))
-					{
-						receive = subscription.Value.ReceiveObject;
-					}
-
-					if (null != receive)
-					{
-						receive(subscription.Value.Subscriber, @event.Event);
-					}
-
-					eventsPublished++;
-
-					if (!_continuePublishing)
-					{
-						break;
-					}
-				}
-
-				EventStore.EventStoreProvider.SavePosition(subscription.Key, subscription.Value.Position = to);
-
-				Logger.Verbose("{0} events published for {1}.", eventsPublished, subscription.Key);
-			}
-			catch (Exception ex)
-			{
-				Logger.Error("{0}", ex);
-			}
-			finally
-			{
-				lock (_subscriptionThreads)
-				{
-					_subscriptionThreads.Remove(subscription.Key);
-				}
-			}
 		}
 
 		public object GetSubscriber(Guid subscriptionId)
@@ -313,5 +115,7 @@ namespace DomainCQRS
 		{
 			return _subscribers[subscriptionId].Subscriber as Subscriber;
 		}
+
+		public abstract void Dispose();
 	}
 }

@@ -6,13 +6,15 @@ using DomainCQRS.Common;
 
 namespace DomainCQRS
 {
+	/// <summary>
+	/// Publishes events from the <see cref="IEventStore"/>.
+	/// Implements <see cref="IDisposable"/> so that the publishing resources can be cleaned up.
+	/// </summary>
 	public interface IEventPublisher : IDisposable
 	{
 		ILogger Logger { get; }
-		int BatchSize { get; }
 		IEventStore EventStore { get; }
-		IMessageReceiver MessageReceiver { get; set; }
-		bool Synchronous { get; set; }
+		IMessageSender Sender { get; }
 
 		IEventPublisher Subscribe<Subscriber>(Guid subscriptionId);
 		IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, string subscriberReceiveMethodName);

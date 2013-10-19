@@ -10,37 +10,22 @@ namespace DomainCQRS.Test.Mock
 {
 	public static class EventPublisherConfigure
 	{
-		public static IConfigure MockEventPublisher(this IConfigure configure)
+		public static IConfigure MockSyncroEventPublisher(this IConfigure configure)
 		{
 			configure.Registry
 				.BuildInstancesOf<IEventPublisher>()
 				.TheDefaultIs(Registry.Instance<IEventPublisher>()
-					.UsingConcreteType<MockEventPublisher>()
-					.WithProperty("batchSize").EqualTo(100)
-					.WithProperty("publishThreadSleep").EqualTo(TimeSpan.FromSeconds(1).Ticks)
-					.WithProperty("defaultSubscriberReceiveMethodName").EqualTo("Receive"))
-				.AsSingletons();
-			return configure;
-		}
-
-		public static IConfigure MockEventPublisher(this IConfigure configure, int batchSize, TimeSpan publishThreadSleep)
-		{
-			configure.Registry
-				.BuildInstancesOf<IEventPublisher>()
-				.TheDefaultIs(Registry.Instance<IEventPublisher>()
-					.UsingConcreteType<MockEventPublisher>()
-					.WithProperty("batchSize").EqualTo(batchSize)
-					.WithProperty("publishThreadSleep").EqualTo(publishThreadSleep.Ticks)
+					.UsingConcreteType<MockSynchroEventPublisher>()
 					.WithProperty("defaultSubscriberReceiveMethodName").EqualTo("Receive"))
 				.AsSingletons();
 			return configure;
 		}
 	}
 
-	public class MockEventPublisher : EventPublisher
+	public class MockSynchroEventPublisher : SynchronousEventPublisher
 	{
-		public MockEventPublisher(ILogger logger, IEventStore eventStore, int batchSize, long publishThreadSleep, string defaultSubscriberReceiveMethodName)
-			: base(logger, eventStore, batchSize, publishThreadSleep, defaultSubscriberReceiveMethodName)
+		public MockSynchroEventPublisher(ILogger logger, IEventStore eventStore, IMessageSender sender, string defaultSubscriberReceiveMethodName)
+			: base(logger, eventStore, sender, defaultSubscriberReceiveMethodName)
 		{
 		}
 

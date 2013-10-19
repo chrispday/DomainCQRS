@@ -13,12 +13,6 @@ namespace DomainCQRS
 	public interface IConfigure
 	{
 		/// <summary>
-		/// Processing of messages and publishing events happen synchronously, default is asynchronous.
-		/// </summary>
-		/// <returns></returns>
-		IConfigure Synchrounous();
-
-		/// <summary>
 		/// Get the StructureMap registry.
 		/// </summary>
 		Registry Registry { get; }
@@ -136,12 +130,6 @@ namespace DomainCQRS
 				Container.CreateInstance<ILogger>().Warning(ex.ToString());
 			}
 
-			if (Synchronous)
-			{
-				_eventPublisher.MessageReceiver = _messageReceiver;
-				_eventPublisher.Synchronous = true;
-			}
-
 			return this;
 		}
 
@@ -158,13 +146,6 @@ namespace DomainCQRS
 			{
 				_eventStoreProvider.Dispose();
 			}
-		}
-
-		public bool Synchronous { get; set; }
-		public IConfigure Synchrounous()
-		{
-			Synchronous = true;
-			return this;
 		}
 	}
 }

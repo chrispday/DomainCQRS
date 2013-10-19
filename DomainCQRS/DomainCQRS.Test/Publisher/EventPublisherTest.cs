@@ -68,11 +68,10 @@ namespace DomainCQRS.Test.Publisher
 				new BinaryFormatterSerializer(),
 				8096);
 
-			eventPublisher = new EventPublisher(
+			eventPublisher = new SynchronousEventPublisher(
 				logger,
 				eventStore,
-				int.MaxValue,
-				100,
+				new DirectMessageSender(logger, new MessageReceiver(logger, eventStore, new NoAggregateRootCache(), "Id", "Apply")),
 				"Receive");
 			eventPublisher.Subscribe<Subscriber>(subId, sub);
 		}
@@ -191,11 +190,10 @@ namespace DomainCQRS.Test.Publisher
 				new BinaryFormatterSerializer(),
 				8096);
 
-			syncEventPublisher = new EventPublisher(
+			syncEventPublisher = new SynchronousEventPublisher(
 				logger,
 				eventStore,
-				int.MaxValue,
-				10,
+				new DirectMessageSender(logger, new MessageReceiver(logger, eventStore, new NoAggregateRootCache(), "Id", "Apply")),
 				"Receive");
 
 			messageReceiver = new MessageReceiver(
@@ -205,8 +203,6 @@ namespace DomainCQRS.Test.Publisher
 				"AggregateRootId",
 				"Apply");
 
-			syncEventPublisher.MessageReceiver = messageReceiver;
-			syncEventPublisher.Synchronous = true;
 			syncEventPublisher.Subscribe<Subscriber>(subId, sub);
 		}
 
