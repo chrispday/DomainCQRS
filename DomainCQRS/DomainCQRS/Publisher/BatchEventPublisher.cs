@@ -39,8 +39,8 @@ namespace DomainCQRS
 		private volatile bool _continuePublishing = true;
 		private AutoResetEvent _finishedPublishing = new AutoResetEvent(false);
 
-		public BatchEventPublisher(ILogger logger, IEventStore eventStore, IMessageSender sender, string defaultSubscriberReceiveMethodName, int batchSize, long publishThreadSleep)
-			: base(logger, eventStore, sender, defaultSubscriberReceiveMethodName)
+		public BatchEventPublisher(ILogger logger, IEventStore eventStore, string defaultSubscriberReceiveMethodName, int batchSize, long publishThreadSleep)
+			: base(logger, eventStore, defaultSubscriberReceiveMethodName)
 		{
 			if (0 >= batchSize)
 			{
@@ -58,6 +58,13 @@ namespace DomainCQRS
 		public override void Dispose()
 		{
 			StopPublishingThread();
+		}
+
+		public override IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName)
+		{
+			base.Subscribe<Subscriber, Event>(subscriptionId, subscriber, subscriberReceiveMethodName);
+			StartPublishingThread();
+			return this;
 		}
 
 		private void StartPublishingThread()

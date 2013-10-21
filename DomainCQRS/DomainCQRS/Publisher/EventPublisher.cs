@@ -34,8 +34,8 @@ namespace DomainCQRS
 		public ILogger Logger { get { return _logger; } }
 		private readonly IEventStore _eventStore;
 		public IEventStore EventStore { get { return _eventStore; } }
-		private readonly IMessageSender _sender;
-		public IMessageSender Sender { get { return _sender; } }
+		//private readonly IMessageSender _sender;
+		//public IMessageSender Sender { get { return _sender; } }
 		private readonly string _defaultSubscriberReceiveMethodName;
 		public string DefaultSubscriberReceiveMethodName { get { return _defaultSubscriberReceiveMethodName; } }
 
@@ -48,7 +48,7 @@ namespace DomainCQRS
 		}
 		protected Dictionary<Guid, SubscriberAndPosition> _subscribers = new Dictionary<Guid, SubscriberAndPosition>();
 
-		public EventPublisherBase(ILogger logger, IEventStore eventStore, IMessageSender sender, string defaultSubscriberReceiveMethodName)
+		public EventPublisherBase(ILogger logger, IEventStore eventStore, string defaultSubscriberReceiveMethodName)
 		{
 			if (null == logger)
 			{
@@ -58,10 +58,6 @@ namespace DomainCQRS
 			{
 				throw new ArgumentNullException("eventStore");
 			}
-			if (null == sender)
-			{
-				throw new ArgumentNullException("sender");
-			}
 			if (null == defaultSubscriberReceiveMethodName)
 			{
 				throw new ArgumentNullException("defaultSubscriberReceiveMethodName");
@@ -69,7 +65,6 @@ namespace DomainCQRS
 
 			_logger = logger;
 			_eventStore = eventStore;
-			_sender = sender;
 			_defaultSubscriberReceiveMethodName = defaultSubscriberReceiveMethodName;
 		}
 
@@ -80,7 +75,7 @@ namespace DomainCQRS
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, Subscriber subscriber) { return Subscribe<Subscriber, object>(subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
 		public IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName) { return Subscribe<Subscriber, object>(subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
 		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, Subscriber subscriber) where Event : class { return Subscribe<Subscriber, Event>(subscriptionId, subscriber, DefaultSubscriberReceiveMethodName); }
-		public IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName)
+		public virtual IEventPublisher Subscribe<Subscriber, Event>(Guid subscriptionId, Subscriber subscriber, string subscriberReceiveMethodName)
 			where Event : class
 		{
 			SubscriberAndPosition subscriberAndPosition;

@@ -47,7 +47,6 @@ namespace DomainCQRS.Test.Publisher
 			eventPublisher = new SynchronousEventPublisher(
 				logger,
 				eventStore,
-				new DirectMessageSender(logger, receiver),
 				"Receive");
 		}
 
@@ -71,7 +70,7 @@ namespace DomainCQRS.Test.Publisher
 		ISagaPublisher sagaPublisher;
 		private void ItsSetupToPublishSagas()
 		{
-			sagaPublisher = new SagaPublisher(receiver);
+			sagaPublisher = new SagaPublisher(new DirectMessageSender(logger, receiver));
 			eventPublisher.Subscribe<ISagaPublisher>(Guid.NewGuid(), sagaPublisher);
 			sagaPublisher.Saga<E>();
 		}

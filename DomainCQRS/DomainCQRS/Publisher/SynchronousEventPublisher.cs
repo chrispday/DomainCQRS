@@ -22,8 +22,8 @@ namespace DomainCQRS
 
 	public class SynchronousEventPublisher : EventPublisherBase, IEventPublisher
 	{
-		public SynchronousEventPublisher(ILogger logger, IEventStore eventStore, IMessageSender sender, string defaultSubscriberReceiveMethodName)
-			: base(logger, eventStore, sender, defaultSubscriberReceiveMethodName)
+		public SynchronousEventPublisher(ILogger logger, IEventStore eventStore, string defaultSubscriberReceiveMethodName)
+			: base(logger, eventStore, defaultSubscriberReceiveMethodName)
 		{
 			eventStore.EventStored += eventStore_EventStored;
 		}

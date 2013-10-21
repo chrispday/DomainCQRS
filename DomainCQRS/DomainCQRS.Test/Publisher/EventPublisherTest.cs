@@ -68,11 +68,12 @@ namespace DomainCQRS.Test.Publisher
 				new BinaryFormatterSerializer(),
 				8096);
 
-			eventPublisher = new SynchronousEventPublisher(
+			eventPublisher = new BatchEventPublisher(
 				logger,
 				eventStore,
-				new DirectMessageSender(logger, new MessageReceiver(logger, eventStore, new NoAggregateRootCache(), "Id", "Apply")),
-				"Receive");
+				"Receive",
+				100,
+				TimeSpan.FromSeconds(0.1).Ticks);
 			eventPublisher.Subscribe<Subscriber>(subId, sub);
 		}
 
@@ -193,7 +194,6 @@ namespace DomainCQRS.Test.Publisher
 			syncEventPublisher = new SynchronousEventPublisher(
 				logger,
 				eventStore,
-				new DirectMessageSender(logger, new MessageReceiver(logger, eventStore, new NoAggregateRootCache(), "Id", "Apply")),
 				"Receive");
 
 			messageReceiver = new MessageReceiver(

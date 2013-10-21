@@ -25,13 +25,14 @@ namespace DomainCQRS.Test
 					.FileEventPersister(directory)
 					.LRUAggregateRootCache(100)
 					.EventStore()
-					.MockSyncroEventPublisher()
+					.MockBatchEventPublisher(100, TimeSpan.FromSeconds(1))
+					.DirectMessageSender()
 					.MessageReceiver()
 					.Build()
 						.Subscribe<MockSubscriber>(subId)
 						.Register<MockCommand, MockAggregateRoot>();
 
-				var publisher = (config as Configure).EventPublisher as MockSynchroEventPublisher;
+				var publisher = (config as Configure).EventPublisher as MockBatchEventPublisher;
 				Assert.AreEqual(1, publisher.Subscribers.Count);
 				var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
 
@@ -54,12 +55,13 @@ namespace DomainCQRS.Test
 					.LRUAggregateRootCache(100)
 					.EventStore()
 					.MessageReceiver()
-					.MockSyncroEventPublisher()
+					.MockBatchEventPublisher(100, TimeSpan.FromSeconds(1))
+					.DirectMessageSender()
 					.Build()
 						.Register<MockCommand, MockAggregateRoot>()
 						.Subscribe<MockSubscriber>(subId);
 
-				publisher = (config as Configure).EventPublisher as MockSynchroEventPublisher;
+				publisher = (config as Configure).EventPublisher as MockBatchEventPublisher;
 				Assert.AreEqual(1, publisher.Subscribers.Count);
 				subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
 

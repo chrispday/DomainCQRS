@@ -337,13 +337,14 @@ namespace DomainCQRS.Test
 				.BinaryFormatterSerializer()
 				.LRUAggregateRootCache(100)
 				.EventStore()
-				.MockSyncroEventPublisher()
+				.MockBatchEventPublisher(100, TimeSpan.FromSeconds(1))
+				.DirectMessageSender()
 				.MessageReceiver()
 				.Build()
 					.Subscribe<MockSubscriber>(Guid.NewGuid())
 					.Register<MockCommand, MockAggregateRoot>();
 
-			var publisher = (config as Configure).EventPublisher as MockSynchroEventPublisher;
+			var publisher = (config as Configure).EventPublisher as MockBatchEventPublisher;
 			Assert.AreEqual(1, publisher.Subscribers.Count);
 			var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
 
@@ -367,6 +368,7 @@ namespace DomainCQRS.Test
 				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MockSyncroEventPublisher()
+				.DirectMessageSender()
 				.MessageReceiver()
 				.Build()
 					.Subscribe<MockSubscriber>(Guid.NewGuid())
@@ -394,14 +396,15 @@ namespace DomainCQRS.Test
 				.BinaryFormatterSerializer()
 				.LRUAggregateRootCache(100)
 				.MockEventStore2()
-				.MockSyncroEventPublisher()
+				.MockBatchEventPublisher(2, TimeSpan.FromSeconds(1))
+				.DirectMessageSender()
 				.MessageReceiver()
 				.Build()
 					.Subscribe<MockSubscriber>(Guid.NewGuid())
 					.Register<MockCommand, MockAggregateRoot>();
 
 
-			var publisher = (config as Configure).EventPublisher as MockSynchroEventPublisher;
+			var publisher = (config as Configure).EventPublisher as MockBatchEventPublisher;
 			Assert.AreEqual(1, publisher.Subscribers.Count);
 			var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
 			subscriber.SignalOnCount = 5;
@@ -439,12 +442,13 @@ namespace DomainCQRS.Test
 				.LRUAggregateRootCache(100)
 				.EventStore()
 				.MessageReceiver()
-				.MockSyncroEventPublisher()
+				.MockBatchEventPublisher(100, TimeSpan.FromSeconds(0.1))
+				.DirectMessageSender()
 				.Build()
 					.Register<MockCommand, MockAggregateRoot>()
 					.Subscribe<MockSubscriber>(Guid.NewGuid());
 
-			var publisher = (config as Configure).EventPublisher as MockSynchroEventPublisher;
+			var publisher = (config as Configure).EventPublisher as MockBatchEventPublisher;
 			var logger = publisher.Logger;
 			Assert.AreEqual(1, publisher.Subscribers.Count);
 			var subscriber = publisher.Subscribers.First().Value.Item1 as MockSubscriber;
@@ -507,6 +511,7 @@ namespace DomainCQRS.Test
 				.EventStore()
 				.MockSyncroEventPublisher()
 				.MessageReceiver()
+				.DirectMessageSender()
 				.Build()
 					.Subscribe<MockSubscriber>(Guid.NewGuid())
 					.Subscribe<MockSubscriber>(Guid.NewGuid())
@@ -562,7 +567,8 @@ namespace DomainCQRS.Test
 				.EventStore()
 				.NoAggregateRootCache()
 				.MessageReceiver()
-				.SynchronousEventPublisher()
+				.MockBatchEventPublisher(100, TimeSpan.FromSeconds(0.1))
+				.DirectMessageSender()
 				.SagaPublisher()
 				.Build()
 					.Register<MockSagaCommand, MockSagaAggregateRoot>()

@@ -70,22 +70,31 @@ namespace DomainCQRS
 
 		private IEventPersister _eventStoreProvider;
 
-		private IEventStore _eventStore;
 		public IEventStore EventStore
 		{
-			get { return _eventStore; }
+			get { return Container.CreateInstance<IEventStore>(); }
 		}
 
-		private IMessageReceiver _messageReceiver;
 		public IMessageReceiver MessageReceiver
 		{
-			get { return _messageReceiver; }
+			get
+			{
+				return Container.CreateInstance<IMessageReceiver>();
+			}
 		}
 
 		private IEventPublisher _eventPublisher;
 		public IEventPublisher EventPublisher
 		{
-			get { return _eventPublisher; }
+			get
+			{
+				if (null == _eventPublisher)
+				{
+					_eventPublisher = Container.CreateInstance<IEventPublisher>();
+				}
+
+				return _eventPublisher;
+			}
 		}
 
 		/// <summary>
@@ -110,26 +119,7 @@ namespace DomainCQRS
 		public IBuiltConfigure Build()
 		{
 			_container = Registry.BuildInstanceManager();
-			
 			_eventStoreProvider = Container.CreateInstance<IEventPersister>().EnsureExists();
-			_eventStore = Container.CreateInstance<IEventStore>();
-			try
-			{
-				_messageReceiver = Container.CreateInstance<IMessageReceiver>();
-			}
-			catch (Exception ex)
-			{
-				Container.CreateInstance<ILogger>().Warning(ex.ToString());
-			}
-			try
-			{
-				_eventPublisher = Container.CreateInstance<IEventPublisher>();
-			}
-			catch (Exception ex)
-			{
-				Container.CreateInstance<ILogger>().Warning(ex.ToString());
-			}
-
 			return this;
 		}
 

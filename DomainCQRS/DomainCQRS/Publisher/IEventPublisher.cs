@@ -14,7 +14,6 @@ namespace DomainCQRS
 	{
 		ILogger Logger { get; }
 		IEventStore EventStore { get; }
-		IMessageSender Sender { get; }
 
 		IEventPublisher Subscribe<Subscriber>(Guid subscriptionId);
 		IEventPublisher Subscribe<Subscriber>(Guid subscriptionId, string subscriberReceiveMethodName);

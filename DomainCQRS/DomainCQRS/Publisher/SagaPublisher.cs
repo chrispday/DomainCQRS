@@ -30,22 +30,22 @@ namespace DomainCQRS
 
 	public class SagaPublisher : ISagaPublisher
 	{
-		private IMessageReceiver _messageReceiver;
-		public IMessageReceiver MessageReceiver { get { return _messageReceiver; } }
+		private IMessageSender _sender;
+		public IMessageSender Sender { get { return _sender; } }
 		private Dictionary<Type, object> _events = new Dictionary<Type, object>();
 		public Guid SubscriptionId
 		{
 			get { return SagaPublisherConfigure.SagaPublisherGuid; }
 		}
 
-		public SagaPublisher(IMessageReceiver messageReceiver)
+		public SagaPublisher(IMessageSender sender)
 		{
-			if (null == messageReceiver)
+			if (null == sender)
 			{
-				throw new ArgumentNullException("messageReceiver");
+				throw new ArgumentNullException("sender");
 			}
 
-			_messageReceiver = messageReceiver;
+			_sender = sender;
 		}
 
 		public ISagaPublisher Saga<Event>()
@@ -58,7 +58,7 @@ namespace DomainCQRS
 		{
 			if (_events.ContainsKey(@event.GetType()))
 			{
-				MessageReceiver.Receive(@event);
+				Sender.Send(@event);
 			}
 		}
 	}
