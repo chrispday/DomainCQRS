@@ -11,7 +11,22 @@ namespace DomainCQRS
 	{
 		public static int DefaultEventStreamCacheCapacity = 10000;
 		public static int DefaultEventStreamBufferSize = 8 * 1024;
+		/// <summary>
+		/// Configure DomainCQRS to use the <see cref="FileEventPersister"/>.
+		/// Uses a default cache capacity and default stream buffer.
+		/// </summary>
+		/// <param name="configure">The <see cref="IConfigure"/></param>
+		/// <param name="directory">The directory where event stream files will be stored.</param>
+		/// <returns>The <see cref="IConfigure"/></returns>
 		public static IConfigure FileEventPersister(this IConfigure configure, string directory) { return configure.FileEventPersister(directory, DefaultEventStreamCacheCapacity, DefaultEventStreamBufferSize); }
+		/// <summary>
+		/// Configure DomainCQRS to use the <see cref="FileEventPersister"/>.
+		/// </summary>
+		/// <param name="configure">The <see cref="IConfigure"/></param>
+		/// <param name="directory">The directory where event stream files will be stored.</param>
+		/// <param name="eventStreamCacheCapacity">The number of event streams to keep in memory using an LRU cache.</param>
+		/// <param name="eventStreamBufferSize">The default buffer size to use when opening event streams.</param>
+		/// <returns>The <see cref="IConfigure"/></returns>
 		public static IConfigure FileEventPersister(this IConfigure configure, string directory, int eventStreamCacheCapacity, int eventStreamBufferSize)
 		{
 			configure.Registry
@@ -29,6 +44,9 @@ namespace DomainCQRS
 
 namespace DomainCQRS.Persister
 {
+	/// <summary>
+	/// Persists events to files.
+	/// </summary>
 	public class FileEventPersister : IEventPersister
 	{
 		private readonly string _directory;

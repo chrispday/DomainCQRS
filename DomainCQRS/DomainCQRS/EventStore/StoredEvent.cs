@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DomainCQRS
 {
+	/// <summary>
+	/// Meta-data of an event thats been loaded from the provider.
+	/// </summary>
 	public class StoredEvent : EventArgs
 	{
 		public Guid AggregateRootId { get; set; }

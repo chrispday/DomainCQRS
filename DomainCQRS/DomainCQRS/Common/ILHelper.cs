@@ -6,8 +6,17 @@ using System.Reflection.Emit;
 
 namespace DomainCQRS.Common
 {
+	/// <summary>
+	/// Contains helper methods to create dynamic method delegates.
+	/// </summary>
 	public static class ILHelper
 	{
+		/// <summary>
+		/// Create an event upgrader delegate method.
+		/// </summary>
+		/// <param name="eventType">The <see cref="Type"/> of the original event.</param>
+		/// <param name="upgradedEventType">The <see cref="Type"/> of the event it will be upgraded to.</param>
+		/// <returns>An <see cref="EventUpgrader"/> delegate.</returns>
 		public static EventUpgrader CreateEventUpgrader(Type eventType, Type upgradedEventType)
 		{
 			var upgradedEventConstructor = upgradedEventType.GetConstructor(new Type[] { eventType });
@@ -25,6 +34,13 @@ namespace DomainCQRS.Common
 			return (EventUpgrader)dynamicMethod.CreateDelegate(typeof(EventUpgrader));
 		}
 
+		/// <summary>
+		/// Create a message receiver delegate method.
+		/// </summary>
+		/// <typeparam name="Subscriber">The subscriber to an event.</typeparam>
+		/// <typeparam name="Event">The event that is being subscribed to.</typeparam>
+		/// <param name="subscriberReceiveMethodName">The name of the method on the subscriber that will recevie the event.</param>
+		/// <returns>A <see cref="Receive"/> delegate.</returns>
 		public static Receive CreateReceive<Subscriber, Event>(string subscriberReceiveMethodName)
 		{
 			var subscriberType = typeof(Subscriber);
@@ -49,6 +65,11 @@ namespace DomainCQRS.Common
 			return (Receive)dynamicMethod.CreateDelegate(typeof(Receive));
 		}
 
+		/// <summary>
+		/// Creates a delegate that constructs an Aggregate Root.
+		/// </summary>
+		/// <param name="aggregateRootType">The <see cref="Type"/> of the Aggregate Root.</param>
+		/// <returns>An <see cref="AggregateRootProxy.CreateAggreateRootDelegate"/> delegate.</returns>
 		public static AggregateRootProxy.CreateAggreateRootDelegate CreateCreateAggreateRoot(Type aggregateRootType)
 		{
 			var dynamicMethod = new DynamicMethod(aggregateRootType.Name + "_Create", typeof(object), null);
@@ -58,6 +79,12 @@ namespace DomainCQRS.Common
 			return (AggregateRootProxy.CreateAggreateRootDelegate)dynamicMethod.CreateDelegate(typeof(AggregateRootProxy.CreateAggreateRootDelegate));
 		}
 
+		/// <summary>
+		/// Creates a delegate that calls the Aggregate Root method that applies an event.
+		/// </summary>
+		/// <param name="eventType">The <see cref="Type"/> of the event.</param>
+		/// <param name="aggregateRootType">The <see cref="Type"/> of the Aggregate Root.</param>
+		/// <returns><see cref="AggregateRootProxy.ApplyEventDelegate"/> delegate.</returns>
 		public static AggregateRootProxy.ApplyEventDelegate CreateApplyEvent(Type eventType, Type aggregateRootType)
 		{
 			MethodInfo applyMethod = null;
@@ -107,6 +134,13 @@ namespace DomainCQRS.Common
 			return (AggregateRootProxy.ApplyEventDelegate)dynamicMethod.CreateDelegate(typeof(AggregateRootProxy.ApplyEventDelegate));
 		}
 
+		/// <summary>
+		/// Creates a delegate to apply a command to an Aggregate Root
+		/// </summary>
+		/// <param name="commandType">The <see cref="Type"/> of the command.</param>
+		/// <param name="aggregateRootType">The <see cref="Type"/> of the Aggregate Root.</param>
+		/// <param name="applyMethod">The name of the Aggregate Root's method that will appy the command.</param>
+		/// <returns>A <see cref="Delegate"/></returns>
 		public static Delegate CreateApplyCommand(Type commandType, Type aggregateRootType, MethodInfo applyMethod)
 		{
 			var enumerable = typeof(IEnumerable).IsAssignableFrom(applyMethod.ReturnType);
@@ -123,6 +157,12 @@ namespace DomainCQRS.Common
 			return dynamicMethod.CreateDelegate(enumerable ? typeof(AggregateRootProxy.ApplyEnumerableCommandDelegate) : typeof(AggregateRootProxy.ApplyObjectCommandDelegate));
 		}
 
+		/// <summary>
+		/// Creates a delegate that will get the Aggregate Root Id from a message.
+		/// </summary>
+		/// <param name="messageType">The <see cref="Type"/> of the message.</param>
+		/// <param name="property">The name of the property that will provide the Aggregate Root Id</param>
+		/// <returns>A <see cref="MessageProxy.GetAggregateRootIdsDelegate"/> delegate</returns>
 		public static MessageProxy.GetAggregateRootIdsDelegate CreateGetAggregateRootIdDelegate(Type messageType, PropertyInfo property)
 		{
 			var dynamicMethod = new DynamicMethod("GetAggregateRootId_" + messageType.Name, typeof(IEnumerable<Guid>), new Type[] { typeof(object) });
@@ -148,6 +188,12 @@ namespace DomainCQRS.Common
 			return (MessageProxy.GetAggregateRootIdsDelegate)dynamicMethod.CreateDelegate(typeof(MessageProxy.GetAggregateRootIdsDelegate));
 		}
 
+		/// <summary>
+		/// Creates a delegate that will get Aggregate Root Ids from a message.
+		/// </summary>
+		/// <param name="messageType">The <see cref="Type"/> of the message.</param>
+		/// <param name="property">The name of the property that will provide the Aggregate Root Ids</param>
+		/// <returns>A <see cref="MessageProxy.GetAggregateRootIdsDelegate"/> delegate</returns>
 		public static MessageProxy.GetAggregateRootIdsDelegate CreateGetAggregateRootIdsDelegate(Type messageType, PropertyInfo property)
 		{
 			var dynamicMethod = new DynamicMethod("GetAggregateRootIds_" + messageType.Name, typeof(IEnumerable<Guid>), new Type[] { typeof(object) });

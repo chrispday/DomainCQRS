@@ -6,6 +6,9 @@ using System.Text;
 
 namespace DomainCQRS
 {
+	/// <summary>
+	/// Thrown when an error occurs during registration.
+	/// </summary>
 	[Serializable]
 	public class RegistrationException : EventStoreException, ISerializable
 	{

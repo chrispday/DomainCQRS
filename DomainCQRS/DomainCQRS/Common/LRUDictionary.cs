@@ -5,12 +5,28 @@ using System.Text;
 
 namespace DomainCQRS.Common
 {
+	/// <summary>
+	/// Provides a Least Recently Used dictionary.
+	/// When items are added and the capacity is exceeded it will remove items.
+	/// The number of items to keep is determined by the Capacity * DefaultCapacityReduction
+	/// </summary>
+	/// <typeparam name="TKey">The key</typeparam>
+	/// <typeparam name="TValue">The value</typeparam>
 	public class LRUDictionary<TKey, TValue> : IDictionary<TKey, TValue>
 	{
+		/// <summary>
+		/// The default percentage of items to keep when the capacity is exceeded.
+		/// </summary>
 		public static double DefaultCapacityReduction = 0.9;
+		/// <summary>
+		/// Be notified when an item is removed.
+		/// </summary>
 		public event EventHandler<KeyValueRemovedArgs<TKey, TValue>> Removed;
 
 		private int _capacity;
+		/// <summary>
+		/// The capacity.
+		/// </summary>
 		public int Capacity { get { return _capacity; } }
 		private class LValue<TTKey, TTValue>
 		{
@@ -26,6 +42,10 @@ namespace DomainCQRS.Common
 		private Dictionary<TKey, DValue<TKey, TValue>> _dictionary;
 		private LinkedList<LValue<TKey, TValue>> _linkedList;
 
+		/// <summary>
+		/// Create an <see cref="LRUDictionary[Tkey,TValue]"/>
+		/// </summary>
+		/// <param name="capacity">The capacity that should not be exceeded.</param>
 		public LRUDictionary(int capacity)
 		{
 			if (1 > capacity)
@@ -175,36 +195,68 @@ namespace DomainCQRS.Common
 			}
 		}
 
+		/// <summary>
+		/// Add an item.
+		/// </summary>
+		/// <param name="key">The key</param>
+		/// <param name="value">The value</param>
 		public void Add(TKey key, TValue value)
 		{
 			_Add(key, value, true);
 		}
 
+		/// <summary>
+		/// Is the key in the dictionary
+		/// </summary>
+		/// <param name="key">The key</param>
+		/// <returns>True if key exists in dictioney, else false.</returns>
 		public bool ContainsKey(TKey key)
 		{
 			return _dictionary.ContainsKey(key);
 		}
 
+		/// <summary>
+		/// Returns the keys.
+		/// </summary>
 		public ICollection<TKey> Keys
 		{
 			get { return _dictionary.Keys; }
 		}
 
+		/// <summary>
+		/// Removes a key.
+		/// </summary>
+		/// <param name="key">The key</param>
+		/// <returns>If the key was removed.</returns>
 		public bool Remove(TKey key)
 		{
 			return _Remove(key);
 		}
 
+		/// <summary>
+		/// Try to get the value using the key.
+		/// </summary>
+		/// <param name="key">The key.</param>
+		/// <param name="value">The value if it exists</param>
+		/// <returns>If the key exists</returns>
 		public bool TryGetValue(TKey key, out TValue value)
 		{
 			return _TryGetValue(key, out value, false);
 		}
 
+		/// <summary>
+		/// Gets the values.
+		/// </summary>
 		public ICollection<TValue> Values
 		{
 			get { throw new NotImplementedException(); }
 		}
 
+		/// <summary>
+		/// Gets or sets the value using the key
+		/// </summary>
+		/// <param name="key">The key</param>
+		/// <returns>The value, will throw if the key does not exist</returns>
 		public TValue this[TKey key]
 		{
 			get
@@ -219,41 +271,73 @@ namespace DomainCQRS.Common
 			}
 		}
 
+		/// <summary>
+		/// Adds the item.
+		/// </summary>
+		/// <param name="item">The item to add.</param>
 		public void Add(KeyValuePair<TKey, TValue> item)
 		{
 			_Add(item.Key, item.Value, true);
 		}
 
+		/// <summary>
+		/// Empties the dictionary.
+		/// </summary>
 		public void Clear()
 		{
 			_Clear();
 		}
 
+		/// <summary>
+		/// If the item exists.
+		/// </summary>
+		/// <param name="item">The item to look for.</param>
+		/// <returns>True if the item exists, else false.</returns>
 		public bool Contains(KeyValuePair<TKey, TValue> item)
 		{
 			return (_dictionary as IDictionary<TKey, TValue>).Contains(item);
 		}
 
+		/// <summary>
+		/// Copies contents to an array
+		/// </summary>
+		/// <param name="array">The array to copy to</param>
+		/// <param name="arrayIndex">The starting index</param>
 		public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
 		{
 			((IDictionary<TKey, TValue>) _dictionary).CopyTo(array, arrayIndex);
 		}
 
+		/// <summary>
+		/// The number of items
+		/// </summary>
 		public int Count
 		{
 			get { return _dictionary.Count; }
 		}
 
+		/// <summary>
+		/// If it is read only. Always returns false.
+		/// </summary>
 		public bool IsReadOnly
 		{
 			get { return false; }
 		}
 
+		/// <summary>
+		/// Removes an item.
+		/// </summary>
+		/// <param name="item">The item to remove.</param>
+		/// <returns>True if the item was removed, else false.</returns>
 		public bool Remove(KeyValuePair<TKey, TValue> item)
 		{
 			return _Remove(item.Key);
 		}
 
+		/// <summary>
+		/// Gets an enumertor for items.
+		/// </summary>
+		/// <returns>An enumerator.</returns>
 		public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
 		{
 			List<KeyValuePair<TKey, TValue>> list = new List<KeyValuePair<TKey, TValue>>();
@@ -267,6 +351,10 @@ namespace DomainCQRS.Common
 			return list.GetEnumerator();
 		}
 
+		/// <summary>
+		/// Gets an enumertor for items.
+		/// </summary>
+		/// <returns>An enumerator.</returns>
 		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
 		{
 			return _dictionary.GetEnumerator();

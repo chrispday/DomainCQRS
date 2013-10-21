@@ -8,6 +8,11 @@ namespace DomainCQRS
 {
 	public static class MemoryEventPersisterConfigure
 	{
+		/// <summary>
+		/// Configure Domain CQRS to use in-memory event persistance. WARNING - there is no actual persistance!
+		/// </summary>
+		/// <param name="configure"></param>
+		/// <returns></returns>
 		public static IConfigure MemoryEventPersister(this IConfigure configure)
 		{
 			configure.Registry
@@ -21,6 +26,9 @@ namespace DomainCQRS
 
 namespace DomainCQRS.Persister
 {
+	/// <summary>
+	/// Stores events in-memory, this will not persist the events.
+	/// </summary>
 	public class MemoryEventPersister : IEventPersister
 	{
 		private readonly ILogger _logger;

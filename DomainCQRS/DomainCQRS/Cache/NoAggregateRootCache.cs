@@ -1,12 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 
-using System.Text;
-
 namespace DomainCQRS
 {
+	/// <summary>
+	/// Configures Domain CQRS to not cache Aggregate Roots
+	/// </summary>
 	public static class NoAggregateRootCacheConfigure
 	{
+		/// <summary>
+		/// Configure Domain CQRS to not cache Aggregate Roots
+		/// </summary>
+		/// <param name="configure">The <see cref="IConfigure"/>.</param>
+		/// <returns>The <see cref="IConfigure"/></returns>
 		public static IConfigure NoAggregateRootCache(this IConfigure configure)
 		{
 			configure.Registry
@@ -16,8 +22,14 @@ namespace DomainCQRS
 		}
 	}
 
+	/// <summary>
+	/// Don't cache Aggregate Roots
+	/// </summary>
 	public class NoAggregateRootCache : IAggregateRootCache
 	{
+		/// <summary>
+		/// This event is never called.
+		/// </summary>
 		public event EventHandler<Common.KeyValueRemovedArgs<Guid, AggregateRootAndVersion>> Removed;
 
 		public void Add(Guid key, AggregateRootAndVersion value) {}

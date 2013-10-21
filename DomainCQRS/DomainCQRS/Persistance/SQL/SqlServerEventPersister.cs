@@ -11,6 +11,12 @@ namespace DomainCQRS
 {
 	public static class SqlServerEventPersisterConfigure
 	{
+		/// <summary>
+		/// Configures Domain CQRS to use SQL Server persistance.
+		/// </summary>
+		/// <param name="configure">The <see cref="IConfigure"/></param>
+		/// <param name="connectionString">The SQL Server connection string</param>
+		/// <returns>The <see cref="IConfigure"/></returns>
 		public static IConfigure SqlServerEventPersister(this IConfigure configure, string connectionString)
 		{
 			if (string.IsNullOrEmpty(connectionString))
@@ -31,6 +37,9 @@ namespace DomainCQRS
 
 namespace DomainCQRS.Persister
 {
+	/// <summary>
+	/// Persists events to SQL Server
+	/// </summary>
 	public class SqlServerEventPersister : IEventPersister
 	{
 		private readonly ILogger _logger;

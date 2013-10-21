@@ -8,6 +8,9 @@ using DomainCQRS.Persister;
 
 namespace DomainCQRS.Persister
 {
+	/// <summary>
+	/// Persists event for an Aggregate Root to a file.
+	/// </summary>
 	public class FileEventStream : IDisposable
 	{
 		private BinaryWriter _writer;
