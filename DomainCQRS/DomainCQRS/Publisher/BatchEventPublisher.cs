@@ -7,12 +7,35 @@ using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
+	/// <summary>
+	/// Configure DomainCQRS to use the <see cref="BatchEventPublisher"/>.
+	/// Events are published in batches, includes historical events.
+	/// </summary>
 	public static class BatchEventPublisherConfigure
 	{
+		/// <summary>
+		/// Default maximum number of events to publish at a time.
+		/// </summary>
 		public static int DefaultBatchSize = 10000;
+		/// <summary>
+		/// Default interval to sleep the event publishing thread.
+		/// </summary>
 		public static TimeSpan DefaultPublishThreadSleep = TimeSpan.FromSeconds(1);
 
+		/// <summary>
+		/// Configure DomainCQRS to use the <see cref="BatchEventPublisher"/>.
+		/// Events are published in batches, includes historical events.
+		/// </summary>
+		/// <param name="configure">The <see cref="IConfigure"/>.</param>
+		/// <returns>The <see cref="IConfigure"/>.</returns>
 		public static IConfigure BatchEventPublisher(this IConfigure configure) { return configure.BatchEventPublisher(DefaultBatchSize); }
+		/// <summary>
+		/// Configure DomainCQRS to use the <see cref="BatchEventPublisher"/>.
+		/// Events are published in batches, includes historical events.
+		/// </summary>
+		/// <param name="configure">The <see cref="IConfigure"/>.</param>
+		/// <param name="batchSize">The maximum number of events to publish at a time.</param>
+		/// <returns>The <see cref="IConfigure"/>.</returns>
 		public static IConfigure BatchEventPublisher(this IConfigure configure, int batchSize)
 		{
 			configure.Registry

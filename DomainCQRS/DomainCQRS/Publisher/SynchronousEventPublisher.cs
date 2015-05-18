@@ -6,8 +6,18 @@ using StructureMap.Configuration.DSL;
 
 namespace DomainCQRS
 {
+	/// <summary>
+	/// Configure DomainCQRS to use the <see cref="SynchronousEventPublisher"/>.
+	/// Events are published synchronously as the are persisted, does not publish historical events.
+	/// </summary>
 	public static class SynchronousEventPublisherConfigure
 	{
+		/// <summary>
+		/// Configure DomainCQRS to use the <see cref="SynchronousEventPublisher"/>.
+		/// Events are published synchronously as the are persisted, does not publish historical events.
+		/// </summary>
+		/// <param name="configure">The <see cref="IConfigure"/>.</param>
+		/// <returns>The <see cref="IConfigure"/>.</returns>
 		public static IConfigure SynchronousEventPublisher(this IConfigure configure)
 		{
 			configure.Registry
@@ -20,6 +30,9 @@ namespace DomainCQRS
 		}
 	}
 
+	/// <summary>
+	/// Publishes event synchronously as the are persisted, does not publish historical events.
+	/// </summary>
 	public class SynchronousEventPublisher : EventPublisherBase, IEventPublisher
 	{
 		public SynchronousEventPublisher(ILogger logger, IEventStore eventStore, string defaultSubscriberReceiveMethodName)
